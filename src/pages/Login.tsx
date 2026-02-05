@@ -19,14 +19,23 @@ function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!email || !password) {
+      setError('Bitte E-Mail und Passwort eingeben')
+      return
+    }
     setIsLoading(true)
     setError('')
 
     try {
       await login(email, password)
       navigate('/dashboard')
-    } catch (err) {
-      setError('Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.')
+    } catch (err: any) {
+      const msg = err?.message || ''
+      if (msg.includes('Invalid login credentials')) {
+        setError('Ungültige Anmeldedaten. Bitte überprüfe E-Mail und Passwort.')
+      } else {
+        setError('Anmeldung fehlgeschlagen. Bitte versuche es erneut.')
+      }
       console.error(err)
     } finally {
       setIsLoading(false)
@@ -58,11 +67,11 @@ function Login() {
         <CardHeader className="space-y-2">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-gradient-to-br from-primary to-blue-600 rounded-lg flex items-center justify-center text-primary-foreground font-bold text-lg">
-              NF
+              NE
             </div>
             <div>
               <CardTitle className="text-xl">NOEXIT Finance</CardTitle>
-              <CardDescription className="text-xs">Finanzmanagement für Bands</CardDescription>
+              <CardDescription className="text-xs">Finanzverwaltung</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -79,11 +88,11 @@ function Login() {
               <Input
                 id="email"
                 type="email"
-                placeholder="du@beispiel.de"
+                placeholder="deine@email.de"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
                 required
-                className="transition-all"
               />
             </div>
 
@@ -95,8 +104,8 @@ function Login() {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
                 required
-                className="transition-all"
               />
             </div>
 
@@ -109,7 +118,7 @@ function Login() {
             </Button>
 
             <div className="text-center text-sm text-muted-foreground border-t pt-4">
-              � Demo-Konto: Beliebige E-Mail und Passwort verwenden
+              Melde dich mit deinen Zugangsdaten an.
             </div>
           </form>
         </CardContent>

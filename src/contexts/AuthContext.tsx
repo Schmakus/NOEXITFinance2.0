@@ -1,10 +1,14 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
+import { supabase } from '@/lib/supabase'
+import { fetchMusicianByUserId } from '@/lib/api-client'
 
-interface User {
-  id: string
+export interface User {
+  id: string          // musicians.id (UUID)
+  authId: string      // auth.users.id (UUID)
   name: string
   email: string
-  role?: string
+  role: string        // 'administrator' | 'superuser' | 'user'
+  balance: number
 }
 
 interface AuthContextType {
@@ -12,8 +16,7 @@ interface AuthContextType {
   isLoading: boolean
   isAuthenticated: boolean
   login: (email: string, password: string) => Promise<void>
-  logout: () => void
-  register: (email: string, password: string, name: string) => Promise<void>
+  logout: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -22,45 +25,71 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  // Check if user is already logged in on mount
+  // Load musician profile from Supabase
+  const loadProfile = useCallback(async (authUserId: string, email: string) => {
+    try {
+      const musician = await fetchMusicianByUserId(authUserId)
+      if (musician) {
+        setUser({
+          id: musician.id,
+          authId: authUserId,
+          name: musician.name,
+          email: musician.email,
+          role: musician.role,
+          balance: musician.balance,
+        })
+      } else {
+        // Auth user exists but no musician record — log out
+        console.warn('Kein Musiker-Profil für Auth-User gefunden:', email)
+        await supabase.auth.signOut()
+        setUser(null)
+      }
+    } catch (err) {
+      console.error('Profil laden fehlgeschlagen:', err)
+      setUser(null)
+    }
+  }, [])
+
+  // Listen for auth state changes
   useEffect(() => {
-    const checkAuth = async () => {
+    // Initial session check
+    const initAuth = async () => {
       try {
-        const token = localStorage.getItem('auth_token')
-        if (token) {
-          // Verify token with backend
-          // For now, we'll assume the token is valid
-          const userData = localStorage.getItem('user_data')
-          if (userData) {
-            setUser(JSON.parse(userData))
-          }
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.user) {
+          await loadProfile(session.user.id, session.user.email ?? '')
         }
-      } catch (error) {
-        console.error('Auth check failed:', error)
-        localStorage.removeItem('auth_token')
-        localStorage.removeItem('user_data')
+      } catch (err) {
+        console.error('Auth init failed:', err)
       } finally {
         setIsLoading(false)
       }
     }
 
-    checkAuth()
-  }, [])
+    initAuth()
+
+    // Subscribe to auth changes (login, logout, token refresh)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user) {
+          await loadProfile(session.user.id, session.user.email ?? '')
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null)
+        }
+      }
+    )
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [loadProfile])
 
   const login = useCallback(async (email: string, password: string) => {
     setIsLoading(true)
     try {
-      // This would be an API call in a real app
-      // For testing, we'll create a mock user
-      const mockUser: User = {
-        id: '123',
-        name: email.split('@')[0],
-        email,
-        role: 'user',
-      }
-      setUser(mockUser)
-      localStorage.setItem('auth_token', 'mock-token-' + Date.now())
-      localStorage.setItem('user_data', JSON.stringify(mockUser))
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) throw error
+      // Profile is loaded by onAuthStateChange listener
     } catch (error) {
       console.error('Login failed:', error)
       throw error
@@ -69,30 +98,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut()
     setUser(null)
-    localStorage.removeItem('auth_token')
-    localStorage.removeItem('user_data')
-  }, [])
-
-  const register = useCallback(async (email: string, password: string, name: string) => {
-    setIsLoading(true)
-    try {
-      const mockUser: User = {
-        id: String(Date.now()),
-        name,
-        email,
-        role: 'user',
-      }
-      setUser(mockUser)
-      localStorage.setItem('auth_token', 'mock-token-' + Date.now())
-      localStorage.setItem('user_data', JSON.stringify(mockUser))
-    } catch (error) {
-      console.error('Registration failed:', error)
-      throw error
-    } finally {
-      setIsLoading(false)
-    }
   }, [])
 
   return (
@@ -103,7 +111,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isAuthenticated: !!user,
         login,
         logout,
-        register,
       }}
     >
       {children}

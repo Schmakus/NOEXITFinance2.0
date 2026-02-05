@@ -16,17 +16,45 @@ import {
   Moon,
   Sun,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { fetchSettings } from '@/lib/api-client'
 
 function Layout() {
   const { user, logout } = useAuth()
   const { isDark, toggleTheme } = useTheme()
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [bandName, setBandName] = useState<string>('NO EXIT')
+  const [logo, setLogo] = useState<string | null>(null)
+
+  const loadSettingsFromSupabase = useCallback(async () => {
+    try {
+      const settings = await fetchSettings()
+      if (settings.bandname) setBandName(settings.bandname)
+      else setBandName('NO EXIT')
+      setLogo(settings.logo ?? null)
+    } catch {
+      setBandName('NO EXIT')
+    }
+  }, [])
+
+  useEffect(() => {
+    loadSettingsFromSupabase()
+
+    // Listen for same-window settings changes (dispatched by Settings page)
+    const handleSettingsChanged = () => {
+      loadSettingsFromSupabase()
+    }
+    window.addEventListener('noexit-settings-changed', handleSettingsChanged)
+    return () => {
+      window.removeEventListener('noexit-settings-changed', handleSettingsChanged)
+    }
+  }, [loadSettingsFromSupabase])
 
   const menuItems = [
     { icon: BarChart3, label: 'Übersicht', path: '/dashboard' },
     { icon: Users, label: 'Musiker', path: '/musicians' },
     { icon: Music, label: 'Gruppen', path: '/groups' },
+    { icon: DollarSign, label: 'Buchung', path: '/bookings' },
     { icon: Calendar, label: 'Konzerte', path: '/concerts' },
     { icon: DollarSign, label: 'Transaktionen', path: '/transactions' },
     { icon: Tag, label: 'Tags', path: '/tags' },
@@ -44,10 +72,23 @@ function Layout() {
         {/* Logo */}
         <div className="p-6 border-b border-border">
           <Link to="/dashboard" className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary to-blue-600 rounded-lg flex items-center justify-center text-primary-foreground font-bold">
-              NF
-            </div>
-            {sidebarOpen && <span className="font-bold">NOEXIT Finance</span>}
+            {logo ? (
+              <img
+                src={logo}
+                alt="Logo"
+                className={`w-10 h-10 rounded-lg object-contain ${isDark ? 'brightness-0 invert' : ''}`}
+              />
+            ) : (
+              <div className="w-10 h-10 bg-gradient-to-br from-primary to-blue-600 rounded-lg flex items-center justify-center text-primary-foreground font-bold">
+                NE
+              </div>
+            )}
+            {sidebarOpen && (
+              <div className="flex flex-col">
+                <span className="font-bold text-sm">{bandName}</span>
+                <span className="text-xs text-muted-foreground">Finanzverwaltung</span>
+              </div>
+            )}
           </Link>
         </div>
 
@@ -103,7 +144,19 @@ function Layout() {
                 <Menu className="w-5 h-5" />
               )}
             </Button>
-            <h1 className="text-2xl font-bold">NOEXIT Finance</h1>
+            <div>
+              <h1 className="text-2xl font-bold flex items-center gap-2">
+                {logo && (
+                  <img
+                    src={logo}
+                    alt="Logo"
+                    className={`w-8 h-8 object-contain ${isDark ? 'brightness-0 invert' : ''}`}
+                  />
+                )}
+                {bandName}
+              </h1>
+              <p className="text-sm text-muted-foreground">Finanzverwaltung</p>
+            </div>
           </div>
           
           {/* Theme Toggle */}
