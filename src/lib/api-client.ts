@@ -614,10 +614,18 @@ export async function fetchSetting(key: string): Promise<string | null> {
 }
 
 export async function upsertSetting(key: string, value: string): Promise<void> {
-  const { error } = await supabase
+  const { error, status } = await supabase
     .from('app_settings')
     .upsert({ key, value }, { onConflict: 'key' })
-  if (error) throw error
+  if (error) throw new Error(`Setting speichern fehlgeschlagen: ${error.message}`)
+  // RLS can silently block writes returning 200/201 with no error
+  // Try a select to verify it was saved
+  if (status === 201 || status === 200) {
+    const { data } = await supabase.from('app_settings').select('value').eq('key', key).single()
+    if (data?.value !== value) {
+      throw new Error('Setting wurde nicht gespeichert (RLS-Berechtigung fehlt)')
+    }
+  }
 }
 
 export async function deleteSetting(key: string): Promise<void> {

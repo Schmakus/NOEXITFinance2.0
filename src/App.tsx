@@ -1,5 +1,7 @@
+import { useEffect, useCallback, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
+import { fetchSettings } from '@/lib/api-client'
 import Layout from '@/components/Layout'
 import Dashboard from '@/pages/Dashboard'
 import Musicians from '@/pages/Musicians'
@@ -11,26 +13,44 @@ import Tags from '@/pages/Tags'
 import Settings from '@/pages/Settings'
 import Login from '@/pages/Login'
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth()
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p>Loading...</p>
-      </div>
-    )
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />
-  }
-
-  return children
-}
-
 function App() {
   const { isAuthenticated, isLoading } = useAuth()
+  const [faviconSet, setFaviconSet] = useState(false)
+
+  const updateTitleAndFavicon = useCallback(async () => {
+    try {
+      const settings = await fetchSettings()
+      const bandName = settings.bandname || 'NO EXIT'
+      const logo = settings.logo ?? null
+
+      document.title = `${bandName} - Finanzverwaltung`
+
+      let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement | null
+      if (logo) {
+        if (!link) {
+          link = document.createElement('link')
+          link.rel = 'icon'
+          document.head.appendChild(link)
+        }
+        link.type = 'image/png'
+        link.href = logo
+      } else if (link) {
+        link.type = 'image/svg+xml'
+        link.href = '/vite.svg'
+      }
+      setFaviconSet(true)
+    } catch {
+      document.title = 'NO EXIT - Finanzverwaltung'
+    }
+  }, [])
+
+  useEffect(() => {
+    updateTitleAndFavicon()
+
+    const handleSettingsChanged = () => updateTitleAndFavicon()
+    window.addEventListener('noexit-settings-changed', handleSettingsChanged)
+    return () => window.removeEventListener('noexit-settings-changed', handleSettingsChanged)
+  }, [updateTitleAndFavicon, isAuthenticated])
 
   if (isLoading) {
     return (

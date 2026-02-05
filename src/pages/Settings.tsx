@@ -71,8 +71,8 @@ function Settings() {
     const file = e.target.files?.[0]
     if (!file) return
 
-    if (file.size > 512_000) {
-      showMessage('Logo darf max. 500 KB groß sein', 'error')
+    if (file.size > 2_000_000) {
+      showMessage('Logo darf max. 2 MB groß sein', 'error')
       return
     }
 
@@ -85,11 +85,16 @@ function Settings() {
         window.dispatchEvent(new Event('noexit-settings-changed'))
         showMessage('Logo gespeichert', 'success')
       } catch (err) {
-        console.error(err)
-        showMessage('Fehler beim Speichern des Logos', 'error')
+        console.error('Logo upload error:', err)
+        showMessage('Fehler beim Speichern des Logos: ' + String(err), 'error')
       }
     }
+    reader.onerror = () => {
+      showMessage('Fehler beim Lesen der Datei', 'error')
+    }
     reader.readAsDataURL(file)
+    // Reset input so same file can be selected again
+    e.target.value = ''
   }
 
   const handleRemoveLogo = async () => {
@@ -223,14 +228,14 @@ function Settings() {
               <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
                 <Image className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground mb-2">Kein Logo hochgeladen</p>
-                <label htmlFor="logo-upload">
-                  <Button variant="outline" size="sm" asChild>
-                    <span>
-                      <Upload className="w-4 h-4 mr-2" />
-                      Logo hochladen
-                    </span>
-                  </Button>
-                </label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => document.getElementById('logo-upload')?.click()}
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Logo hochladen
+                </Button>
                 <input
                   id="logo-upload"
                   type="file"
@@ -242,14 +247,14 @@ function Settings() {
             )}
             {logo && (
               <div>
-                <label htmlFor="logo-replace">
-                  <Button variant="outline" size="sm" asChild>
-                    <span>
-                      <Upload className="w-4 h-4 mr-2" />
-                      Ersetzen
-                    </span>
-                  </Button>
-                </label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => document.getElementById('logo-replace')?.click()}
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Ersetzen
+                </Button>
                 <input
                   id="logo-replace"
                   type="file"

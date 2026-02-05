@@ -52,17 +52,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Listen for auth state changes
   useEffect(() => {
+    let isMounted = true
+
     // Initial session check
     const initAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session?.user) {
+        const { data: { session }, error } = await supabase.auth.getSession()
+        if (error) {
+          console.error('getSession error:', error)
+        } else if (session?.user && isMounted) {
           await loadProfile(session.user.id, session.user.email ?? '')
         }
       } catch (err) {
         console.error('Auth init failed:', err)
       } finally {
-        setIsLoading(false)
+        if (isMounted) setIsLoading(false)
       }
     }
 
@@ -71,6 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Subscribe to auth changes (login, logout, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (!isMounted) return
         if (event === 'SIGNED_IN' && session?.user) {
           await loadProfile(session.user.id, session.user.email ?? '')
         } else if (event === 'SIGNED_OUT') {
@@ -80,6 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     )
 
     return () => {
+      isMounted = false
       subscription.unsubscribe()
     }
   }, [loadProfile])

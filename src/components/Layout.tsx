@@ -50,6 +50,8 @@ function Layout() {
     }
   }, [loadSettingsFromSupabase])
 
+
+
   const menuItems = [
     { icon: BarChart3, label: 'Übersicht', path: '/dashboard' },
     { icon: Users, label: 'Musiker', path: '/musicians' },
