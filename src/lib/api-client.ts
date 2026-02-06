@@ -1,7 +1,7 @@
 // ============================================
 // Supabase API-Funktionen
 // ============================================
-import { supabase } from './supabase'
+import { supabase, supabaseAdmin } from './supabase'
 import type {
   DbMusician,
   DbGroup,
@@ -14,6 +14,27 @@ import type {
   GroupWithMembers,
   ConcertWithExpenses,
 } from './database.types'
+
+// ============================================
+// AUTH USER MANAGEMENT (Admin)
+// ============================================
+
+export async function createAuthUser(email: string, password: string): Promise<string> {
+  if (!supabaseAdmin) throw new Error('Service Role Key fehlt – Admin-Funktionen nicht verfügbar')
+  const { data, error } = await supabaseAdmin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+  })
+  if (error) throw error
+  return data.user.id
+}
+
+export async function deleteAuthUser(authUserId: string): Promise<void> {
+  if (!supabaseAdmin) throw new Error('Service Role Key fehlt – Admin-Funktionen nicht verfügbar')
+  const { error } = await supabaseAdmin.auth.admin.deleteUser(authUserId)
+  if (error) throw error
+}
 
 // ============================================
 // MUSIKER
@@ -695,3 +716,183 @@ export async function deleteAllData(): Promise<void> {
     .neq('id', '00000000-0000-0000-0000-000000000000')
   if (bErr) throw bErr
 }
+
+  // ============================================
+  // BACKUP & RESTORE
+  // ============================================
+
+  export interface BackupData {
+    version: string
+    timestamp: string
+    musicians: DbMusician[]
+    groups: GroupWithMembers[]
+    concerts: ConcertWithExpenses[]
+    bookings: DbBooking[]
+    transactions: DbTransaction[]
+    tags: DbTag[]
+    settings: Record<string, string>
+  }
+
+  export function validateBackup(data: any): asserts data is BackupData {
+    const isObj = (v: any) => v !== null && typeof v === 'object'
+    if (!isObj(data)) throw new Error('Backup ist kein Objekt')
+
+    if (typeof data.version !== 'string') throw new Error('Backup-Version fehlt oder ungültig')
+    if (typeof data.timestamp !== 'string') throw new Error('Backup-Timestamp fehlt oder ungültig')
+
+    const requireArray = (key: string) => {
+      if (!Array.isArray((data as any)[key])) throw new Error(`Backup-Feld fehlt: ${key}`)
+    }
+
+    requireArray('musicians')
+    requireArray('groups')
+    requireArray('concerts')
+    requireArray('bookings')
+    requireArray('transactions')
+    requireArray('tags')
+
+    if (!isObj(data.settings)) throw new Error('Backup-Feld fehlt: settings')
+  }
+
+  export async function exportBackup(): Promise<BackupData> {
+    const [musicians, groups, concerts, bookings, transactions, tags, settings] = await Promise.all([
+      fetchMusicians(),
+      fetchGroupsWithMembers(),
+      fetchConcerts(),
+      fetchBookings(),
+      fetchTransactions(),
+      fetchTags(),
+      fetchSettings(),
+    ])
+
+    return {
+      version: '2.0',
+      timestamp: new Date().toISOString(),
+      musicians,
+      groups,
+      concerts,
+      bookings,
+      transactions,
+      tags,
+      settings,
+    }
+  }
+
+  export async function importBackup(data: BackupData): Promise<void> {
+    // Destructive restore: delete all existing data, then insert backup
+    await deleteAllDataForRestore()
+
+    if (data.musicians?.length) {
+      const { error } = await supabase.from('musicians').insert(data.musicians)
+      if (error) throw error
+    }
+
+    if (data.groups?.length) {
+      const groups = data.groups.map(({ members, ...group }) => group)
+      const { error } = await supabase.from('groups').insert(groups)
+      if (error) throw error
+
+      const groupMembers = data.groups.flatMap((g) =>
+        (g.members ?? []).map((m) => ({
+          id: m.id,
+          group_id: m.group_id,
+          musician_id: m.musician_id,
+          percent: m.percent,
+        }))
+      )
+      if (groupMembers.length > 0) {
+        const { error: mErr } = await supabase.from('group_members').insert(groupMembers)
+        if (mErr) throw mErr
+      }
+    }
+
+    if (data.concerts?.length) {
+      const concerts = data.concerts.map((c: any) => {
+        const { expenses, group_name, ...rest } = c
+        return rest
+      })
+      const { error } = await supabase.from('concerts').insert(concerts)
+      if (error) throw error
+
+      const expenses = data.concerts.flatMap((c: any) => c.expenses ?? [])
+      if (expenses.length > 0) {
+        const { error: eErr } = await supabase.from('concert_expenses').insert(expenses)
+        if (eErr) throw eErr
+      }
+    }
+
+    if (data.bookings?.length) {
+      const { error } = await supabase.from('bookings').insert(data.bookings)
+      if (error) throw error
+    }
+
+    if (data.transactions?.length) {
+      const { error } = await supabase.from('transactions').insert(data.transactions)
+      if (error) throw error
+    }
+
+    if (data.tags?.length) {
+      const { error } = await supabase.from('tags').insert(data.tags)
+      if (error) throw error
+    }
+
+    if (data.settings) {
+      const settings = Object.entries(data.settings).map(([key, value]) => ({ key, value }))
+      if (settings.length > 0) {
+        const { error } = await supabase.from('app_settings').insert(settings)
+        if (error) throw error
+      }
+    }
+  }
+
+  async function deleteAllDataForRestore(): Promise<void> {
+    const emptyUuid = '00000000-0000-0000-0000-000000000000'
+
+    const { error: tErr } = await supabase.from('transactions').delete().neq('id', emptyUuid)
+    if (tErr) throw tErr
+
+    const { error: ceErr } = await supabase.from('concert_expenses').delete().neq('id', emptyUuid)
+    if (ceErr) throw ceErr
+
+    const { error: bErr } = await supabase.from('bookings').delete().neq('id', emptyUuid)
+    if (bErr) throw bErr
+
+    const { error: cErr } = await supabase.from('concerts').delete().neq('id', emptyUuid)
+    if (cErr) throw cErr
+
+    const { error: gmErr } = await supabase.from('group_members').delete().neq('id', emptyUuid)
+    if (gmErr) throw gmErr
+
+    const { error: gErr } = await supabase.from('groups').delete().neq('id', emptyUuid)
+    if (gErr) throw gErr
+
+    const { error: tagErr } = await supabase.from('tags').delete().neq('id', emptyUuid)
+    if (tagErr) throw tagErr
+
+    const { error: sErr } = await supabase.from('app_settings').delete().neq('key', '__never__')
+    if (sErr) throw sErr
+
+    const { error: mErr } = await supabase.from('musicians').delete().neq('id', emptyUuid)
+    if (mErr) throw mErr
+  }
+
+  // ============================================
+  // CSV EXPORT
+  // ============================================
+
+  export async function exportTransactionsCSV(): Promise<string> {
+    const transactions = await fetchTransactionsWithMusician()
+  
+    const header = 'Datum,Musiker,Typ,Betrag,Beschreibung,Konzert\n'
+    const rows = transactions.map((t) => {
+      const date = t.date || ''
+      const musician = t.musician_name
+      const type = t.type === 'earn' ? 'Einnahme' : 'Ausgabe'
+      const amount = t.amount.toFixed(2)
+      const description = `"${(t.description || '').replace(/"/g, '""')}"` // CSV escape
+      const concert = `"${(t.concert_name || '').replace(/"/g, '""')}"`
+      return `${date},${musician},${type},${amount},${description},${concert}`
+    })
+
+    return header + rows.join('\n')
+  }

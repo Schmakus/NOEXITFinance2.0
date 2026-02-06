@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState } from 'react'
+import { useEffect, useCallback } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { fetchSettings } from '@/lib/api-client'
@@ -15,42 +15,24 @@ import Login from '@/pages/Login'
 
 function App() {
   const { isAuthenticated, isLoading } = useAuth()
-  const [faviconSet, setFaviconSet] = useState(false)
 
-  const updateTitleAndFavicon = useCallback(async () => {
+  const updateTitle = useCallback(async () => {
     try {
       const settings = await fetchSettings()
       const bandName = settings.bandname || 'NO EXIT'
-      const logo = settings.logo ?? null
-
       document.title = `${bandName} - Finanzverwaltung`
-
-      let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement | null
-      if (logo) {
-        if (!link) {
-          link = document.createElement('link')
-          link.rel = 'icon'
-          document.head.appendChild(link)
-        }
-        link.type = 'image/png'
-        link.href = logo
-      } else if (link) {
-        link.type = 'image/svg+xml'
-        link.href = '/vite.svg'
-      }
-      setFaviconSet(true)
     } catch {
       document.title = 'NO EXIT - Finanzverwaltung'
     }
   }, [])
 
   useEffect(() => {
-    updateTitleAndFavicon()
+    updateTitle()
 
-    const handleSettingsChanged = () => updateTitleAndFavicon()
+    const handleSettingsChanged = () => updateTitle()
     window.addEventListener('noexit-settings-changed', handleSettingsChanged)
     return () => window.removeEventListener('noexit-settings-changed', handleSettingsChanged)
-  }, [updateTitleAndFavicon, isAuthenticated])
+  }, [updateTitle, isAuthenticated])
 
   if (isLoading) {
     return (

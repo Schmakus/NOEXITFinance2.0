@@ -50,43 +50,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  // Listen for auth state changes
+  // Listen for auth state changes (Supabase v2.39+ fires INITIAL_SESSION)
   useEffect(() => {
     let isMounted = true
 
-    // Initial session check
-    const initAuth = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession()
-        if (error) {
-          console.error('getSession error:', error)
-        } else if (session?.user && isMounted) {
-          await loadProfile(session.user.id, session.user.email ?? '')
-        }
-      } catch (err) {
-        console.error('Auth init failed:', err)
-      } finally {
-        if (isMounted) setIsLoading(false)
-      }
-    }
-
-    initAuth()
-
-    // Subscribe to auth changes (login, logout, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!isMounted) return
-        if (event === 'SIGNED_IN' && session?.user) {
+
+        if (event === 'SIGNED_OUT') {
+          setUser(null)
+          setIsLoading(false)
+          return
+        }
+
+        // Handle INITIAL_SESSION (page reload), SIGNED_IN (login), TOKEN_REFRESHED
+        if (session?.user) {
           await loadProfile(session.user.id, session.user.email ?? '')
-        } else if (event === 'SIGNED_OUT') {
+        } else {
           setUser(null)
         }
+        if (isMounted) setIsLoading(false)
       }
     )
+
+    // Safety timeout: prevent permanent "Lade..." if no auth event fires
+    const timeout = setTimeout(() => {
+      if (isMounted) setIsLoading(false)
+    }, 3000)
 
     return () => {
       isMounted = false
       subscription.unsubscribe()
+      clearTimeout(timeout)
     }
   }, [loadProfile])
 

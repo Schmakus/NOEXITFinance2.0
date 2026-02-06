@@ -12,7 +12,10 @@ import {
   Image,
   X,
   Info,
-} from 'lucide-react'
+    Download,
+    FileJson,
+    FileSpreadsheet,
+  } from 'lucide-react'
 import {
   fetchSettings,
   upsertSetting,
@@ -21,11 +24,16 @@ import {
   deleteAllBookingsAndTransactions,
   deleteAllTransactions,
   deleteAllData,
+    exportBackup,
+    exportTransactionsCSV,
+  importBackup,
+  validateBackup,
 } from '@/lib/api-client'
 
 function Settings() {
   const { user } = useAuth()
   const isAdmin = user?.role === 'administrator'
+  const canExportCsv = isAdmin || user?.role === 'superuser'
 
   const [bandName, setBandName] = useState('NO EXIT')
   const [logo, setLogo] = useState<string | null>(null)
@@ -108,6 +116,65 @@ function Settings() {
       showMessage('Fehler beim Entfernen', 'error')
     }
   }
+
+    const handleExportBackup = async () => {
+      try {
+        const data = await exportBackup()
+        const json = JSON.stringify(data, null, 2)
+        const blob = new Blob([json], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `noexit-backup-${new Date().toISOString().split('T')[0]}.json`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+        showMessage('Backup erfolgreich erstellt', 'success')
+      } catch (err) {
+        console.error(err)
+        showMessage('Fehler beim Erstellen des Backups: ' + String(err), 'error')
+      }
+    }
+
+    const handleImportBackup = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      e.target.value = ''
+      if (!file) return
+      if (!confirm('Restore startet das Überschreiben ALLER Daten. Fortfahren?')) return
+      if (!confirm('Bist du wirklich sicher? Dieser Vorgang ist irreversibel.')) return
+
+      try {
+        const text = await file.text()
+        const data = JSON.parse(text)
+        validateBackup(data)
+        await importBackup(data)
+        window.dispatchEvent(new Event('noexit-settings-changed'))
+        showMessage('Restore erfolgreich abgeschlossen', 'success')
+      } catch (err) {
+        console.error(err)
+        showMessage('Fehler beim Restore: ' + String(err), 'error')
+      }
+    }
+
+    const handleExportCSV = async () => {
+      try {
+        const csv = await exportTransactionsCSV()
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `noexit-kontoauszuege-${new Date().toISOString().split('T')[0]}.csv`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+        showMessage('CSV erfolgreich exportiert', 'success')
+      } catch (err) {
+        console.error(err)
+        showMessage('Fehler beim CSV-Export: ' + String(err), 'error')
+      }
+    }
 
   const handleDangerAction = async (
     label: string,
@@ -264,6 +331,90 @@ function Settings() {
                 />
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Datenverwaltung */}
+      {canExportCsv && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Download className="w-5 h-5" />
+              Datenverwaltung
+            </CardTitle>
+            <CardDescription>
+              Exportiere und sichere deine Daten
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col gap-3">
+              {isAdmin && (
+                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
+                  <div>
+                    <p className="font-medium text-sm">Backup erstellen</p>
+                    <p className="text-xs text-muted-foreground">
+                      Exportiert alle Daten als JSON-Datei
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExportBackup}
+                  >
+                    <FileJson className="w-4 h-4 mr-2" />
+                    Backup (JSON)
+                  </Button>
+                </div>
+              )}
+
+              {isAdmin && (
+                <div className="flex items-center justify-between p-3 rounded-lg bg-destructive/5 border border-destructive/20">
+                  <div>
+                    <p className="font-medium text-sm text-destructive">Backup wiederherstellen</p>
+                    <p className="text-xs text-muted-foreground">
+                      Überschreibt ALLE Daten mit einem JSON-Backup
+                    </p>
+                  </div>
+                  <div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => document.getElementById('restore-backup')?.click()}
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      Restore (JSON)
+                    </Button>
+                    <input
+                      id="restore-backup"
+                      type="file"
+                      accept="application/json"
+                      className="hidden"
+                      onChange={handleImportBackup}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {canExportCsv && (
+                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
+                  <div>
+                    <p className="font-medium text-sm">Kontoauszüge exportieren</p>
+                    <p className="text-xs text-muted-foreground">
+                      Alle Transaktionen als CSV-Datei herunterladen
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExportCSV}
+                  >
+                    <FileSpreadsheet className="w-4 h-4 mr-2" />
+                    CSV Export
+                  </Button>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       )}

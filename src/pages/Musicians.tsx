@@ -19,10 +19,15 @@ import {
   createMusician,
   updateMusician,
   deleteMusician as apiDeleteMusician,
+  createAuthUser,
+  deleteAuthUser,
 } from '@/lib/api-client'
 import type { DbMusician } from '@/lib/database.types'
+import { useAuth } from '@/contexts/AuthContext'
 
 function Musicians() {
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'administrator'
   const [musicians, setMusicians] = useState<DbMusician[]>([])
   const [loading, setLoading] = useState(true)
   const [isOpen, setIsOpen] = useState(false)
@@ -30,6 +35,7 @@ function Musicians() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    password: '',
     balance: '',
     role: 'user' as 'administrator' | 'superuser' | 'user',
   })
@@ -51,7 +57,7 @@ function Musicians() {
 
   const handleAdd = () => {
     setEditingId(null)
-    setFormData({ name: '', email: '', balance: '', role: 'user' })
+    setFormData({ name: '', email: '', password: '', balance: '', role: 'user' })
     setIsOpen(true)
   }
 
@@ -60,6 +66,7 @@ function Musicians() {
     setFormData({
       name: musician.name,
       email: musician.email,
+      password: '',
       balance: musician.balance.toString(),
       role: musician.role,
     })
@@ -69,7 +76,17 @@ function Musicians() {
   const handleDelete = async (id: string) => {
     if (!confirm('Musiker wirklich löschen?')) return
     try {
+      // Find the musician to get user_id for auth deletion
+      const musician = musicians.find((m) => m.id === id)
       await apiDeleteMusician(id)
+      // Also delete the auth user if linked
+      if (musician?.user_id) {
+        try {
+          await deleteAuthUser(musician.user_id)
+        } catch (err) {
+          console.warn('Auth-User konnte nicht gelöscht werden:', err)
+        }
+      }
       setMusicians((prev) => prev.filter((m) => m.id !== id))
     } catch (err) {
       console.error('Musiker löschen fehlgeschlagen:', err)
@@ -79,6 +96,15 @@ function Musicians() {
 
   const handleSave = async () => {
     if (!formData.name || !formData.email) return
+    // Require password for new musicians
+    if (!editingId && !formData.password) {
+      alert('Bitte ein Passwort für den neuen Musiker eingeben.')
+      return
+    }
+    if (!editingId && formData.password.length < 6) {
+      alert('Das Passwort muss mindestens 6 Zeichen lang sein.')
+      return
+    }
 
     try {
       if (editingId) {
@@ -90,20 +116,30 @@ function Musicians() {
         })
         setMusicians((prev) => prev.map((m) => (m.id === editingId ? updated : m)))
       } else {
-        const created = await createMusician({
-          name: formData.name,
-          email: formData.email,
-          balance: parseFloat(formData.balance || '0'),
-          role: formData.role,
-        })
-        setMusicians((prev) => [...prev, created])
+        // 1. Create Supabase Auth user
+        const authUserId = await createAuthUser(formData.email, formData.password)
+        try {
+          // 2. Create musician record linked to auth user
+          const created = await createMusician({
+            name: formData.name,
+            email: formData.email,
+            balance: parseFloat(formData.balance || '0'),
+            role: formData.role,
+            user_id: authUserId,
+          })
+          setMusicians((prev) => [...prev, created])
+        } catch (err) {
+          // Rollback: delete auth user if musician creation fails
+          try { await deleteAuthUser(authUserId) } catch { /* ignore */ }
+          throw err
+        }
       }
 
       setIsOpen(false)
-      setFormData({ name: '', email: '', balance: '', role: 'user' })
-    } catch (err) {
+      setFormData({ name: '', email: '', password: '', balance: '', role: 'user' })
+    } catch (err: any) {
       console.error('Musiker speichern fehlgeschlagen:', err)
-      alert('Musiker konnte nicht gespeichert werden.')
+      alert(err?.message || 'Musiker konnte nicht gespeichert werden.')
     }
   }
 
@@ -130,13 +166,14 @@ function Musicians() {
           <h1 className="text-3xl font-bold">Musiker</h1>
           <p className="text-muted-foreground mt-2">Verwalte Bandmitglieder</p>
         </div>
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={handleAdd}>
-              <Plus className="w-4 h-4 mr-2" />
-              Musiker hinzufügen
-            </Button>
-          </DialogTrigger>
+        {isAdmin && (
+          <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={handleAdd}>
+                <Plus className="w-4 h-4 mr-2" />
+                Musiker hinzufügen
+              </Button>
+            </DialogTrigger>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>
@@ -168,6 +205,21 @@ function Musicians() {
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 />
               </div>
+              {!editingId && (
+                <div className="grid gap-2">
+                  <Label htmlFor="password">Passwort</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Min. 6 Zeichen"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Login-Passwort für den Supabase-Account des Musikers
+                  </p>
+                </div>
+              )}
               <div className="grid gap-2">
                 <Label htmlFor="balance">Anfänglicher Kontostand (€)</Label>
                 <Input
@@ -208,6 +260,7 @@ function Musicians() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       {/* Musicians List */}
@@ -244,6 +297,7 @@ function Musicians() {
                       </div>
                     </div>
                   </div>
+                  {isAdmin && (
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" onClick={() => handleEdit(musician)}>
                       <Edit2 className="w-4 h-4" />
@@ -257,6 +311,7 @@ function Musicians() {
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
