@@ -62,6 +62,37 @@ npm run build
 npm run preview
 ```
 
+## Release
+
+Ein Befehl erledigt Version, Tag, Push und GitHub Release.
+
+```bash
+# Patch/Minor/Major
+npm run release:patch
+npm run release:minor
+npm run release:major
+
+# Beta (Prerelease)
+npm run release:beta
+```
+
+Voraussetzungen:
+- Du bist auf `main`
+- GitHub CLI (`gh`) ist installiert und eingeloggt
+
+## Release Notes
+
+Schreibe neue Punkte immer unter **WORKING**. Beim Release wird **WORKING** umbenannt,
+z.B. `v0.0.5 (04.02.2026)`, und eine neue **WORKING**-Zeile wird oben eingefuegt.
+
+```
+***WORKING***
+- 
+
+v0.0.5 (04.02.2026)
+- Beispiel: Backup/Restore hinzugefuegt
+```
+
 ## Linting & Formatierung
 
 ```bash

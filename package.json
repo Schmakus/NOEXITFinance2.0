@@ -7,7 +7,11 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "release:patch": "npm version patch -m \"chore(release): %s\" && git push --follow-tags && gh release create v$(node -p \"require('./package.json').version\") --generate-notes",
+    "release:minor": "npm version minor -m \"chore(release): %s\" && git push --follow-tags && gh release create v$(node -p \"require('./package.json').version\") --generate-notes",
+    "release:major": "npm version major -m \"chore(release): %s\" && git push --follow-tags && gh release create v$(node -p \"require('./package.json').version\") --generate-notes",
+    "release:beta": "npm version prerelease --preid=beta -m \"chore(release): %s\" && git push --follow-tags && gh release create v$(node -p \"require('./package.json').version\") --prerelease --generate-notes"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.4",
