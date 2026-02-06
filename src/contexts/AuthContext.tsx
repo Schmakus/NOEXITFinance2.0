@@ -50,9 +50,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  const loadProfileWithTimeout = useCallback(
+    async (authUserId: string, email: string, timeoutMs: number = 7000) => {
+      const timeoutPromise = new Promise<void>((_, reject) => {
+        setTimeout(() => reject(new Error('Profil laden Timeout')), timeoutMs)
+      })
+      await Promise.race([loadProfile(authUserId, email), timeoutPromise])
+    },
+    [loadProfile]
+  )
+
   // Listen for auth state changes (Supabase v2.39+ fires INITIAL_SESSION)
   useEffect(() => {
     let isMounted = true
+
+    const initAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession()
+        if (error) {
+          console.error('getSession error:', error)
+        } else if (session?.user) {
+          await loadProfileWithTimeout(session.user.id, session.user.email ?? '')
+        } else {
+          setUser(null)
+        }
+      } catch (err) {
+        console.error('Auth init failed:', err)
+        setUser(null)
+      } finally {
+        if (isMounted) setIsLoading(false)
+      }
+    }
+
+    initAuth()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -66,7 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         // Handle INITIAL_SESSION (page reload), SIGNED_IN (login), TOKEN_REFRESHED
         if (session?.user) {
-          await loadProfile(session.user.id, session.user.email ?? '')
+          await loadProfileWithTimeout(session.user.id, session.user.email ?? '')
         } else {
           setUser(null)
         }
@@ -77,7 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Safety timeout: prevent permanent "Lade..." if no auth event fires
     const timeout = setTimeout(() => {
       if (isMounted) setIsLoading(false)
-    }, 3000)
+    }, 5000)
 
     return () => {
       isMounted = false
