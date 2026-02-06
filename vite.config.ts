@@ -10,6 +10,9 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  preview: {
+    allowedHosts: ['noexit-finance-2-0.onrender.com'],
+  },
   server: {
     port: 5173,
     strictPort: false,
