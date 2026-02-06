@@ -12,22 +12,23 @@ Eine moderne **Finanzmanagement-Anwendung für Musikbands** mit aktuellem Tech-S
 ✅ **Transaktionen** - Finanzielle Aktivitäten tracken  
 ✅ **Tags** - Transaktionen kategorisieren  
 ✅ **Einstellungen** - Benutzerpräferenzen  
+✅ **Backup/Restore** - JSON Export & Restore (Admin)  
+✅ **CSV Export** - Kontoauszuege fuer alle Musiker (Admin/Superuser)  
 
 ## Tech Stack
 
 - **Frontend:** React 19, TypeScript, Vite 7
-- **Styling:** Tailwind CSS 3.4, shadcn/ui
-- **Routing:** React Router v6
+- **Styling:** Tailwind CSS 4, shadcn/ui
+- **Routing:** React Router v7
 - **State Management:** TanStack React Query
-- **Forms:** React Hook Form + Zod Validation
+- **Backend:** Supabase (Auth + Database)
 - **Icons:** Lucide React
-- **Utilities:** Date-fns, Lodash, Axios
 
 ## Installation
 
 ### Voraussetzungen
-- Node.js 25.6.0+
-- npm 11.8.0+
+- Node.js 20+ (LTS empfohlen)
+- npm 10+
 
 ### Setup
 
@@ -90,7 +91,7 @@ src/
 ├── contexts/            # React Contexts
 │   └── AuthContext.tsx  # Authentifizierung
 ├── lib/                 # Utilities & Konfiguration
-│   ├── api-client.ts    # Axios Client
+│   ├── api-client.ts    # Supabase API Client
 │   ├── query-client.ts  # TanStack Query
 │   └── utils.ts         # Utility Functions
 └── App.tsx              # Haupt-App Component
@@ -98,13 +99,7 @@ src/
 
 ## API Integration
 
-The app is configured to connect to a backend API at `http://localhost:3000/api` (configurable via `.env.local`).
-
-Alle API-Requests verwenden einen Bearer Token für Authentifizierung:
-
-```typescript
-Authorization: Bearer <auth_token>
-```
+Die App nutzt Supabase fuer Authentifizierung und Datenbank.
 
 ## UI Components
 
@@ -120,6 +115,26 @@ Ready-to-use shadcn/ui Components:
 - **Hot Module Replacement (HMR):** Änderungen werden live im Browser aktualisiert
 - **TypeScript:** Strikte Typ-Überprüfung für Sicherheit
 - **ESLint:** Code-Qualitätsprüfungen
+
+## Conventional Commits Cheat-Sheet
+
+**Format:** `type(scope): kurze beschreibung`
+
+- `feat:` neue Funktion
+- `fix:` Bugfix
+- `docs:` nur Doku
+- `chore:` Wartung/Build
+- `refactor:` Code-Refactor ohne Feature/Bugfix
+- `perf:` Performance
+- `test:` Tests
+
+**Beispiele**
+
+```
+feat(settings): backup export hinzugefuegt
+fix(auth): lade-screen bei reload behoben
+chore(release): 2.1.0
+```
 
 ## Lizenz
 
