@@ -138,4 +138,4 @@ chore(release): 2.1.0
 
 ## Lizenz
 
-Privat - NOEXIT Band
+Privat - NOEXIT Partyrock
