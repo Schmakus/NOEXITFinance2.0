@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { DatePicker } from '@/components/ui/date-picker'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { supabase } from '@/lib/supabase'
 import { fetchMusicianById, fetchTransactionsWithMusician } from '@/lib/api-client'
 import type { DbMusician, TransactionWithMusician } from '@/lib/database.types'
 import {
@@ -12,7 +11,6 @@ import {
   Banknote,
   FileDown,
   TrendingDown,
-  TrendingUp,
   UserRound,
   CircleDollarSign,
 } from 'lucide-react'
