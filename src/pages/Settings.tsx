@@ -369,16 +369,16 @@ function Settings() {
               )}
 
               {isAdmin && (
-                <div className="flex items-center justify-between p-3 rounded-lg bg-destructive/5 border border-destructive/20">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
                   <div>
-                    <p className="font-medium text-sm text-destructive">Backup wiederherstellen</p>
+                    <p className="font-medium text-sm">Backup wiederherstellen</p>
                     <p className="text-xs text-muted-foreground">
                       Überschreibt ALLE Daten mit einem JSON-Backup
                     </p>
                   </div>
                   <div>
                     <Button
-                      variant="destructive"
+                      variant="outline"
                       size="sm"
                       onClick={() => document.getElementById('restore-backup')?.click()}
                     >

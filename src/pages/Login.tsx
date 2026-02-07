@@ -45,8 +45,8 @@ function Login() {
   return (
     <div className={`flex items-center justify-center min-h-screen bg-gradient-to-br ${
       isDark 
-        ? 'from-slate-900 via-blue-900 to-slate-900' 
-        : 'from-blue-50 via-cyan-50 to-blue-50'
+        ? 'from-slate-900 via-amber-950 to-slate-900' 
+        : 'from-amber-50 via-orange-50 to-amber-50'
     }`}>
       {/* Theme Toggle */}
       <Button
@@ -66,7 +66,7 @@ function Login() {
       <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="space-y-2">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-primary to-blue-600 rounded-lg flex items-center justify-center text-primary-foreground font-bold text-lg">
+            <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
               NE
             </div>
             <div>
@@ -111,7 +111,7 @@ function Login() {
 
             <Button
               type="submit"
-              className="w-full bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-700 transition-all"
+              className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white transition-all"
               disabled={isLoading}
             >
               {isLoading ? 'Wird angemeldet...' : 'Anmelden'}

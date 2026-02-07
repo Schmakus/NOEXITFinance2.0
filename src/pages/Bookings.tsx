@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { DatePicker } from '@/components/ui/date-picker'
 import { Switch } from '@/components/ui/switch'
 import {
   Dialog,
@@ -27,9 +28,12 @@ import {
   deleteTransactionsByBooking,
 } from '@/lib/api-client'
 import { useTags } from '@/contexts/TagsContext'
+import { useAuth } from '@/contexts/AuthContext'
 import type { DbBooking, DbMusician, GroupWithMembers } from '@/lib/database.types'
 
 function Bookings() {
+  const { user } = useAuth()
+  const canManage = user?.role === 'administrator' || user?.role === 'superuser'
   const [bookings, setBookings] = useState<(DbBooking & { group_name?: string })[]>([])
   const [musicians, setMusicians] = useState<DbMusician[]>([])
   const [groups, setGroups] = useState<GroupWithMembers[]>([])
@@ -88,6 +92,7 @@ function Bookings() {
   }
 
   const openAdd = () => {
+    if (!canManage) return
     resetForm()
     setOpen(true)
   }
@@ -121,6 +126,10 @@ function Bookings() {
   }, [form.groupId, groups])
 
   const saveBooking = async () => {
+    if (!canManage) {
+      alert('Keine Berechtigung: Nur Admins/Superuser koennen Buchungen verwalten.')
+      return
+    }
     if (!form.amount || !form.date) return
 
     const amount = parseFloat(form.amount)
@@ -191,7 +200,8 @@ function Bookings() {
       await loadData()
     } catch (err) {
       console.error('Buchung speichern fehlgeschlagen:', err)
-      alert('Buchung konnte nicht gespeichert werden.')
+      const msg = (err as any)?.message || (err as any)?.details || String(err)
+      alert(`Buchung konnte nicht gespeichert werden: ${msg}`)
     }
   }
 
@@ -227,14 +237,15 @@ function Bookings() {
           <h1 className="text-3xl font-bold">Buchungen</h1>
           <p className="text-muted-foreground mt-2">Erfasse einzelne Buchungen (Einnahmen, Ausgaben, Auszahlungen)</p>
         </div>
-        <Dialog open={open} onOpenChange={(v: boolean) => { if (!v) resetForm(); setOpen(v) }}>
-          <DialogTrigger asChild>
-            <Button onClick={openAdd}>
-              <Plus className="w-4 h-4 mr-2" />
-              Buchung hinzufügen
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[640px]">
+        {canManage && (
+          <Dialog open={open} onOpenChange={(v: boolean) => { if (!v) resetForm(); setOpen(v) }}>
+            <DialogTrigger asChild>
+              <Button onClick={openAdd}>
+                <Plus className="w-4 h-4 mr-2" />
+                Buchung hinzufügen
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[640px]">
             <DialogHeader>
               <DialogTitle>{editingId ? 'Buchung bearbeiten' : 'Neue Buchung'}</DialogTitle>
               <DialogDescription>Erfasse eine Ausgabe, Einnahme oder Auszahlung</DialogDescription>
@@ -266,7 +277,7 @@ function Bookings() {
 
               <div className="grid gap-2">
                 <Label>Datum</Label>
-                <Input type="date" value={form.date} onChange={(e) => setForm((s) => ({ ...s, date: e.target.value }))} />
+                <DatePicker value={form.date} onChange={(v) => setForm((s) => ({ ...s, date: v }))} />
               </div>
 
               {form.type !== 'payout' && (
@@ -369,8 +380,9 @@ function Bookings() {
               <Button variant="outline" onClick={() => { setOpen(false); resetForm() }}>Abbrechen</Button>
               <Button onClick={saveBooking}>{editingId ? 'Aktualisieren' : 'Erstellen'}</Button>
             </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4">
@@ -401,14 +413,16 @@ function Bookings() {
                         {b.date ? formatDate(new Date(b.date)) : '-'} • {b.type} • {formatCurrency(b.amount)}
                       </CardDescription>
                     </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => openEdit(b)}>
-                        <Edit2 className="w-4 h-4" />
-                      </Button>
-                      <Button variant="destructive" size="sm" onClick={() => handleDeleteBooking(b.id)}>
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
+                    {canManage && (
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => openEdit(b)}>
+                          <Edit2 className="w-4 h-4" />
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={() => handleDeleteBooking(b.id)}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent>

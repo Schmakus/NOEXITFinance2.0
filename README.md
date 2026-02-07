@@ -82,12 +82,14 @@ Voraussetzungen:
 
 ## Release Notes
 
-Schreibe neue Punkte immer unter **WORKING**. Beim Release wird **WORKING** umbenannt,
-z.B. `v0.0.5 (04.02.2026)`, und eine neue **WORKING**-Zeile wird oben eingefuegt.
-
 ```
 ***WORKING***
-- 
+- (Schmakus) fix Authentification
+- (Schmakus) fix Buchungen
+- (Schmakus) Add archiv for deleted musicians
+- (Schmakus) Design fixes/changes
+- (Schmakus) Edit Layout, add PDF Export und eMail for Kontoauszüge
+- (Schmakus) DatePicker
 
 v0.0.5 (04.02.2026)
 - Beispiel: Backup/Restore hinzugefuegt

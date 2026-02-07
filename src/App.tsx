@@ -11,7 +11,9 @@ import Bookings from '@/pages/Bookings'
 import Transactions from '@/pages/Transactions'
 import Tags from '@/pages/Tags'
 import Settings from '@/pages/Settings'
+import Archive from '@/pages/Archive'
 import Login from '@/pages/Login'
+import Statement from '@/pages/Statement'
 
 function App() {
   const { isAuthenticated, isLoading } = useAuth()
@@ -48,17 +50,21 @@ function App() {
         <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />} />
         
         {isAuthenticated ? (
-          <Route element={<Layout />}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/musicians" element={<Musicians />} />
-            <Route path="/groups" element={<Groups />} />
-            <Route path="/bookings" element={<Bookings />} />
-            <Route path="/concerts" element={<Concerts />} />
-            <Route path="/transactions" element={<Transactions />} />
-            <Route path="/tags" element={<Tags />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Route>
+          <>
+            <Route path="/statement/:musicianId" element={<Statement />} />
+            <Route element={<Layout />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/musicians" element={<Musicians />} />
+              <Route path="/groups" element={<Groups />} />
+              <Route path="/bookings" element={<Bookings />} />
+              <Route path="/concerts" element={<Concerts />} />
+              <Route path="/transactions" element={<Transactions />} />
+              <Route path="/archive" element={<Archive />} />
+              <Route path="/tags" element={<Tags />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Route>
+          </>
         ) : (
           <Route path="*" element={<Navigate to="/login" replace />} />
         )}

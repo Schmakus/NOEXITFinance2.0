@@ -15,6 +15,7 @@ import {
   X,
   Moon,
   Sun,
+  Archive,
 } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
 import { fetchSettings } from '@/lib/api-client'
@@ -22,6 +23,7 @@ import { fetchSettings } from '@/lib/api-client'
 function Layout() {
   const { user, logout } = useAuth()
   const { isDark, toggleTheme } = useTheme()
+  const isAdmin = user?.role === 'administrator'
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [bandName, setBandName] = useState<string>('NO EXIT')
   const [logo, setLogo] = useState<string | null>(null)
@@ -53,14 +55,15 @@ function Layout() {
 
 
   const menuItems = [
-    { icon: BarChart3, label: 'Übersicht', path: '/dashboard' },
-    { icon: Users, label: 'Musiker', path: '/musicians' },
-    { icon: Music, label: 'Gruppen', path: '/groups' },
+    { icon: BarChart3, label: 'Dashboard', path: '/dashboard' },
     { icon: DollarSign, label: 'Buchung', path: '/bookings' },
     { icon: Calendar, label: 'Konzerte', path: '/concerts' },
     { icon: DollarSign, label: 'Transaktionen', path: '/transactions' },
-    { icon: Tag, label: 'Tags', path: '/tags' },
-    { icon: Settings, label: 'Einstellungen', path: '/settings' },
+    { icon: Users, label: 'Musiker', path: '/musicians' },
+    ...(isAdmin ? [{ icon: Music, label: 'Gruppen', path: '/groups' }] : []),
+    ...(isAdmin ? [{ icon: Tag, label: 'Tags', path: '/tags' }] : []),
+    ...(isAdmin ? [{ icon: Settings, label: 'Einstellungen', path: '/settings' }] : []),
+     ...(isAdmin ? [{ icon: Archive, label: 'Archiv', path: '/archive' }] : []),
   ]
 
   return (
@@ -81,7 +84,7 @@ function Layout() {
                 className={`w-10 h-10 rounded-lg object-contain ${isDark ? 'brightness-0 invert' : ''}`}
               />
             ) : (
-              <div className="w-10 h-10 bg-gradient-to-br from-primary to-blue-600 rounded-lg flex items-center justify-center text-primary-foreground font-bold">
+              <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg flex items-center justify-center text-white font-bold">
                 NE
               </div>
             )}

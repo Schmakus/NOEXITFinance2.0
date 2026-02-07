@@ -21,9 +21,13 @@ create table if not exists musicians (
   email text not null unique,
   role text not null default 'user' check (role in ('administrator', 'superuser', 'user')),
   balance numeric(12,2) not null default 0,
+  archived_at timestamptz,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
+
+-- Migration: Falls musicians-Tabelle bereits existiert:
+-- ALTER TABLE musicians ADD COLUMN IF NOT EXISTS archived_at timestamptz;
 
 -- 2. GRUPPEN
 create table if not exists groups (
@@ -97,6 +101,24 @@ create table if not exists transactions (
   created_at timestamptz default now()
 );
 
+-- 7b. TRANSAKTIONEN ARCHIV
+create table if not exists transactions_archive (
+  id uuid primary key default gen_random_uuid(),
+  musician_id uuid references musicians(id) on delete set null,
+  concert_id uuid,
+  booking_id uuid,
+  concert_name text,
+  amount numeric(12,2) not null,
+  date date,
+  type text not null check (type in ('earn', 'expense')),
+  description text,
+  created_at timestamptz,
+  archived_at timestamptz default now()
+);
+
+-- Migration: Falls transactions_archive bereits existiert, stelle sicher dass RLS aktiv ist:
+-- ALTER TABLE transactions_archive ENABLE ROW LEVEL SECURITY;
+
 -- 8. TAGS/STICHWORTE
 create table if not exists tags (
   id uuid primary key default gen_random_uuid(),
@@ -128,6 +150,7 @@ alter table concerts enable row level security;
 alter table concert_expenses enable row level security;
 alter table bookings enable row level security;
 alter table transactions enable row level security;
+alter table transactions_archive enable row level security;
 alter table tags enable row level security;
 alter table app_settings enable row level security;
 
@@ -139,6 +162,7 @@ create policy "Authenticated users can read concerts" on concerts for select to 
 create policy "Authenticated users can read concert_expenses" on concert_expenses for select to authenticated using (true);
 create policy "Authenticated users can read bookings" on bookings for select to authenticated using (true);
 create policy "Authenticated users can read transactions" on transactions for select to authenticated using (true);
+create policy "Authenticated users can read transactions_archive" on transactions_archive for select to authenticated using (true);
 create policy "Authenticated users can read tags" on tags for select to authenticated using (true);
 create policy "Authenticated users can read app_settings" on app_settings for select to authenticated using (true);
 
@@ -167,6 +191,7 @@ create policy "Admins can manage concert_expenses" on concert_expenses for all t
 
 create policy "Admins can manage bookings" on bookings for all to authenticated using (is_admin_or_superuser());
 create policy "Admins can manage transactions" on transactions for all to authenticated using (is_admin_or_superuser());
+create policy "Admins can manage transactions_archive" on transactions_archive for all to authenticated using (is_admin_or_superuser());
 
 create policy "Admins can manage tags" on tags for all to authenticated using (is_admin_or_superuser());
 create policy "Admins can manage app_settings" on app_settings for all to authenticated using (is_admin_or_superuser());

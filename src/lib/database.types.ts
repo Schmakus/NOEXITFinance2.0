@@ -9,6 +9,7 @@ export interface DbMusician {
   email: string
   role: 'administrator' | 'superuser' | 'user'
   balance: number
+  archived_at: string | null
   created_at: string
   updated_at: string
 }
@@ -75,6 +76,20 @@ export interface DbTransaction {
   created_at: string
 }
 
+export interface DbTransactionArchive {
+  id: string
+  musician_id: string | null
+  concert_id: string | null
+  booking_id: string | null
+  concert_name: string | null
+  amount: number
+  date: string | null
+  type: 'earn' | 'expense'
+  description: string | null
+  created_at: string | null
+  archived_at: string
+}
+
 export interface DbTag {
   id: string
   name: string
@@ -109,4 +124,10 @@ export interface BookingWithDetails extends DbBooking {
 
 export interface TransactionWithMusician extends DbTransaction {
   musician_name?: string
+  booking_type?: 'expense' | 'income' | 'payout' | null
+}
+
+export interface TransactionArchiveWithMusician extends DbTransactionArchive {
+  musician_name?: string
+  booking_type?: 'expense' | 'income' | 'payout' | null
 }

@@ -9,10 +9,12 @@ import type {
   DbConcertExpense,
   DbBooking,
   DbTransaction,
+  DbTransactionArchive,
   DbTag,
   DbAppSetting,
   GroupWithMembers,
   ConcertWithExpenses,
+  TransactionArchiveWithMusician,
 } from './database.types'
 
 // ============================================
@@ -44,6 +46,26 @@ export async function fetchMusicians(): Promise<DbMusician[]> {
   const { data, error } = await supabase
     .from('musicians')
     .select('*')
+    .is('archived_at', null)
+    .order('name')
+  if (error) throw error
+  return (data ?? []).map((m: any) => ({ ...m, balance: Number(m.balance) }))
+}
+
+export async function fetchAllMusicians(): Promise<DbMusician[]> {
+  const { data, error } = await supabase
+    .from('musicians')
+    .select('*')
+    .order('name')
+  if (error) throw error
+  return (data ?? []).map((m: any) => ({ ...m, balance: Number(m.balance) }))
+}
+
+export async function fetchArchivedMusicians(): Promise<DbMusician[]> {
+  const { data, error } = await supabase
+    .from('musicians')
+    .select('*')
+    .not('archived_at', 'is', null)
     .order('name')
   if (error) throw error
   return (data ?? []).map((m: any) => ({ ...m, balance: Number(m.balance) }))
@@ -54,6 +76,17 @@ export async function fetchMusicianByUserId(userId: string): Promise<DbMusician 
     .from('musicians')
     .select('*')
     .eq('user_id', userId)
+    .is('archived_at', null)
+    .maybeSingle()
+  if (error) throw error
+  return data ? { ...data, balance: Number(data.balance) } : null
+}
+
+export async function fetchMusicianById(id: string): Promise<DbMusician | null> {
+  const { data, error } = await supabase
+    .from('musicians')
+    .select('*')
+    .eq('id', id)
     .maybeSingle()
   if (error) throw error
   return data ? { ...data, balance: Number(data.balance) } : null
@@ -104,6 +137,85 @@ export async function updateMusician(
 export async function deleteMusician(id: string): Promise<void> {
   const { error } = await supabase.from('musicians').delete().eq('id', id)
   if (error) throw error
+}
+
+export async function archiveMusician(id: string): Promise<void> {
+  const { data: musician, error: mErr } = await supabase
+    .from('musicians')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle()
+  if (mErr) throw mErr
+  if (!musician) throw new Error('Musiker nicht gefunden')
+
+  const balance = Number(musician.balance)
+  if (Math.abs(balance) > 0.01) {
+    throw new Error('Musiker kann nur archiviert werden, wenn der Kontostand 0,00€ ist')
+  }
+
+  const { data: transactions, error: tErr } = await supabase
+    .from('transactions')
+    .select('*')
+    .eq('musician_id', id)
+  if (tErr) throw tErr
+
+  if ((transactions ?? []).length > 0) {
+    const archiveRows = (transactions ?? []).map((t: any) => ({
+      ...t,
+      archived_at: new Date().toISOString(),
+    }))
+    const { error: aErr } = await supabase.from('transactions_archive').insert(archiveRows)
+    if (aErr) throw aErr
+
+    const { error: dErr } = await supabase
+      .from('transactions')
+      .delete()
+      .eq('musician_id', id)
+    if (dErr) throw dErr
+  }
+
+  const { error: uErr } = await supabase
+    .from('musicians')
+    .update({ archived_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq('id', id)
+  if (uErr) throw uErr
+}
+
+export async function restoreMusician(id: string): Promise<void> {
+  const { data: musician, error: mErr } = await supabase
+    .from('musicians')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle()
+  if (mErr) throw mErr
+  if (!musician) throw new Error('Musiker nicht gefunden')
+
+  const { data: archivedTx, error: tErr } = await supabase
+    .from('transactions_archive')
+    .select('*')
+    .eq('musician_id', id)
+  if (tErr) throw tErr
+
+  if ((archivedTx ?? []).length > 0) {
+    const restoreRows = (archivedTx ?? []).map((t: any) => {
+      const { archived_at, ...rest } = t
+      return rest
+    })
+    const { error: iErr } = await supabase.from('transactions').insert(restoreRows)
+    if (iErr) throw iErr
+
+    const { error: dErr } = await supabase
+      .from('transactions_archive')
+      .delete()
+      .eq('musician_id', id)
+    if (dErr) throw dErr
+  }
+
+  const { error: uErr } = await supabase
+    .from('musicians')
+    .update({ archived_at: null, updated_at: new Date().toISOString() })
+    .eq('id', id)
+  if (uErr) throw uErr
 }
 
 // ============================================
@@ -454,6 +566,22 @@ export async function deleteBooking(id: string): Promise<void> {
 // TRANSAKTIONEN
 // ============================================
 
+async function fetchBookingTypesByIds(
+  bookingIds: string[]
+): Promise<Record<string, DbBooking['type']>> {
+  const uniqueIds = Array.from(new Set(bookingIds.filter(Boolean)))
+  if (uniqueIds.length === 0) return {}
+  const { data, error } = await supabase
+    .from('bookings')
+    .select('id, type')
+    .in('id', uniqueIds)
+  if (error) throw error
+  return (data ?? []).reduce((acc: Record<string, DbBooking['type']>, b: any) => {
+    if (b?.id) acc[b.id] = b.type
+    return acc
+  }, {})
+}
+
 export async function fetchTransactions(): Promise<DbTransaction[]> {
   const { data, error } = await supabase
     .from('transactions')
@@ -466,13 +594,103 @@ export async function fetchTransactions(): Promise<DbTransaction[]> {
 export async function fetchTransactionsWithMusician() {
   const { data, error } = await supabase
     .from('transactions')
-    .select('*, musicians(name)')
+    .select('*, musicians(name), bookings(type)')
+    .order('date', { ascending: false })
+  if (error) {
+    const { data: fallbackData, error: fallbackError } = await supabase
+      .from('transactions')
+      .select('*, musicians(name)')
+      .order('date', { ascending: false })
+    if (fallbackError) throw fallbackError
+    const rows = (fallbackData ?? []).map((t: any) => ({
+      ...t,
+      amount: Number(t.amount),
+      musician_name: t.musicians?.name ?? 'Unbekannt',
+      booking_type: null,
+    }))
+    const missingIds = rows
+      .filter((t: any) => t.booking_id && !t.booking_type)
+      .map((t: any) => t.booking_id as string)
+    if (missingIds.length === 0) return rows
+    const bookingTypeById = await fetchBookingTypesByIds(missingIds)
+    return rows.map((t: any) => ({
+      ...t,
+      booking_type: t.booking_type ?? bookingTypeById[t.booking_id] ?? null,
+    }))
+  }
+  const rows = (data ?? []).map((t: any) => ({
+    ...t,
+    amount: Number(t.amount),
+    musician_name: t.musicians?.name ?? 'Unbekannt',
+    booking_type: t.bookings?.type ?? null,
+  }))
+  const missingIds = rows
+    .filter((t: any) => t.booking_id && !t.booking_type)
+    .map((t: any) => t.booking_id as string)
+  if (missingIds.length === 0) return rows
+  const bookingTypeById = await fetchBookingTypesByIds(missingIds)
+  return rows.map((t: any) => ({
+    ...t,
+    booking_type: t.booking_type ?? bookingTypeById[t.booking_id] ?? null,
+  }))
+}
+
+export async function fetchArchivedTransactions(): Promise<DbTransactionArchive[]> {
+  const { data, error } = await supabase
+    .from('transactions_archive')
+    .select('*')
     .order('date', { ascending: false })
   if (error) throw error
   return (data ?? []).map((t: any) => ({
     ...t,
     amount: Number(t.amount),
+    created_at: t.created_at ?? null,
+  }))
+}
+
+export async function fetchArchivedTransactionsWithMusician(): Promise<TransactionArchiveWithMusician[]> {
+  const { data, error } = await supabase
+    .from('transactions_archive')
+    .select('*, musicians(name), bookings(type)')
+    .order('date', { ascending: false })
+  if (error) {
+    const { data: fallbackData, error: fallbackError } = await supabase
+      .from('transactions_archive')
+      .select('*, musicians(name)')
+      .order('date', { ascending: false })
+    if (fallbackError) throw fallbackError
+    const rows = (fallbackData ?? []).map((t: any) => ({
+      ...t,
+      amount: Number(t.amount),
+      created_at: t.created_at ?? null,
+      musician_name: t.musicians?.name ?? 'Unbekannt',
+      booking_type: null,
+    }))
+    const missingIds = rows
+      .filter((t: any) => t.booking_id && !t.booking_type)
+      .map((t: any) => t.booking_id as string)
+    if (missingIds.length === 0) return rows
+    const bookingTypeById = await fetchBookingTypesByIds(missingIds)
+    return rows.map((t: any) => ({
+      ...t,
+      booking_type: t.booking_type ?? bookingTypeById[t.booking_id] ?? null,
+    }))
+  }
+  const rows = (data ?? []).map((t: any) => ({
+    ...t,
+    amount: Number(t.amount),
+    created_at: t.created_at ?? null,
     musician_name: t.musicians?.name ?? 'Unbekannt',
+    booking_type: t.bookings?.type ?? null,
+  }))
+  const missingIds = rows
+    .filter((t: any) => t.booking_id && !t.booking_type)
+    .map((t: any) => t.booking_id as string)
+  if (missingIds.length === 0) return rows
+  const bookingTypeById = await fetchBookingTypesByIds(missingIds)
+  return rows.map((t: any) => ({
+    ...t,
+    booking_type: t.booking_type ?? bookingTypeById[t.booking_id] ?? null,
   }))
 }
 
@@ -696,6 +914,12 @@ export async function deleteAllTransactions(): Promise<void> {
     .delete()
     .neq('id', '00000000-0000-0000-0000-000000000000')
   if (error) throw error
+
+  const { error: aErr } = await supabase
+    .from('transactions_archive')
+    .delete()
+    .neq('id', '00000000-0000-0000-0000-000000000000')
+  if (aErr) throw aErr
 }
 
 export async function deleteAllData(): Promise<void> {
@@ -729,6 +953,7 @@ export async function deleteAllData(): Promise<void> {
     concerts: ConcertWithExpenses[]
     bookings: DbBooking[]
     transactions: DbTransaction[]
+    transactions_archive: DbTransactionArchive[]
     tags: DbTag[]
     settings: Record<string, string>
   }
@@ -749,18 +974,20 @@ export async function deleteAllData(): Promise<void> {
     requireArray('concerts')
     requireArray('bookings')
     requireArray('transactions')
+    requireArray('transactions_archive')
     requireArray('tags')
 
     if (!isObj(data.settings)) throw new Error('Backup-Feld fehlt: settings')
   }
 
   export async function exportBackup(): Promise<BackupData> {
-    const [musicians, groups, concerts, bookings, transactions, tags, settings] = await Promise.all([
-      fetchMusicians(),
+    const [musicians, groups, concerts, bookings, transactions, transactionsArchive, tags, settings] = await Promise.all([
+      fetchAllMusicians(),
       fetchGroupsWithMembers(),
       fetchConcerts(),
       fetchBookings(),
       fetchTransactions(),
+      fetchArchivedTransactions(),
       fetchTags(),
       fetchSettings(),
     ])
@@ -773,6 +1000,7 @@ export async function deleteAllData(): Promise<void> {
       concerts,
       bookings,
       transactions,
+      transactions_archive: transactionsArchive,
       tags,
       settings,
     }
@@ -831,6 +1059,13 @@ export async function deleteAllData(): Promise<void> {
       if (error) throw error
     }
 
+    if (data.transactions_archive?.length) {
+      const { error } = await supabase
+        .from('transactions_archive')
+        .insert(data.transactions_archive)
+      if (error) throw error
+    }
+
     if (data.tags?.length) {
       const { error } = await supabase.from('tags').insert(data.tags)
       if (error) throw error
@@ -850,6 +1085,9 @@ export async function deleteAllData(): Promise<void> {
 
     const { error: tErr } = await supabase.from('transactions').delete().neq('id', emptyUuid)
     if (tErr) throw tErr
+
+    const { error: taErr } = await supabase.from('transactions_archive').delete().neq('id', emptyUuid)
+    if (taErr) throw taErr
 
     const { error: ceErr } = await supabase.from('concert_expenses').delete().neq('id', emptyUuid)
     if (ceErr) throw ceErr
@@ -892,6 +1130,24 @@ export async function deleteAllData(): Promise<void> {
       const description = `"${(t.description || '').replace(/"/g, '""')}"` // CSV escape
       const concert = `"${(t.concert_name || '').replace(/"/g, '""')}"`
       return `${date},${musician},${type},${amount},${description},${concert}`
+    })
+
+    return header + rows.join('\n')
+  }
+
+  export async function exportArchivedTransactionsCSV(): Promise<string> {
+    const transactions = await fetchArchivedTransactionsWithMusician()
+
+    const header = 'Datum,Musiker,Typ,Betrag,Beschreibung,Konzert,Archiviert\n'
+    const rows = transactions.map((t) => {
+      const date = t.date || ''
+      const musician = t.musician_name
+      const type = t.type === 'earn' ? 'Einnahme' : 'Ausgabe'
+      const amount = t.amount.toFixed(2)
+      const description = `"${(t.description || '').replace(/"/g, '""')}"`
+      const concert = `"${(t.concert_name || '').replace(/"/g, '""')}"`
+      const archived = t.archived_at ? new Date(t.archived_at).toISOString().split('T')[0] : ''
+      return `${date},${musician},${type},${amount},${description},${concert},${archived}`
     })
 
     return header + rows.join('\n')

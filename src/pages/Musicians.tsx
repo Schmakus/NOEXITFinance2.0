@@ -12,13 +12,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Plus, Edit2, Trash2, Mail, User, Users } from 'lucide-react'
+import { Plus, Edit2, Trash2, Mail, User, Users, RotateCcw } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import {
   fetchMusicians,
+  fetchArchivedMusicians,
   createMusician,
   updateMusician,
-  deleteMusician as apiDeleteMusician,
+  archiveMusician,
+  restoreMusician,
   createAuthUser,
   deleteAuthUser,
 } from '@/lib/api-client'
@@ -30,6 +32,7 @@ function Musicians() {
   const isAdmin = user?.role === 'administrator'
   const [musicians, setMusicians] = useState<DbMusician[]>([])
   const [loading, setLoading] = useState(true)
+  const [showArchived, setShowArchived] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [formData, setFormData] = useState({
@@ -42,7 +45,7 @@ function Musicians() {
 
   const loadMusicians = async () => {
     try {
-      const data = await fetchMusicians()
+      const data = showArchived ? await fetchArchivedMusicians() : await fetchMusicians()
       setMusicians(data)
     } catch (err) {
       console.error('Musiker laden fehlgeschlagen:', err)
@@ -52,8 +55,9 @@ function Musicians() {
   }
 
   useEffect(() => {
+    setLoading(true)
     loadMusicians()
-  }, [])
+  }, [showArchived])
 
   const handleAdd = () => {
     setEditingId(null)
@@ -74,23 +78,30 @@ function Musicians() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Musiker wirklich löschen?')) return
+    const musician = musicians.find((m) => m.id === id)
+    if (!musician) return
+    if (Math.abs(musician.balance) > 0.01) {
+      alert('Musiker kann nur archiviert werden, wenn der Kontostand 0,00€ ist.')
+      return
+    }
+    if (!confirm('Musiker ins Archiv verschieben?')) return
     try {
-      // Find the musician to get user_id for auth deletion
-      const musician = musicians.find((m) => m.id === id)
-      await apiDeleteMusician(id)
-      // Also delete the auth user if linked
-      if (musician?.user_id) {
-        try {
-          await deleteAuthUser(musician.user_id)
-        } catch (err) {
-          console.warn('Auth-User konnte nicht gelöscht werden:', err)
-        }
-      }
+      await archiveMusician(id)
       setMusicians((prev) => prev.filter((m) => m.id !== id))
     } catch (err) {
       console.error('Musiker löschen fehlgeschlagen:', err)
-      alert('Musiker konnte nicht gelöscht werden.')
+      alert(err instanceof Error ? err.message : 'Musiker konnte nicht archiviert werden.')
+    }
+  }
+
+  const handleRestore = async (id: string) => {
+    if (!confirm('Musiker aus dem Archiv wiederherstellen?')) return
+    try {
+      await restoreMusician(id)
+      setMusicians((prev) => prev.filter((m) => m.id !== id))
+    } catch (err) {
+      console.error('Musiker wiederherstellen fehlgeschlagen:', err)
+      alert(err instanceof Error ? err.message : 'Musiker konnte nicht wiederhergestellt werden.')
     }
   }
 
@@ -166,15 +177,30 @@ function Musicians() {
           <h1 className="text-3xl font-bold">Musiker</h1>
           <p className="text-muted-foreground mt-2">Verwalte Bandmitglieder</p>
         </div>
-        {isAdmin && (
-          <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={handleAdd}>
-                <Plus className="w-4 h-4 mr-2" />
-                Musiker hinzufügen
-              </Button>
-            </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
+        <div className="flex items-center gap-2">
+          <Button
+            variant={showArchived ? 'outline' : 'secondary'}
+            size="sm"
+            onClick={() => setShowArchived(false)}
+          >
+            Aktiv
+          </Button>
+          <Button
+            variant={showArchived ? 'secondary' : 'outline'}
+            size="sm"
+            onClick={() => setShowArchived(true)}
+          >
+            Archiv
+          </Button>
+          {isAdmin && !showArchived && (
+            <Dialog open={isOpen} onOpenChange={setIsOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={handleAdd}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Musiker hinzufuegen
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>
                 {editingId ? 'Musiker bearbeiten' : 'Neuen Musiker hinzufügen'}
@@ -258,9 +284,10 @@ function Musicians() {
                 {editingId ? 'Aktualisieren' : 'Hinzufügen'}
               </Button>
             </DialogFooter>
-          </DialogContent>
-        </Dialog>
-        )}
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
       </div>
 
       {/* Musicians List */}
@@ -270,7 +297,9 @@ function Musicians() {
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Users className="w-12 h-12 text-muted-foreground mb-4" />
               <p className="text-muted-foreground text-center">
-                Noch keine Musiker hinzugefügt. Klick auf "Musiker hinzufügen" um zu beginnen.
+                {showArchived
+                  ? 'Keine archivierten Musiker vorhanden.'
+                  : 'Noch keine Musiker hinzugefuegt. Klick auf "Musiker hinzufuegen" um zu beginnen.'}
               </p>
             </CardContent>
           </Card>
@@ -293,24 +322,36 @@ function Musicians() {
                       </div>
                       <div className="flex items-center gap-2">
                         <User className="w-4 h-4" />
-                        Balance: <span className="font-semibold text-foreground">{formatCurrency(musician.balance)}</span>
+                        Init-Wert: <span className="font-semibold text-foreground">{formatCurrency(musician.balance)}</span>
                       </div>
                     </div>
                   </div>
                   {isAdmin && (
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => handleEdit(musician)}>
-                      <Edit2 className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-destructive hover:text-destructive"
-                      onClick={() => handleDelete(musician.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
+                    <div className="flex gap-2">
+                      {!showArchived ? (
+                        <>
+                          <Button variant="outline" size="sm" onClick={() => handleEdit(musician)}>
+                            <Edit2 className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => handleDelete(musician.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleRestore(musician.id)}
+                        >
+                          <RotateCcw className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
                   )}
                 </div>
               </CardContent>
@@ -318,38 +359,6 @@ function Musicians() {
           ))
         )}
       </div>
-
-      {/* Summary Stats */}
-      {musicians.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Band-Übersicht</CardTitle>
-            <CardDescription>Übersicht deiner Band</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Gesamtmitglieder</p>
-                <p className="text-2xl font-bold">{musicians.length}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Gesamtkontostand</p>
-                <p className="text-2xl font-bold">
-                  {formatCurrency(musicians.reduce((sum, m) => sum + m.balance, 0))}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Durchschn. Kontostand</p>
-                <p className="text-2xl font-bold">
-                  {formatCurrency(
-                    musicians.reduce((sum, m) => sum + m.balance, 0) / musicians.length
-                  )}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   )
 }
