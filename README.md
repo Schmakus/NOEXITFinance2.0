@@ -83,7 +83,7 @@ Voraussetzungen:
 ## Release Notes
 
 ```
-***WORKING***
+v1.2.1 (08.02.2026)
 
 v1.2.0 (08.02.2026)
 - (Schmakus) fix Authentification
