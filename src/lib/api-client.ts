@@ -566,22 +566,6 @@ export async function deleteBooking(id: string): Promise<void> {
 // TRANSAKTIONEN
 // ============================================
 
-async function fetchBookingTypesByIds(
-  bookingIds: string[]
-): Promise<Record<string, DbBooking['type']>> {
-  const uniqueIds = Array.from(new Set(bookingIds.filter(Boolean)))
-  if (uniqueIds.length === 0) return {}
-  const { data, error } = await supabase
-    .from('bookings')
-    .select('id, type')
-    .in('id', uniqueIds)
-  if (error) throw error
-  return (data ?? []).reduce((acc: Record<string, DbBooking['type']>, b: any) => {
-    if (b?.id) acc[b.id] = b.type
-    return acc
-  }, {})
-}
-
 export async function fetchTransactions(): Promise<DbTransaction[]> {
   const { data, error } = await supabase
     .from('transactions')
@@ -596,42 +580,12 @@ export async function fetchTransactionsWithMusician() {
     .from('transactions')
     .select('*, musicians(name), bookings(type)')
     .order('date', { ascending: false })
-  if (error) {
-    const { data: fallbackData, error: fallbackError } = await supabase
-      .from('transactions')
-      .select('*, musicians(name)')
-      .order('date', { ascending: false })
-    if (fallbackError) throw fallbackError
-    const rows = (fallbackData ?? []).map((t: any) => ({
-      ...t,
-      amount: Number(t.amount),
-      musician_name: t.musicians?.name ?? 'Unbekannt',
-      booking_type: null,
-    }))
-    const missingIds = rows
-      .filter((t: any) => t.booking_id && !t.booking_type)
-      .map((t: any) => t.booking_id as string)
-    if (missingIds.length === 0) return rows
-    const bookingTypeById = await fetchBookingTypesByIds(missingIds)
-    return rows.map((t: any) => ({
-      ...t,
-      booking_type: t.booking_type ?? bookingTypeById[t.booking_id] ?? null,
-    }))
-  }
-  const rows = (data ?? []).map((t: any) => ({
+  if (error) throw error
+  return (data ?? []).map((t: any) => ({
     ...t,
     amount: Number(t.amount),
     musician_name: t.musicians?.name ?? 'Unbekannt',
     booking_type: t.bookings?.type ?? null,
-  }))
-  const missingIds = rows
-    .filter((t: any) => t.booking_id && !t.booking_type)
-    .map((t: any) => t.booking_id as string)
-  if (missingIds.length === 0) return rows
-  const bookingTypeById = await fetchBookingTypesByIds(missingIds)
-  return rows.map((t: any) => ({
-    ...t,
-    booking_type: t.booking_type ?? bookingTypeById[t.booking_id] ?? null,
   }))
 }
 
@@ -653,44 +607,13 @@ export async function fetchArchivedTransactionsWithMusician(): Promise<Transacti
     .from('transactions_archive')
     .select('*, musicians(name), bookings(type)')
     .order('date', { ascending: false })
-  if (error) {
-    const { data: fallbackData, error: fallbackError } = await supabase
-      .from('transactions_archive')
-      .select('*, musicians(name)')
-      .order('date', { ascending: false })
-    if (fallbackError) throw fallbackError
-    const rows = (fallbackData ?? []).map((t: any) => ({
-      ...t,
-      amount: Number(t.amount),
-      created_at: t.created_at ?? null,
-      musician_name: t.musicians?.name ?? 'Unbekannt',
-      booking_type: null,
-    }))
-    const missingIds = rows
-      .filter((t: any) => t.booking_id && !t.booking_type)
-      .map((t: any) => t.booking_id as string)
-    if (missingIds.length === 0) return rows
-    const bookingTypeById = await fetchBookingTypesByIds(missingIds)
-    return rows.map((t: any) => ({
-      ...t,
-      booking_type: t.booking_type ?? bookingTypeById[t.booking_id] ?? null,
-    }))
-  }
-  const rows = (data ?? []).map((t: any) => ({
+  if (error) throw error
+  return (data ?? []).map((t: any) => ({
     ...t,
     amount: Number(t.amount),
     created_at: t.created_at ?? null,
     musician_name: t.musicians?.name ?? 'Unbekannt',
     booking_type: t.bookings?.type ?? null,
-  }))
-  const missingIds = rows
-    .filter((t: any) => t.booking_id && !t.booking_type)
-    .map((t: any) => t.booking_id as string)
-  if (missingIds.length === 0) return rows
-  const bookingTypeById = await fetchBookingTypesByIds(missingIds)
-  return rows.map((t: any) => ({
-    ...t,
-    booking_type: t.booking_type ?? bookingTypeById[t.booking_id] ?? null,
   }))
 }
 

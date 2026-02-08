@@ -15,6 +15,10 @@ export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '')
 // Admin client for user management (uses service role key, bypasses RLS)
 export const supabaseAdmin = supabaseServiceRoleKey
   ? createClient(supabaseUrl || '', supabaseServiceRoleKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        storageKey: 'sb-admin-auth-token',
+      },
     })
   : null

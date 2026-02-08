@@ -63,26 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Listen for auth state changes (Supabase v2.39+ fires INITIAL_SESSION)
   useEffect(() => {
     let isMounted = true
-
-    const initAuth = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession()
-        if (error) {
-          console.error('getSession error:', error)
-        } else if (session?.user) {
-          await loadProfileWithTimeout(session.user.id, session.user.email ?? '')
-        } else {
-          setUser(null)
-        }
-      } catch (err) {
-        console.error('Auth init failed:', err)
-        setUser(null)
-      } finally {
-        if (isMounted) setIsLoading(false)
-      }
-    }
-
-    initAuth()
+    let profileLoaded = false
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -91,12 +72,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (event === 'SIGNED_OUT') {
           setUser(null)
           setIsLoading(false)
+          profileLoaded = false
           return
         }
 
         // Handle INITIAL_SESSION (page reload), SIGNED_IN (login), TOKEN_REFRESHED
         if (session?.user) {
-          await loadProfileWithTimeout(session.user.id, session.user.email ?? '')
+          // Prevent double profile loading on page load
+          if (event === 'TOKEN_REFRESHED' && profileLoaded) return
+
+          try {
+            await loadProfileWithTimeout(session.user.id, session.user.email ?? '')
+            profileLoaded = true
+          } catch (err) {
+            console.error('Profil laden fehlgeschlagen:', err)
+            setUser(null)
+          }
         } else {
           setUser(null)
         }
@@ -107,14 +98,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Safety timeout: prevent permanent "Lade..." if no auth event fires
     const timeout = setTimeout(() => {
       if (isMounted) setIsLoading(false)
-    }, 5000)
+    }, 10000)
 
     return () => {
       isMounted = false
       subscription.unsubscribe()
       clearTimeout(timeout)
     }
-  }, [loadProfile])
+  }, [loadProfileWithTimeout])
 
   const login = useCallback(async (email: string, password: string) => {
     setIsLoading(true)
