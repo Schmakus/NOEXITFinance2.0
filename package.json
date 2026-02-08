@@ -9,10 +9,10 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "version": "bash scripts/update-readme-version.sh",
-    "release:patch": "npm version patch -m \"chore(release): %s\" && git push --follow-tags && gh release create v$(node -p \"require('./package.json').version\") --generate-notes",
-    "release:minor": "npm version minor -m \"chore(release): %s\" && git push --follow-tags && gh release create v$(node -p \"require('./package.json').version\") --generate-notes",
-    "release:major": "npm version major -m \"chore(release): %s\" && git push --follow-tags && gh release create v$(node -p \"require('./package.json').version\") --generate-notes",
-    "release:beta": "npm version prerelease --preid=beta -m \"chore(release): %s\" && git push --follow-tags && gh release create v$(node -p \"require('./package.json').version\") --prerelease --generate-notes"
+    "release:patch": "git add -A && git diff --cached --quiet || git commit -m \"chore: pre-release changes\" && npm version patch -m \"chore(release): %s\" && git push --follow-tags && gh release create v$(node -p \"require('./package.json').version\") --generate-notes",
+    "release:minor": "git add -A && git diff --cached --quiet || git commit -m \"chore: pre-release changes\" && npm version minor -m \"chore(release): %s\" && git push --follow-tags && gh release create v$(node -p \"require('./package.json').version\") --generate-notes",
+    "release:major": "git add -A && git diff --cached --quiet || git commit -m \"chore: pre-release changes\" && npm version major -m \"chore(release): %s\" && git push --follow-tags && gh release create v$(node -p \"require('./package.json').version\") --generate-notes",
+    "release:beta": "git add -A && git diff --cached --quiet || git commit -m \"chore: pre-release changes\" && npm version prerelease --preid=beta -m \"chore(release): %s\" && git push --follow-tags && gh release create v$(node -p \"require('./package.json').version\") --prerelease --generate-notes"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.4",
