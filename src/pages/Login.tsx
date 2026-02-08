@@ -1,21 +1,28 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { useTheme } from '@/contexts/ThemeContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Moon, Sun } from 'lucide-react'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { fetchPublicSettings } from '@/lib/api-client'
 
 function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const [logo, setLogo] = useState<string | null>(null)
+  const [bandName, setBandName] = useState('NO EXIT')
   const { login } = useAuth()
-  const { isDark, toggleTheme } = useTheme()
-  const navigate = useNavigate()
+
+  useEffect(() => {
+    fetchPublicSettings()
+      .then(({ logo, bandname }) => {
+        setLogo(logo)
+        setBandName(bandname)
+      })
+      .catch(() => {})
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -28,11 +35,14 @@ function Login() {
 
     try {
       await login(email, password)
-      navigate('/dashboard')
+      // login() now loads the profile directly — isAuthenticated will be true
+      // App.tsx will redirect to /dashboard automatically
     } catch (err: any) {
       const msg = err?.message || ''
       if (msg.includes('Invalid login credentials')) {
         setError('Ungültige Anmeldedaten. Bitte überprüfe E-Mail und Passwort.')
+      } else if (msg.includes('Kein Musiker-Profil')) {
+        setError(msg)
       } else {
         setError('Anmeldung fehlgeschlagen. Bitte versuche es erneut.')
       }
@@ -43,35 +53,24 @@ function Login() {
   }
 
   return (
-    <div className={`flex items-center justify-center min-h-screen bg-gradient-to-br ${
-      isDark 
-        ? 'from-slate-900 via-amber-950 to-slate-900' 
-        : 'from-amber-50 via-orange-50 to-amber-50'
-    }`}>
-      {/* Theme Toggle */}
-      <Button
-        variant="outline"
-        size="icon"
-        onClick={toggleTheme}
-        className="absolute top-6 right-6"
-        title={isDark ? 'Hell' : 'Dunkel'}
-      >
-        {isDark ? (
-          <Sun className="w-5 h-5" />
-        ) : (
-          <Moon className="w-5 h-5" />
-        )}
-      </Button>
-
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 via-amber-950 to-slate-900">
       <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="space-y-2">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
-              NE
-            </div>
+            {logo ? (
+              <img
+                src={logo}
+                alt="Logo"
+                className="w-12 h-12 rounded-lg object-contain brightness-0 invert"
+              />
+            ) : (
+              <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
+                NE
+              </div>
+            )}
             <div>
-              <CardTitle className="text-xl">NOEXIT Finance</CardTitle>
-              <CardDescription className="text-xs">Finanzverwaltung</CardDescription>
+              <h1 className="text-xl font-bold">{bandName}</h1>
+              <p className="text-xs text-muted-foreground">Finanzverwaltung</p>
             </div>
           </div>
         </CardHeader>

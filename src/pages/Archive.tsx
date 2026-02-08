@@ -11,6 +11,7 @@ import {
 } from '@/lib/api-client'
 import type { DbMusician, TransactionArchiveWithMusician } from '@/lib/database.types'
 import { useAuth } from '@/contexts/AuthContext'
+import { Spinner } from '@/components/ui/spinner'
 
 const isPayout = (t: TransactionArchiveWithMusician) =>
   t.booking_type === 'payout' ||
@@ -89,11 +90,7 @@ function ArchivePage() {
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <p className="text-muted-foreground">Archiv wird geladen...</p>
-      </div>
-    )
+    return <Spinner text="Archiv wird geladen..." />
   }
 
   const transactionsByMusician = transactions.reduce((acc, t) => {
@@ -106,13 +103,13 @@ function ArchivePage() {
   return (
     <div className="space-y-8">
       <div>
-        <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              <Archive className="w-6 h-6" />
+            <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
+              <Archive className="w-5 h-5 sm:w-6 sm:h-6" />
               Archiv
             </h1>
-            <p className="text-muted-foreground mt-2">Archivierte Musiker und Kontoauszuege</p>
+            <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-base">Archivierte Musiker und Kontoauszuege</p>
           </div>
           <Button variant="outline" size="sm" onClick={handleExportArchiveCsv} disabled={exporting}>
             <Download className="w-4 h-4 mr-2" />

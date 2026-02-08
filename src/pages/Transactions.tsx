@@ -4,6 +4,7 @@ import { formatCurrency, formatDate } from '@/lib/utils'
 import { Banknote, TrendingUp, TrendingDown } from 'lucide-react'
 import { fetchMusicians, fetchTransactionsWithMusician } from '@/lib/api-client'
 import type { DbMusician } from '@/lib/database.types'
+import { Spinner } from '@/components/ui/spinner'
 
 interface TransactionRow {
   id: string
@@ -50,11 +51,7 @@ function Transactions() {
   }, {} as Record<string, TransactionRow[]>)
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <p className="text-muted-foreground">Transaktionen werden geladen...</p>
-      </div>
-    )
+    return <Spinner text="Transaktionen werden geladen..." />
   }
 
   const isPayout = (t: TransactionRow) =>
@@ -65,8 +62,8 @@ function Transactions() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold">Transaktionen</h1>
-        <p className="text-muted-foreground mt-2">Verfolge alle Finanztransaktionen</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Transaktionen</h1>
+          <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-base">Verfolge alle Finanztransaktionen</p>
       </div>
 
       {transactions.length === 0 ? (

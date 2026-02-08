@@ -5,6 +5,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { DatePicker } from '@/components/ui/date-picker'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { fetchMusicianById, fetchTransactionsWithMusician } from '@/lib/api-client'
+import { useAuth } from '@/contexts/AuthContext'
+import { Spinner } from '@/components/ui/spinner'
 import type { DbMusician, TransactionWithMusician } from '@/lib/database.types'
 import {
   ArrowLeft,
@@ -29,11 +31,19 @@ const toDateInput = (date: Date) => date.toISOString().slice(0, 10)
 function Statement() {
   const { musicianId } = useParams()
   const navigate = useNavigate()
+  const { user, isUser } = useAuth()
   const [musician, setMusician] = useState<DbMusician | null>(null)
   const [transactions, setTransactions] = useState<TransactionWithMusician[]>([])
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
   const contentRef = useRef<HTMLDivElement | null>(null)
+
+  // Users can only view their own statement
+  useEffect(() => {
+    if (isUser && user && musicianId && musicianId !== user.id) {
+      navigate(`/statement/${user.id}`, { replace: true })
+    }
+  }, [isUser, user, musicianId, navigate])
 
   const today = useMemo(() => new Date(), [])
   const ninetyDaysAgo = useMemo(() => {
@@ -145,11 +155,7 @@ function Statement() {
 
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <p className="text-muted-foreground">Kontoauszug wird geladen...</p>
-      </div>
-    )
+    return <Spinner text="Kontoauszug wird geladen..." />
   }
 
   if (!musician) {
@@ -162,32 +168,32 @@ function Statement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+          <Button variant="ghost" size="icon" className="shrink-0" onClick={() => navigate('/dashboard')}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-600/30 flex items-center justify-center">
-              <UserRound className="w-6 h-6 text-amber-200" />
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-600/30 flex items-center justify-center shrink-0">
+              <UserRound className="w-5 h-5 sm:w-6 sm:h-6 text-amber-200" />
             </div>
-            <div>
-              <h1 className="text-2xl font-bold">{musician.name}</h1>
-              <p className={`text-lg font-semibold ${currentBalance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold truncate">{musician.name}</h1>
+              <p className={`text-base sm:text-lg font-semibold ${currentBalance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                 {formatCurrency(currentBalance)}
               </p>
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handlePdfExport} disabled={exporting}>
+        <div className="flex items-center gap-2 ml-auto sm:ml-0">
+          <Button variant="outline" size="sm" onClick={handlePdfExport} disabled={exporting}>
             <FileDown className="w-4 h-4 mr-2" />
             PDF Export
           </Button>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-end gap-4">
+      <div className="flex flex-wrap items-end gap-4 px-4">
         <div className="grid gap-2">
           <span className="text-xs text-muted-foreground">Von</span>
           <DatePicker value={fromDate} onChange={setFromDate} placeholder="Von" />
@@ -200,7 +206,7 @@ function Statement() {
 
       <div ref={contentRef} className="space-y-6 p-4">
         {/* PDF Header — Musiker & Zeitraum */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-600/30 flex items-center justify-center">
               <UserRound className="w-6 h-6 text-amber-200" />
@@ -262,8 +268,8 @@ function Statement() {
               )
               return (
                 <Card key={t.id} className="bg-muted/40">
-                  <CardContent className="p-4 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
+                  <CardContent className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                       <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${iconWrapClass}`}>
                         {icon}
                       </div>

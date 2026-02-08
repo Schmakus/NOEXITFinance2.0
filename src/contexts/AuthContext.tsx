@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { fetchMusicianByUserId } from '@/lib/api-client'
 
@@ -15,8 +15,17 @@ interface AuthContextType {
   user: User | null
   isLoading: boolean
   isAuthenticated: boolean
+  isAdmin: boolean
+  isSuperuser: boolean
+  isUser: boolean
+  canManageMusicians: boolean    // admin only
+  canManageBookings: boolean     // admin + superuser
+  canAccessSettings: boolean     // admin only (user gets own settings page)
+  canAccessArchive: boolean      // admin + superuser
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
+  updateEmail: (newEmail: string) => Promise<void>
+  updatePassword: (newPassword: string) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -24,9 +33,10 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const profileLoadedRef = useRef(false)
 
   // Load musician profile from Supabase
-  const loadProfile = useCallback(async (authUserId: string, email: string) => {
+  const loadProfile = useCallback(async (authUserId: string, email: string): Promise<boolean> => {
     try {
       const musician = await fetchMusicianByUserId(authUserId)
       if (musician) {
@@ -38,93 +48,97 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           role: musician.role,
           balance: musician.balance,
         })
+        return true
       } else {
-        // Auth user exists but no musician record — log out
         console.warn('Kein Musiker-Profil für Auth-User gefunden:', email)
-        await supabase.auth.signOut()
         setUser(null)
+        return false
       }
     } catch (err) {
       console.error('Profil laden fehlgeschlagen:', err)
       setUser(null)
+      return false
     }
   }, [])
 
-  const loadProfileWithTimeout = useCallback(
-    async (authUserId: string, email: string, timeoutMs: number = 7000) => {
-      const timeoutPromise = new Promise<void>((_, reject) => {
-        setTimeout(() => reject(new Error('Profil laden Timeout')), timeoutMs)
-      })
-      await Promise.race([loadProfile(authUserId, email), timeoutPromise])
-    },
-    [loadProfile]
-  )
-
-  // Listen for auth state changes (Supabase v2.39+ fires INITIAL_SESSION)
+  // Handle initial session on mount
   useEffect(() => {
     let isMounted = true
-    let profileLoaded = false
 
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!isMounted) return
+      if (session?.user) {
+        const success = await loadProfile(session.user.id, session.user.email ?? '')
+        if (isMounted) {
+          profileLoadedRef.current = success
+          if (!success) await supabase.auth.signOut()
+        }
+      }
+      if (isMounted) setIsLoading(false)
+    }).catch(() => {
+      if (isMounted) setIsLoading(false)
+    })
+
+    return () => { isMounted = false }
+  }, [loadProfile])
+
+  // Listen for auth state changes (token refresh, sign out)
+  useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (!isMounted) return
-
         if (event === 'SIGNED_OUT') {
           setUser(null)
-          setIsLoading(false)
-          profileLoaded = false
+          profileLoadedRef.current = false
           return
         }
 
-        // Handle INITIAL_SESSION (page reload), SIGNED_IN (login), TOKEN_REFRESHED
-        if (session?.user) {
-          // Prevent double profile loading on page load
-          if (event === 'TOKEN_REFRESHED' && profileLoaded) return
+        // Skip events that are handled elsewhere (login / initial load)
+        if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') return
 
-          try {
-            await loadProfileWithTimeout(session.user.id, session.user.email ?? '')
-            profileLoaded = true
-          } catch (err) {
-            console.error('Profil laden fehlgeschlagen:', err)
-            setUser(null)
-          }
-        } else {
-          setUser(null)
+        // TOKEN_REFRESHED — reload profile if needed
+        if (event === 'TOKEN_REFRESHED' && session?.user && !profileLoadedRef.current) {
+          const success = await loadProfile(session.user.id, session.user.email ?? '')
+          profileLoadedRef.current = success
         }
-        if (isMounted) setIsLoading(false)
       }
     )
 
-    // Safety timeout: prevent permanent "Lade..." if no auth event fires
-    const timeout = setTimeout(() => {
-      if (isMounted) setIsLoading(false)
-    }, 10000)
-
-    return () => {
-      isMounted = false
-      subscription.unsubscribe()
-      clearTimeout(timeout)
-    }
-  }, [loadProfileWithTimeout])
+    return () => subscription.unsubscribe()
+  }, [loadProfile])
 
   const login = useCallback(async (email: string, password: string) => {
-    setIsLoading(true)
-    try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) throw error
-      // Profile is loaded by onAuthStateChange listener
-    } catch (error) {
-      console.error('Login failed:', error)
-      throw error
-    } finally {
-      setIsLoading(false)
+    const { error, data } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) throw error
+
+    if (data.session?.user) {
+      const success = await loadProfile(data.session.user.id, data.session.user.email ?? '')
+      profileLoadedRef.current = success
+      if (!success) {
+        await supabase.auth.signOut()
+        throw new Error('Kein Musiker-Profil gefunden. Bitte wende dich an den Administrator.')
+      }
     }
-  }, [])
+  }, [loadProfile])
 
   const logout = useCallback(async () => {
     await supabase.auth.signOut()
     setUser(null)
   }, [])
+
+  const updateEmail = useCallback(async (newEmail: string) => {
+    const { error } = await supabase.auth.updateUser({ email: newEmail })
+    if (error) throw error
+  }, [])
+
+  const updatePassword = useCallback(async (newPassword: string) => {
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    if (error) throw error
+  }, [])
+
+  const role = user?.role ?? ''
+  const isAdmin = role === 'administrator'
+  const isSuperuser = role === 'superuser'
+  const isUser = role === 'user'
 
   return (
     <AuthContext.Provider
@@ -132,8 +146,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         isLoading,
         isAuthenticated: !!user,
+        isAdmin,
+        isSuperuser,
+        isUser,
+        canManageMusicians: isAdmin,
+        canManageBookings: isAdmin || isSuperuser,
+        canAccessSettings: isAdmin,
+        canAccessArchive: isAdmin || isSuperuser,
         login,
         logout,
+        updateEmail,
+        updatePassword,
       }}
     >
       {children}

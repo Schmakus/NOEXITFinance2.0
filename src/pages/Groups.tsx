@@ -22,6 +22,7 @@ import {
   deleteGroup as apiDeleteGroup,
 } from '@/lib/api-client'
 import type { DbMusician, GroupWithMembers } from '@/lib/database.types'
+import { Spinner } from '@/components/ui/spinner'
 
 function Groups() {
   const [groups, setGroups] = useState<GroupWithMembers[]>([])
@@ -149,19 +150,15 @@ function Groups() {
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <p className="text-muted-foreground">Gruppen werden geladen...</p>
-      </div>
-    )
+    return <Spinner text="Gruppen werden geladen..." />
   }
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Gruppen</h1>
-          <p className="text-muted-foreground mt-2">Verteile Beträge innerhalb einer Gruppe</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Gruppen</h1>
+          <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-base">Verteile Beträge innerhalb einer Gruppe</p>
         </div>
         <Dialog open={open} onOpenChange={(v: boolean) => { if (!v) resetForm(); setOpen(v) }}>
           <DialogTrigger asChild>
@@ -188,12 +185,12 @@ function Groups() {
                 </div>
                 <div className="space-y-2">
                   {musicians.map((m) => (
-                    <div key={m.id} className="flex items-center gap-3">
+                    <div key={m.id} className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
                       <Switch checked={m.id in selected} onCheckedChange={(checked: boolean) => toggleSelectChecked(m.id, checked)} />
-                      <div className="flex-1">
-                        <div className="font-medium">{m.name}</div>
+                      <div className="flex-1 min-w-[80px]">
+                        <div className="font-medium text-sm sm:text-base">{m.name}</div>
                       </div>
-                      <div className="w-36">
+                      <div className="w-24 sm:w-36">
                         <Input
                           type="number"
                           step="0.01"
@@ -204,7 +201,7 @@ function Groups() {
                           onChange={(e) => setPercent(m.id, e.target.value)}
                         />
                       </div>
-                      <div className="w-12 text-sm text-muted-foreground">%</div>
+                      <div className="w-8 sm:w-12 text-sm text-muted-foreground">%</div>
                     </div>
                   ))}
                 </div>

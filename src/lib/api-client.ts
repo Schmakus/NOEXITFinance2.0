@@ -1,7 +1,7 @@
 // ============================================
 // Supabase API-Funktionen
 // ============================================
-import { supabase, supabaseAdmin } from './supabase'
+import { supabase, getSupabaseAdmin } from './supabase'
 import type {
   DbMusician,
   DbGroup,
@@ -22,8 +22,9 @@ import type {
 // ============================================
 
 export async function createAuthUser(email: string, password: string): Promise<string> {
-  if (!supabaseAdmin) throw new Error('Service Role Key fehlt – Admin-Funktionen nicht verfügbar')
-  const { data, error } = await supabaseAdmin.auth.admin.createUser({
+  const admin = getSupabaseAdmin()
+  if (!admin) throw new Error('Service Role Key fehlt – Admin-Funktionen nicht verfügbar')
+  const { data, error } = await admin.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
@@ -33,8 +34,16 @@ export async function createAuthUser(email: string, password: string): Promise<s
 }
 
 export async function deleteAuthUser(authUserId: string): Promise<void> {
-  if (!supabaseAdmin) throw new Error('Service Role Key fehlt – Admin-Funktionen nicht verfügbar')
-  const { error } = await supabaseAdmin.auth.admin.deleteUser(authUserId)
+  const admin = getSupabaseAdmin()
+  if (!admin) throw new Error('Service Role Key fehlt – Admin-Funktionen nicht verfügbar')
+  const { error } = await admin.auth.admin.deleteUser(authUserId)
+  if (error) throw error
+}
+
+export async function updateAuthUserPassword(authUserId: string, newPassword: string): Promise<void> {
+  const admin = getSupabaseAdmin()
+  if (!admin) throw new Error('Service Role Key fehlt – Admin-Funktionen nicht verfügbar')
+  const { error } = await admin.auth.admin.updateUserById(authUserId, { password: newPassword })
   if (error) throw error
 }
 
@@ -763,6 +772,22 @@ export async function fetchSettings(): Promise<Record<string, string>> {
     if (s.value !== null) settings[s.key] = s.value
   })
   return settings
+}
+
+// Public settings (logo, bandname) — uses admin client to bypass RLS on login page
+export async function fetchPublicSettings(): Promise<{ logo: string | null; bandname: string }> {
+  const admin = getSupabaseAdmin()
+  if (!admin) return { logo: null, bandname: 'NO EXIT' }
+  const { data, error } = await admin
+    .from('app_settings')
+    .select('key, value')
+    .in('key', ['logo', 'bandname'])
+  if (error) return { logo: null, bandname: 'NO EXIT' }
+  const settings: Record<string, string> = {}
+  ;(data ?? []).forEach((s: any) => {
+    if (s.value !== null) settings[s.key] = s.value
+  })
+  return { logo: settings.logo ?? null, bandname: settings.bandname ?? 'NO EXIT' }
 }
 
 export async function fetchSetting(key: string): Promise<string | null> {

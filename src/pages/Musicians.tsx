@@ -23,9 +23,11 @@ import {
   restoreMusician,
   createAuthUser,
   deleteAuthUser,
+  updateAuthUserPassword,
 } from '@/lib/api-client'
 import type { DbMusician } from '@/lib/database.types'
 import { useAuth } from '@/contexts/AuthContext'
+import { Spinner } from '@/components/ui/spinner'
 
 function Musicians() {
   const { user } = useAuth()
@@ -119,6 +121,17 @@ function Musicians() {
 
     try {
       if (editingId) {
+        // Update password if provided
+        if (formData.password) {
+          if (formData.password.length < 6) {
+            alert('Das Passwort muss mindestens 6 Zeichen lang sein.')
+            return
+          }
+          const musician = musicians.find((m) => m.id === editingId)
+          if (musician?.user_id) {
+            await updateAuthUserPassword(musician.user_id, formData.password)
+          }
+        }
         const updated = await updateMusician(editingId, {
           name: formData.name,
           email: formData.email,
@@ -163,21 +176,17 @@ function Musicians() {
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <p className="text-muted-foreground">Musiker werden geladen...</p>
-      </div>
-    )
+    return <Spinner text="Musiker werden geladen..." />
   }
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Musiker</h1>
-          <p className="text-muted-foreground mt-2">Verwalte Bandmitglieder</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Musiker</h1>
+          <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-base">Verwalte Bandmitglieder</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button
             variant={showArchived ? 'outline' : 'secondary'}
             size="sm"
@@ -211,7 +220,7 @@ function Musicians() {
                   : 'Füge ein neues Bandmitglied zu deinem Team hinzu'}
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
+            <div className="grid gap-4 py-4 px-1">
               <div className="grid gap-2">
                 <Label htmlFor="name">Name</Label>
                 <Input
@@ -243,6 +252,21 @@ function Musicians() {
                   />
                   <p className="text-xs text-muted-foreground">
                     Login-Passwort für den Supabase-Account des Musikers
+                  </p>
+                </div>
+              )}
+              {editingId && (
+                <div className="grid gap-2">
+                  <Label htmlFor="password">Neues Passwort (optional)</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Leer lassen = unverändert"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Nur ausfüllen, wenn das Passwort geändert werden soll
                   </p>
                 </div>
               )}
@@ -307,8 +331,8 @@ function Musicians() {
           musicians.map((musician) => (
             <Card key={musician.id} className="hover:shadow-lg transition-shadow">
               <CardContent className="pt-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="text-lg font-semibold">{musician.name}</h3>
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground">

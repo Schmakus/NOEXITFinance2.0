@@ -16,6 +16,7 @@ import {
     FileJson,
     FileSpreadsheet,
   } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 import {
   fetchSettings,
   upsertSetting,
@@ -192,18 +193,14 @@ function Settings() {
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <p className="text-muted-foreground">Einstellungen werden geladen...</p>
-      </div>
-    )
+    return <Spinner text="Einstellungen werden geladen..." />
   }
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold">Einstellungen</h1>
-        <p className="text-muted-foreground mt-2">Konfiguriere die Anwendung</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Einstellungen</h1>
+          <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-base">Konfiguriere die Anwendung</p>
       </div>
 
       {message && (
@@ -225,14 +222,14 @@ function Settings() {
           <CardDescription>Deine Kontoinformationen</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-muted-foreground">Name</p>
               <p className="font-medium">{user?.name}</p>
             </div>
             <div>
               <p className="text-muted-foreground">E-Mail</p>
-              <p className="font-medium">{user?.email}</p>
+              <p className="font-medium break-all">{user?.email}</p>
             </div>
             <div>
               <p className="text-muted-foreground">Rolle</p>
@@ -350,8 +347,8 @@ function Settings() {
           <CardContent className="space-y-4">
             <div className="flex flex-col gap-3">
               {isAdmin && (
-                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
-                  <div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-muted/50 border">
+                  <div className="min-w-0">
                     <p className="font-medium text-sm">Backup erstellen</p>
                     <p className="text-xs text-muted-foreground">
                       Exportiert alle Daten als JSON-Datei
@@ -360,6 +357,7 @@ function Settings() {
                   <Button
                     variant="outline"
                     size="sm"
+                    className="shrink-0 self-start sm:self-auto"
                     onClick={handleExportBackup}
                   >
                     <FileJson className="w-4 h-4 mr-2" />
@@ -369,14 +367,14 @@ function Settings() {
               )}
 
               {isAdmin && (
-                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
-                  <div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-muted/50 border">
+                  <div className="min-w-0">
                     <p className="font-medium text-sm">Backup wiederherstellen</p>
                     <p className="text-xs text-muted-foreground">
                       Überschreibt ALLE Daten mit einem JSON-Backup
                     </p>
                   </div>
-                  <div>
+                  <div className="shrink-0 self-start sm:self-auto">
                     <Button
                       variant="outline"
                       size="sm"
@@ -397,8 +395,8 @@ function Settings() {
               )}
 
               {canExportCsv && (
-                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
-                  <div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-muted/50 border">
+                  <div className="min-w-0">
                     <p className="font-medium text-sm">Kontoauszüge exportieren</p>
                     <p className="text-xs text-muted-foreground">
                       Alle Transaktionen als CSV-Datei herunterladen
@@ -407,6 +405,7 @@ function Settings() {
                   <Button
                     variant="outline"
                     size="sm"
+                    className="shrink-0 self-start sm:self-auto"
                     onClick={handleExportCSV}
                   >
                     <FileSpreadsheet className="w-4 h-4 mr-2" />
@@ -428,7 +427,7 @@ function Settings() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-muted-foreground">Version</p>
               <p className="font-medium">2.0</p>
@@ -463,14 +462,15 @@ function Settings() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between p-3 rounded-lg bg-destructive/5 border border-destructive/20">
-                <div>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-destructive/5 border border-destructive/20">
+                <div className="min-w-0">
                   <p className="font-medium text-sm">Konzerte & zugehörige Transaktionen löschen</p>
                   <p className="text-xs text-muted-foreground">Entfernt alle Konzerte und deren Transaktionen</p>
                 </div>
                 <Button
                   variant="destructive"
                   size="sm"
+                  className="shrink-0 self-start sm:self-auto"
                   onClick={() => handleDangerAction('Konzerte & Transaktionen löschen', deleteAllConcertsAndTransactions)}
                 >
                   <Trash2 className="w-4 h-4 mr-1" />
@@ -478,14 +478,15 @@ function Settings() {
                 </Button>
               </div>
 
-              <div className="flex items-center justify-between p-3 rounded-lg bg-destructive/5 border border-destructive/20">
-                <div>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-destructive/5 border border-destructive/20">
+                <div className="min-w-0">
                   <p className="font-medium text-sm">Buchungen & zugehörige Transaktionen löschen</p>
                   <p className="text-xs text-muted-foreground">Entfernt alle Buchungen und deren Transaktionen</p>
                 </div>
                 <Button
                   variant="destructive"
                   size="sm"
+                  className="shrink-0 self-start sm:self-auto"
                   onClick={() => handleDangerAction('Buchungen & Transaktionen löschen', deleteAllBookingsAndTransactions)}
                 >
                   <Trash2 className="w-4 h-4 mr-1" />
@@ -493,14 +494,15 @@ function Settings() {
                 </Button>
               </div>
 
-              <div className="flex items-center justify-between p-3 rounded-lg bg-destructive/5 border border-destructive/20">
-                <div>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-destructive/5 border border-destructive/20">
+                <div className="min-w-0">
                   <p className="font-medium text-sm">Alle Transaktionen löschen</p>
                   <p className="text-xs text-muted-foreground">Entfernt alle Transaktionen (Konzerte & Buchungen bleiben)</p>
                 </div>
                 <Button
                   variant="destructive"
                   size="sm"
+                  className="shrink-0 self-start sm:self-auto"
                   onClick={() => handleDangerAction('Alle Transaktionen löschen', deleteAllTransactions)}
                 >
                   <Trash2 className="w-4 h-4 mr-1" />
@@ -508,14 +510,15 @@ function Settings() {
                 </Button>
               </div>
 
-              <div className="flex items-center justify-between p-3 rounded-lg bg-destructive/10 border border-destructive/30">
-                <div>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-destructive/10 border border-destructive/30">
+                <div className="min-w-0">
                   <p className="font-medium text-sm text-destructive">Alle Daten löschen</p>
                   <p className="text-xs text-muted-foreground">Entfernt ALLE Daten (Musiker, Gruppen, Konzerte, Buchungen, Transaktionen)</p>
                 </div>
                 <Button
                   variant="destructive"
                   size="sm"
+                  className="shrink-0 self-start sm:self-auto"
                   onClick={() => handleDangerAction('ALLE Daten löschen', deleteAllData)}
                 >
                   <Trash2 className="w-4 h-4 mr-1" />

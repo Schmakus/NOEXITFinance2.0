@@ -89,7 +89,8 @@ Voraussetzungen:
 - (Schmakus) Add archiv for deleted musicians
 - (Schmakus) Design fixes/changes
 - (Schmakus) Edit Layout, add PDF Export und eMail for Kontoauszüge
-- (Schmakus) DatePicker
+- (Schmakus) DatePicker; Respnsive Design; Only DarkMode
+- (Schmakus) Rollenzuweisung optimiert
 
 v0.0.5 (04.02.2026)
 - Beispiel: Backup/Restore hinzugefuegt

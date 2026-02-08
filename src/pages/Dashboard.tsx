@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Wallet } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
+import { Spinner } from '@/components/ui/spinner'
 import { fetchMusicians, fetchTransactionsWithMusician } from '@/lib/api-client'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '@/contexts/AuthContext'
 import type { DbMusician, TransactionWithMusician } from '@/lib/database.types'
 
 interface MusicianWithBalance {
@@ -14,9 +16,17 @@ interface MusicianWithBalance {
 
 function Dashboard() {
   const navigate = useNavigate()
+  const { user, isUser } = useAuth()
   const [musicians, setMusicians] = useState<DbMusician[]>([])
   const [transactions, setTransactions] = useState<TransactionWithMusician[]>([])
   const [loading, setLoading] = useState(true)
+
+  // User role: redirect to own statement
+  useEffect(() => {
+    if (isUser && user) {
+      navigate(`/statement/${user.id}`, { replace: true })
+    }
+  }, [isUser, user, navigate])
 
   useEffect(() => {
     const loadData = async () => {
@@ -47,18 +57,14 @@ function Dashboard() {
   const totalBalance = musiciansWithBalance.reduce((sum, m) => sum + m.balance, 0)
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <p className="text-muted-foreground">Dashboard wird geladen...</p>
-      </div>
-    )
+    return <Spinner text="Dashboard wird geladen..." />
   }
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground mt-2">Übersicht deiner Bandmitglieder</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Dashboard</h1>
+          <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-base">Übersicht deiner Bandmitglieder</p>
       </div>
 
       {/* Total Balance Card */}
@@ -80,7 +86,7 @@ function Dashboard() {
       {/* Musicians Grid */}
       <div>
         <h2 className="text-xl font-semibold mb-4">Bandmitglieder</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {musiciansWithBalance.map((musician) => (
             <Card
               key={musician.id}

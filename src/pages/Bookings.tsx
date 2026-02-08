@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -15,7 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Plus, Edit2, Trash2, X } from 'lucide-react'
+import { Plus, Edit2, Trash2, X, Banknote, CircleDollarSign, TrendingDown } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import {
   fetchBookings,
@@ -29,6 +29,7 @@ import {
 } from '@/lib/api-client'
 import { useTags } from '@/contexts/TagsContext'
 import { useAuth } from '@/contexts/AuthContext'
+import { Spinner } from '@/components/ui/spinner'
 import type { DbBooking, DbMusician, GroupWithMembers } from '@/lib/database.types'
 
 function Bookings() {
@@ -223,19 +224,15 @@ function Bookings() {
   }, [bookings])
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <p className="text-muted-foreground">Buchungen werden geladen...</p>
-      </div>
-    )
+    return <Spinner text="Buchungen werden geladen..." />
   }
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Buchungen</h1>
-          <p className="text-muted-foreground mt-2">Erfasse einzelne Buchungen (Einnahmen, Ausgaben, Auszahlungen)</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Buchungen</h1>
+          <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-base">Erfasse einzelne Buchungen (Einnahmen, Ausgaben, Auszahlungen)</p>
         </div>
         {canManage && (
           <Dialog open={open} onOpenChange={(v: boolean) => { if (!v) resetForm(); setOpen(v) }}>
@@ -251,8 +248,8 @@ function Bookings() {
               <DialogDescription>Erfasse eine Ausgabe, Einnahme oder Auszahlung</DialogDescription>
             </DialogHeader>
 
-            <div className="grid gap-4 py-4 pl-4 max-h-[70vh] overflow-y-auto">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-4 py-4 px-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label>Typ</Label>
                   <select value={form.type} onChange={(e) => setForm((s) => ({ ...s, type: e.target.value, payoutMusicians: [] }))} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50">
@@ -385,9 +382,9 @@ function Bookings() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
+      <div className="space-y-3">
         {bookings.length === 0 ? (
-          <Card>
+          <Card className="bg-muted/40">
             <CardContent className="py-12 text-center text-muted-foreground">Noch keine Buchungen. Lege eine neue Buchung an.</CardContent>
           </Card>
         ) : (
@@ -400,64 +397,87 @@ function Bookings() {
                   .filter(Boolean)
               : []
 
+            const isPayout = b.type === 'payout'
+            const isIncome = b.type === 'income'
+            const iconWrapClass = isPayout
+              ? 'bg-amber-500/20 text-amber-300'
+              : isIncome
+                ? 'bg-green-500/20 text-green-300'
+                : 'bg-red-500/20 text-red-300'
+            const icon = isPayout ? (
+              <Banknote className="w-5 h-5" />
+            ) : isIncome ? (
+              <CircleDollarSign className="w-5 h-5" />
+            ) : (
+              <TrendingDown className="w-5 h-5" />
+            )
+            const typeLabel = isPayout ? 'Auszahlung' : isIncome ? 'Einnahme' : 'Ausgabe'
+
+            const hasDetails = (isPayout && payoutNames.length > 0)
+              || (!isPayout && groupMembers.length > 0)
+              || !!b.notes
+
             return (
-              <Card key={b.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle>
-                        {b.description || '-'}{' '}
-                        {b.group_name && <span className="text-sm text-muted-foreground">• {b.group_name}</span>}
-                      </CardTitle>
-                      <CardDescription>
-                        {b.date ? formatDate(new Date(b.date)) : '-'} • {b.type} • {formatCurrency(b.amount)}
-                      </CardDescription>
-                    </div>
-                    {canManage && (
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => openEdit(b)}>
-                          <Edit2 className="w-4 h-4" />
-                        </Button>
-                        <Button variant="destructive" size="sm" onClick={() => handleDeleteBooking(b.id)}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+              <Card key={b.id} className="bg-muted/40">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${iconWrapClass}`}>
+                        {icon}
                       </div>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {b.type === 'payout' && payoutNames.length > 0 && (
-                      <div className="text-sm space-y-1">
-                        <div className="font-medium text-muted-foreground">Auszahlung an:</div>
-                        <div className="space-y-1">
-                          {payoutNames.map((name) => (
-                            <div key={name} className="text-sm">{name}</div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {(b.type === 'income' || b.type === 'expense') && groupMembers.length > 0 && (
-                      <div className="text-sm space-y-1">
-                        <div className="font-medium text-muted-foreground">Verteilung:</div>
-                        <div className="space-y-1">
-                          {groupMembers.map((m) => (
-                            <div key={m.musician_id} className="text-sm">{m.musician_name} ({m.percent}%)</div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {b.keywords.length > 0 && (
-                      <div className="flex gap-2 flex-wrap pt-2">
-                        {b.keywords.map((k) => (
-                          <span key={k} className="px-2 py-1 bg-primary text-primary-foreground rounded-full text-xs font-medium">
-                            {k}
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold truncate text-sm sm:text-base">{b.description || '-'}</p>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full border leading-none ${
+                            isPayout
+                              ? 'border-amber-400/60 text-amber-300'
+                              : isIncome
+                                ? 'border-green-400/60 text-green-300'
+                                : 'border-red-400/60 text-red-300'
+                          }`}>
+                            {typeLabel}
                           </span>
-                        ))}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {b.date ? formatDate(new Date(b.date)) : '-'}
+                          {b.group_name ? ` • ${b.group_name}` : ''}
+                        </p>
                       </div>
-                    )}
-                    {b.notes && <div className="text-sm text-muted-foreground pt-2">{b.notes}</div>}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <p className={`text-sm sm:text-base font-semibold whitespace-nowrap ${
+                        isIncome ? 'text-green-400' : 'text-red-400'
+                      }`}>
+                        {isIncome ? '+' : '-'}{formatCurrency(b.amount)}
+                      </p>
+                      {canManage && (
+                        <div className="flex gap-0.5">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(b)}>
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-300" onClick={() => handleDeleteBooking(b.id)}>
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </div>
+
+                  {hasDetails && (
+                    <div className="mt-2 pt-2 border-t border-border/50 ml-[52px] space-y-1">
+                      {isPayout && payoutNames.length > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          <span className="font-medium">An:</span> {payoutNames.join(', ')}
+                        </p>
+                      )}
+                      {!isPayout && groupMembers.length > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          {groupMembers.map((m) => `${m.musician_name} (${m.percent}%)`).join(', ')}
+                        </p>
+                      )}
+                      {b.notes && <p className="text-xs text-muted-foreground italic">{b.notes}</p>}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )

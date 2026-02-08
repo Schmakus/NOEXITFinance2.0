@@ -26,6 +26,7 @@ import {
   deleteTransactionsByConcert,
 } from '@/lib/api-client'
 import { useTags } from '@/contexts/TagsContext'
+import { Spinner } from '@/components/ui/spinner'
 import type { ConcertWithExpenses, GroupWithMembers } from '@/lib/database.types'
 
 interface LocalExpense {
@@ -197,19 +198,15 @@ function Concerts() {
   const restBetrag = parseFloat(formData.nettoGage || '0') - totalExpenses
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <p className="text-muted-foreground">Konzerte werden geladen...</p>
-      </div>
-    )
+    return <Spinner text="Konzerte werden geladen..." />
   }
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Konzerte</h1>
-          <p className="text-muted-foreground mt-2">Verwalte deine Konzertabrechnungen</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Konzerte</h1>
+          <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-base">Verwalte deine Konzertabrechnungen</p>
         </div>
         <Dialog open={open} onOpenChange={(v: boolean) => { if (!v) resetForm(); setOpen(v) }}>
           <DialogTrigger asChild>
@@ -225,9 +222,9 @@ function Concerts() {
                 {editingId ? 'Aktualisiere die Konzertinformationen' : 'Erstelle ein neues Konzert mit Ausgaben'}
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4 pl-4 max-h-[70vh] overflow-y-auto">
+            <div className="grid gap-4 py-4 px-1">
               {/* Basic Info */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="name">Name/Anlass</Label>
                   <Input
@@ -248,7 +245,7 @@ function Concerts() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="date">Datum</Label>
                   <DatePicker value={formData.date} onChange={(v) => setFormData({ ...formData, date: v })} />
@@ -267,7 +264,7 @@ function Concerts() {
               </div>
 
               {/* Concert Summary */}
-              <div className="grid grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
+              <div className="grid grid-cols-3 gap-2 sm:gap-4 p-3 sm:p-4 bg-muted rounded-lg">
                 <div>
                   <p className="text-sm text-muted-foreground">Netto-Gage</p>
                   <p className="text-lg font-medium">{formatCurrency(parseFloat(formData.nettoGage || '0'))}</p>
@@ -304,7 +301,7 @@ function Concerts() {
 
                 {/* Add Expense Form */}
                 <div className="grid gap-2 p-3 border rounded-lg bg-muted/30">
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     <Input
                       placeholder="Beschreibung"
                       value={expenseForm.description}
@@ -421,7 +418,7 @@ function Concerts() {
                 <CardContent>
                   <div className="space-y-4">
                     {/* Summary */}
-                    <div className="grid grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
+                    <div className="grid grid-cols-3 gap-2 sm:gap-4 p-3 sm:p-4 bg-muted rounded-lg">
                       <div>
                         <p className="text-sm text-muted-foreground">Netto-Gage</p>
                         <p className="text-lg font-medium">{formatCurrency(concert.netto_gage)}</p>
