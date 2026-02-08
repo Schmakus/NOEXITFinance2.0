@@ -83,7 +83,7 @@ Voraussetzungen:
 ## Release Notes
 
 ```
-***WORKING***
+v1.2.0 (08.02.2026)
 - (Schmakus) fix Authentification
 - (Schmakus) fix Buchungen
 - (Schmakus) Add archiv for deleted musicians
