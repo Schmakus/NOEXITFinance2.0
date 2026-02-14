@@ -83,6 +83,8 @@ Voraussetzungen:
 ## Release Notes
 
 ```
+***WORKING***
+
 v1.3.0 (14.02.2026)
 - (Schmakus) New: Auszahlung beantragen; inkl. Genehmigung und PDF Upload
 
