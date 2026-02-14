@@ -13,9 +13,10 @@ import {
   Menu,
   X,
   Archive,
+  HandCoins,
 } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
-import { fetchSettings } from '@/lib/api-client'
+import { fetchSettings, fetchPendingPayoutRequestCount } from '@/lib/api-client'
 
 function Layout() {
   const { user, logout, isAdmin, canManageBookings, canManageMusicians, canAccessSettings, canAccessArchive } = useAuth()
@@ -24,6 +25,7 @@ function Layout() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
   const [bandName, setBandName] = useState<string>('NO EXIT')
   const [logo, setLogo] = useState<string | null>(null)
+  const [pendingPayoutCount, setPendingPayoutCount] = useState(0)
 
   // Track screen size
   useEffect(() => {
@@ -60,6 +62,19 @@ function Layout() {
     }
   }, [loadSettingsFromSupabase])
 
+  // Load pending payout request count for admins
+  useEffect(() => {
+    if (!isAdmin) return
+    const loadCount = async () => {
+      const count = await fetchPendingPayoutRequestCount()
+      setPendingPayoutCount(count)
+    }
+    loadCount()
+    // Refresh count every 30 seconds
+    const interval = setInterval(loadCount, 30_000)
+    return () => clearInterval(interval)
+  }, [isAdmin, location.pathname])
+
 
 
   const menuItems = [
@@ -69,6 +84,7 @@ function Layout() {
     ...(canManageBookings ? [{ icon: DollarSign, label: 'Transaktionen', path: '/transactions' }] : []),
     ...(canManageMusicians ? [{ icon: Users, label: 'Musiker', path: '/musicians' }] : []),
     ...(isAdmin ? [{ icon: Music, label: 'Gruppen', path: '/groups' }] : []),
+    ...(isAdmin ? [{ icon: HandCoins, label: 'Auszahlungen', path: '/payout-requests', badge: pendingPayoutCount }] : []),
     ...(isAdmin ? [{ icon: Tag, label: 'Tags', path: '/tags' }] : []),
     ...(canAccessSettings ? [{ icon: Settings, label: 'Einstellungen', path: '/settings' }] : []),
     ...(canAccessArchive ? [{ icon: Archive, label: 'Archiv', path: '/archive' }] : []),
@@ -124,17 +140,33 @@ function Layout() {
 
         {/* Menu Items */}
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          {menuItems.map(({ icon: Icon, label, path }) => {
+          {menuItems.map(({ icon: Icon, label, path, badge }) => {
             const isActive = location.pathname === path
             return (
               <Link key={path} to={path} onClick={() => isMobile && setSidebarOpen(false)}>
                 <Button
                   variant={isActive ? 'secondary' : 'ghost'}
-                  className="w-full justify-start"
+                  className="w-full justify-start relative"
                   title={!sidebarOpen && !isMobile ? label : undefined}
                 >
-                  <Icon className="w-5 h-5 shrink-0" />
-                  {(sidebarOpen || isMobile) && <span>{label}</span>}
+                  <div className="relative">
+                    <Icon className="w-5 h-5 shrink-0" />
+                    {!!(badge && badge > 0 && !sidebarOpen && !isMobile) && (
+                      <span className="absolute -top-2 -right-2 w-4 h-4 text-[10px] font-bold rounded-full bg-amber-500 text-white flex items-center justify-center">
+                        {badge}
+                      </span>
+                    )}
+                  </div>
+                  {(sidebarOpen || isMobile) && (
+                    <span className="flex items-center gap-2">
+                      {label}
+                      {!!(badge && badge > 0) && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500 text-white leading-none">
+                          {badge}
+                        </span>
+                      )}
+                    </span>
+                  )}
                 </Button>
               </Link>
             )

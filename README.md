@@ -83,7 +83,12 @@ Voraussetzungen:
 ## Release Notes
 
 ```
+***WORKING***
+- (Schmakus) New: Auszahlung beantragen; inkl. Genehmigung und PDF Upload
+
 v1.2.1 (08.02.2026)
+- (Schmakus) Test release script
+- (Schmakus) Fix PayoutRequest; PDF Upload onhold
 
 v1.2.0 (08.02.2026)
 - (Schmakus) fix Authentification

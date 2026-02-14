@@ -138,6 +138,20 @@ insert into app_settings (key, value) values
   ('version', '0.0.1')
 on conflict (key) do nothing;
 
+-- 10. AUSZAHLUNGSANTRÄGE (Payout Requests)
+create table if not exists payout_requests (
+  id uuid primary key default gen_random_uuid(),
+  musician_id uuid references musicians(id) on delete cascade not null,
+  amount numeric(12,2) not null,
+  note text,
+  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  admin_note text,
+  reviewed_by uuid references musicians(id),
+  reviewed_at timestamptz,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
 -- ============================================
 -- ROW LEVEL SECURITY (RLS)
 -- ============================================
@@ -153,6 +167,7 @@ alter table transactions enable row level security;
 alter table transactions_archive enable row level security;
 alter table tags enable row level security;
 alter table app_settings enable row level security;
+alter table payout_requests enable row level security;
 
 -- Alle authentifizierten Benutzer können lesen
 create policy "Authenticated users can read musicians" on musicians for select to authenticated using (true);
@@ -195,6 +210,30 @@ create policy "Admins can manage transactions_archive" on transactions_archive f
 
 create policy "Admins can manage tags" on tags for all to authenticated using (is_admin_or_superuser());
 create policy "Admins can manage app_settings" on app_settings for all to authenticated using (is_admin_or_superuser());
+
+-- Payout Requests: Users können eigene lesen & erstellen, Admins können alles
+create policy "Users can read own payout_requests" on payout_requests for select to authenticated
+  using (musician_id in (select id from musicians where user_id = auth.uid()) or is_admin_or_superuser());
+create policy "Users can insert own payout_requests" on payout_requests for insert to authenticated
+  with check (musician_id in (select id from musicians where user_id = auth.uid()));
+create policy "Admins can update payout_requests" on payout_requests for update to authenticated using (is_admin_or_superuser());
+create policy "Admins can delete payout_requests" on payout_requests for delete to authenticated using (is_admin_or_superuser());
+
+-- Users können eigene ausstehende Anträge bearbeiten
+create policy "Users can update own pending payout_requests" on payout_requests
+  for update to authenticated
+  using (
+    musician_id in (select id from musicians where user_id = auth.uid())
+    and status = 'pending'
+  );
+
+-- Users können eigene ausstehende Anträge löschen
+create policy "Users can delete own pending payout_requests" on payout_requests
+  for delete to authenticated
+  using (
+    musician_id in (select id from musicians where user_id = auth.uid())
+    and status = 'pending'
+  );
 
 -- ============================================
 -- STANDARD-TAGS

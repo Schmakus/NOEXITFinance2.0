@@ -101,6 +101,20 @@ export interface DbAppSetting {
   value: string | null
 }
 
+export interface DbPayoutRequest {
+  id: string
+  musician_id: string
+  amount: number
+  note: string | null
+  status: 'pending' | 'approved' | 'rejected'
+  admin_note: string | null
+  reviewed_by: string | null
+  reviewed_at: string | null
+  created_at: string
+  updated_at: string
+  pdf_url?: string | null
+}
+
 // ============================================
 // Erweiterte Typen (mit Joins / für die UI)
 // ============================================
@@ -130,4 +144,10 @@ export interface TransactionWithMusician extends DbTransaction {
 export interface TransactionArchiveWithMusician extends DbTransactionArchive {
   musician_name?: string
   booking_type?: 'expense' | 'income' | 'payout' | null
+}
+
+export interface PayoutRequestWithMusician extends DbPayoutRequest {
+  musician_name: string
+  reviewed_by_name?: string
+  pdf_url?: string | null
 }

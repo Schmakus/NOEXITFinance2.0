@@ -16,6 +16,7 @@ import Archive from '@/pages/Archive'
 import Login from '@/pages/Login'
 import Statement from '@/pages/Statement'
 import Account from '@/pages/Account'
+import PayoutRequests from '@/pages/PayoutRequests'
 
 // Route guard: redirects to dashboard if user doesn't have permission
 function ProtectedRoute({ allowed, children }: { allowed: boolean; children: React.ReactNode }) {
@@ -63,6 +64,7 @@ function App() {
               <Route path="/concerts" element={<ProtectedRoute allowed={canManageBookings}><Concerts /></ProtectedRoute>} />
               <Route path="/transactions" element={<ProtectedRoute allowed={canManageBookings}><Transactions /></ProtectedRoute>} />
               <Route path="/archive" element={<ProtectedRoute allowed={canAccessArchive}><Archive /></ProtectedRoute>} />
+              <Route path="/payout-requests" element={<ProtectedRoute allowed={isAdmin}><PayoutRequests /></ProtectedRoute>} />
               <Route path="/tags" element={<ProtectedRoute allowed={isAdmin}><Tags /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute allowed={canAccessSettings}><Settings /></ProtectedRoute>} />
               <Route path="/account" element={<Account />} />

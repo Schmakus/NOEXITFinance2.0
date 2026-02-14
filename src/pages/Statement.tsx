@@ -3,11 +3,31 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { DatePicker } from '@/components/ui/date-picker'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { fetchMusicianById, fetchTransactionsWithMusician } from '@/lib/api-client'
+import {
+  fetchMusicianById,
+  fetchTransactionsWithMusician,
+  fetchMyPayoutRequests,
+  createPayoutRequest,
+  updatePayoutRequestAdmin,
+  deletePayoutRequest,
+  updatePayoutRequestUser,
+  deletePayoutRequestUser
+} from '@/lib/api-client'
 import { useAuth } from '@/contexts/AuthContext'
 import { Spinner } from '@/components/ui/spinner'
-import type { DbMusician, TransactionWithMusician } from '@/lib/database.types'
+import type { DbMusician, DbPayoutRequest, TransactionWithMusician } from '@/lib/database.types'
 import {
   ArrowLeft,
   Banknote,
@@ -15,6 +35,14 @@ import {
   TrendingDown,
   UserRound,
   CircleDollarSign,
+  HandCoins,
+  LogOut,
+  Settings,
+  Save,
+  Mail,
+  Lock,
+  Pencil,
+  Trash2,
 } from 'lucide-react'
 
 const isPayout = (t: TransactionWithMusician) =>
@@ -31,12 +59,37 @@ const toDateInput = (date: Date) => date.toISOString().slice(0, 10)
 function Statement() {
   const { musicianId } = useParams()
   const navigate = useNavigate()
-  const { user, isUser } = useAuth()
+  const { user, isUser, isSuperuser, logout, updateEmail, updatePassword } = useAuth()
+  const canRequestPayout = (isUser || isSuperuser) && !!user && musicianId === user.id
   const [musician, setMusician] = useState<DbMusician | null>(null)
   const [transactions, setTransactions] = useState<TransactionWithMusician[]>([])
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
   const contentRef = useRef<HTMLDivElement | null>(null)
+
+  // Payout request state
+  const [payoutRequests, setPayoutRequests] = useState<DbPayoutRequest[]>([])
+  const [showPayoutDialog, setShowPayoutDialog] = useState(false)
+  const [payoutAmount, setPayoutAmount] = useState('')
+  const [payoutNote, setPayoutNote] = useState('')
+  // PDF-Upload temporär deaktiviert
+  const [payoutSubmitting, setPayoutSubmitting] = useState(false)
+  const [payoutError, setPayoutError] = useState('')
+
+  // Edit payout request state
+  const [editRequestId, setEditRequestId] = useState<string | null>(null)
+  const [editRequestAmount, setEditRequestAmount] = useState('')
+  const [editRequestNote, setEditRequestNote] = useState('')
+  const [editRequestSubmitting, setEditRequestSubmitting] = useState(false)
+  const [editRequestError, setEditRequestError] = useState('')
+
+  // Account dialog state (User only)
+  const [showAccountDialog, setShowAccountDialog] = useState(false)
+  const [newEmail, setNewEmail] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [accountSaving, setAccountSaving] = useState(false)
+  const [accountMessage, setAccountMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
 
   // Users can only view their own statement
   useEffect(() => {
@@ -65,6 +118,11 @@ function Statement() {
         ])
         setMusician(m)
         setTransactions(t.filter((row) => row.musician_id === musicianId))
+        // Load payout requests for own statement
+        if ((isUser || isSuperuser) && user && musicianId === user.id) {
+          const requests = await fetchMyPayoutRequests(musicianId)
+          setPayoutRequests(requests)
+        }
       } catch (err) {
         console.error('Kontoauszug laden fehlgeschlagen:', err)
       } finally {
@@ -72,7 +130,7 @@ function Statement() {
       }
     }
     load()
-  }, [musicianId])
+  }, [musicianId, isUser, user])
 
   const filteredTransactions = useMemo(() => {
     const from = fromDate ? new Date(fromDate) : null
@@ -87,6 +145,31 @@ function Statement() {
       })
       .sort((a, b) => new Date(b.date ?? '').getTime() - new Date(a.date ?? '').getTime())
   }, [transactions, fromDate, toDate])
+
+  // Merge pending payout requests into the statement as entries
+  type StatementEntry =
+    | { kind: 'transaction'; data: TransactionWithMusician }
+    | { kind: 'payout-request'; data: DbPayoutRequest }
+
+  const statementEntries: StatementEntry[] = useMemo(() => {
+    const txEntries: StatementEntry[] = filteredTransactions.map((t) => ({
+      kind: 'transaction' as const,
+      data: t,
+    }))
+    // Only show pending requests for users who can request payouts
+    const pendingEntries: StatementEntry[] = canRequestPayout
+      ? payoutRequests
+          .filter((r) => r.status === 'pending')
+          .map((r) => ({ kind: 'payout-request' as const, data: r }))
+      : []
+    const all = [...txEntries, ...pendingEntries]
+    all.sort((a, b) => {
+      const dateA = a.kind === 'transaction' ? (a.data.date ?? '') : (a.data.created_at ?? '')
+      const dateB = b.kind === 'transaction' ? (b.data.date ?? '') : (b.data.created_at ?? '')
+      return new Date(dateB).getTime() - new Date(dateA).getTime()
+    })
+    return all
+  }, [filteredTransactions, payoutRequests, canRequestPayout])
 
   const totals = useMemo(() => {
     const income = filteredTransactions
@@ -153,6 +236,140 @@ function Statement() {
     }
   }
 
+  const openAccountDialog = () => {
+    setNewEmail(user?.email ?? '')
+    setNewPassword('')
+    setConfirmPassword('')
+    setAccountMessage(null)
+    setShowAccountDialog(true)
+  }
+
+  const handleUpdateEmail = async () => {
+    if (!newEmail.trim() || newEmail === user?.email) return
+    setAccountSaving(true)
+    try {
+      await updateEmail(newEmail.trim())
+      setAccountMessage({ text: 'E-Mail Änderung angefordert. Bitte bestätige die neue E-Mail-Adresse.', type: 'success' })
+    } catch (err: any) {
+      setAccountMessage({ text: 'Fehler: ' + (err?.message ?? String(err)), type: 'error' })
+    } finally {
+      setAccountSaving(false)
+    }
+  }
+
+  const handleUpdatePassword = async () => {
+    if (!newPassword) return
+    if (newPassword.length < 6) {
+      setAccountMessage({ text: 'Passwort muss mindestens 6 Zeichen lang sein', type: 'error' })
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setAccountMessage({ text: 'Passwörter stimmen nicht überein', type: 'error' })
+      return
+    }
+    setAccountSaving(true)
+    try {
+      await updatePassword(newPassword)
+      setNewPassword('')
+      setConfirmPassword('')
+      setAccountMessage({ text: 'Passwort erfolgreich geändert', type: 'success' })
+    } catch (err: any) {
+      setAccountMessage({ text: 'Fehler: ' + (err?.message ?? String(err)), type: 'error' })
+    } finally {
+      setAccountSaving(false)
+    }
+  }
+
+  const handlePayoutRequest = async () => {
+    const amount = parseFloat(payoutAmount.replace(',', '.'))
+    if (isNaN(amount) || amount <= 0) {
+      setPayoutError('Bitte einen gültigen Betrag eingeben')
+      return
+    }
+    if (amount > currentBalance) {
+      setPayoutError('Der Betrag übersteigt deinen Kontostand')
+      return
+    }
+    if (!musicianId) return
+    setPayoutSubmitting(true)
+    setPayoutError('')
+    try {
+      // PDF-Upload temporär deaktiviert
+      let newReq = await createPayoutRequest(musicianId, amount, payoutNote)
+      setPayoutRequests((prev) => [newReq, ...prev])
+      setShowPayoutDialog(false)
+      setPayoutAmount('')
+      setPayoutNote('')
+      // PDF-Upload temporär deaktiviert: setPayoutPdf / setPayoutPdfName entfernt
+    } catch (err) {
+      setPayoutError('Antrag konnte nicht erstellt werden: ' + (err instanceof Error ? err.message : String(err)))
+    } finally {
+      setPayoutSubmitting(false)
+    }
+  }
+
+  const openEditRequest = (req: DbPayoutRequest) => {
+    setEditRequestId(req.id)
+    setEditRequestAmount(String(req.amount))
+    setEditRequestNote(req.note ?? '')
+    setEditRequestError('')
+  }
+
+  const handleEditRequest = async () => {
+    if (!editRequestId) return
+    const amount = parseFloat(editRequestAmount.replace(',', '.'))
+    if (isNaN(amount) || amount <= 0) {
+      setEditRequestError('Bitte einen gültigen Betrag eingeben')
+      return
+    }
+    if (amount > currentBalance) {
+      setEditRequestError('Der Betrag übersteigt deinen Kontostand')
+      return
+    }
+    setEditRequestSubmitting(true)
+    setEditRequestError('')
+    try {
+      let updated: DbPayoutRequest
+      if (isUser && user && musicianId === user.id) {
+        updated = await updatePayoutRequestUser(editRequestId, musicianId, {
+          amount,
+          note: editRequestNote || undefined,
+        })
+      } else {
+        updated = await updatePayoutRequestAdmin(editRequestId, {
+          amount,
+          note: editRequestNote || undefined,
+        })
+      }
+      setPayoutRequests((prev) => prev.map((r) => (r.id === editRequestId ? updated : r)))
+      setEditRequestId(null)
+    } catch (err) {
+      let msg = ''
+      if (err instanceof Error && err.message.includes('existiert nicht, gehört nicht dir oder ist nicht mehr ausstehend')) {
+        msg = 'Der Antrag kann nicht mehr bearbeitet werden. Er wurde entweder bereits bearbeitet, gehört nicht dir oder existiert nicht mehr.'
+      } else {
+        msg = 'Bearbeitung fehlgeschlagen. Bitte versuche es erneut oder kontaktiere den Support.'
+      }
+      setEditRequestError(msg)
+    } finally {
+      setEditRequestSubmitting(false)
+    }
+  }
+
+  const handleDeleteRequest = async (id: string) => {
+    if (!confirm('Antrag wirklich löschen?')) return
+    try {
+      if (isUser && user && musicianId === user.id) {
+        await deletePayoutRequestUser(id, musicianId)
+      } else {
+        await deletePayoutRequest(id)
+      }
+      setPayoutRequests((prev) => prev.filter((r) => r.id !== id))
+    } catch (err) {
+      console.error('Löschen fehlgeschlagen:', err)
+    }
+  }
+
 
   if (loading) {
     return <Spinner text="Kontoauszug wird geladen..." />
@@ -170,9 +387,11 @@ function Statement() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4">
         <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-          <Button variant="ghost" size="icon" className="shrink-0" onClick={() => navigate('/dashboard')}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
+          {!isUser && (
+            <Button variant="ghost" size="icon" className="shrink-0" onClick={() => navigate('/dashboard')}>
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+          )}
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-600/30 flex items-center justify-center shrink-0">
               <UserRound className="w-5 h-5 sm:w-6 sm:h-6 text-amber-200" />
@@ -186,10 +405,26 @@ function Statement() {
           </div>
         </div>
         <div className="flex items-center gap-2 ml-auto sm:ml-0">
+          {canRequestPayout && (
+            <Button variant="default" size="sm" onClick={() => setShowPayoutDialog(true)}>
+              <HandCoins className="w-4 h-4 mr-2" />
+              Auszahlung beantragen
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={handlePdfExport} disabled={exporting}>
             <FileDown className="w-4 h-4 mr-2" />
             PDF Export
           </Button>
+          {isUser && (
+            <>
+              <Button variant="ghost" size="icon" className="shrink-0" onClick={openAccountDialog} title="Mein Konto">
+                <Settings className="w-4 h-4" />
+              </Button>
+              <Button variant="ghost" size="icon" className="shrink-0" onClick={logout} title="Logout">
+                <LogOut className="w-4 h-4" />
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -249,10 +484,63 @@ function Statement() {
 
         <div className="space-y-3">
           <h2 className="text-xl font-semibold">Kontoauszug</h2>
-          {filteredTransactions.length === 0 ? (
+          {statementEntries.length === 0 ? (
             <p className="text-muted-foreground">Keine Transaktionen im Zeitraum.</p>
           ) : (
-            filteredTransactions.map((t) => {
+            statementEntries.map((entry) => {
+              if (entry.kind === 'payout-request') {
+                const r = entry.data
+                return (
+                  <Card key={`pr-${r.id}`} className="bg-muted/40 border-amber-500/30">
+                    <CardContent className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                        <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-amber-500/20 text-amber-300">
+                          <HandCoins className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-semibold">Auszahlung beantragt</p>
+                            <span className="text-xs px-2 py-0.5 rounded-full border border-amber-400/60 text-amber-300 animate-pulse">
+                              Genehmigung ausstehend…
+                            </span>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {r.created_at ? formatDate(new Date(r.created_at)) : '-'}
+                            {r.note ? ` • ${r.note}` : ''}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <p className="text-lg font-semibold text-amber-400">
+                          -{formatCurrency(r.amount)}
+                        </p>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            title="Bearbeiten"
+                            onClick={() => openEditRequest(r)}
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-red-400"
+                            title="Löschen"
+                            onClick={() => handleDeleteRequest(r.id)}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              }
+
+              const t = entry.data
               const payout = t.type === 'expense' && isPayout(t)
               const iconWrapClass = payout
                 ? 'bg-amber-500/20 text-amber-300'
@@ -276,16 +564,16 @@ function Statement() {
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="font-semibold">{t.description || '-'}</p>
-                          {payout && (
+                          {Boolean(payout) ? (
                             <span className="text-xs px-2 py-0.5 rounded-full border border-amber-400/60 text-amber-300">
                               Auszahlung
                             </span>
-                          )}
-                          {!payout && t.type === 'earn' && isGage(t) && (
+                          ) : null}
+                          {!payout && t.type === 'earn' && isGage(t) ? (
                             <span className="text-xs px-2 py-0.5 rounded-full border border-amber-400/60 text-amber-300">
                               Gage
                             </span>
-                          )}
+                          ) : null}
                         </div>
                         <p className="text-sm text-muted-foreground">
                           {t.date ? formatDate(new Date(t.date)) : '-'}
@@ -303,6 +591,180 @@ function Statement() {
           )}
         </div>
       </div>
+
+      {/* Edit Payout Request Dialog */}
+      <Dialog open={!!editRequestId} onOpenChange={(open) => { if (!open) setEditRequestId(null) }}>
+        <DialogContent aria-describedby="edit-request-dialog-desc">
+          <DialogHeader>
+            <DialogTitle>Antrag bearbeiten</DialogTitle>
+          </DialogHeader>
+          <DialogDescription id="edit-request-dialog-desc" className="sr-only">
+            Hier kannst du einen Auszahlungsantrag bearbeiten.
+          </DialogDescription>
+          {/* Kein Wrapper um die nächsten Blöcke, alles direkt als Child */}
+          <div className="space-y-4 px-1">
+            <div className="grid gap-2">
+              <Label htmlFor="edit-req-amount">Betrag (€)</Label>
+              <Input
+                id="edit-req-amount"
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={editRequestAmount}
+                onChange={(e) => setEditRequestAmount(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-req-note">Notiz (optional)</Label>
+              <Textarea
+                id="edit-req-note"
+                placeholder="z.B. Banküberweisung auf mein Konto"
+                value={editRequestNote}
+                onChange={(e) => setEditRequestNote(e.target.value)}
+                rows={2}
+              />
+            </div>
+            {editRequestError && <p className="text-sm text-red-400">{editRequestError}</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditRequestId(null)} disabled={editRequestSubmitting}>
+              Abbrechen
+            </Button>
+            <Button onClick={handleEditRequest} disabled={editRequestSubmitting}>
+              {editRequestSubmitting ? 'Wird gespeichert...' : 'Speichern'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Account Dialog (User only) */}
+      <Dialog open={showAccountDialog} onOpenChange={setShowAccountDialog}>
+        <DialogContent aria-describedby="account-dialog-desc">
+          <DialogHeader>
+            <DialogTitle>Mein Konto</DialogTitle>
+          </DialogHeader>
+          <DialogDescription id="account-dialog-desc" className="sr-only">
+            Hier kannst du deine Kontodaten und dein Passwort ändern.
+          </DialogDescription>
+          <div className="space-y-6 px-1">
+            {accountMessage && (
+              <div className={`p-3 rounded-lg text-sm font-medium ${
+                accountMessage.type === 'success'
+                  ? 'bg-green-900/30 text-green-300'
+                  : 'bg-red-900/30 text-red-300'
+              }`}>
+                {accountMessage.text}
+              </div>
+            )}
+
+            {/* E-Mail ändern */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold flex items-center gap-2"><Mail className="w-4 h-4" /> E-Mail ändern</h3>
+              <div className="grid gap-2">
+                <Label htmlFor="account-email">Neue E-Mail-Adresse</Label>
+                <Input
+                  id="account-email"
+                  type="email"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  placeholder="neue@email.de"
+                />
+              </div>
+              <Button size="sm" onClick={handleUpdateEmail} disabled={accountSaving || newEmail === user?.email}>
+                <Save className="w-4 h-4 mr-2" />
+                E-Mail ändern
+              </Button>
+            </div>
+
+            {/* Passwort ändern */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold flex items-center gap-2"><Lock className="w-4 h-4" /> Passwort ändern</h3>
+              <div className="grid gap-2">
+                <Label htmlFor="account-password">Neues Passwort</Label>
+                <Input
+                  id="account-password"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="••••••••"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="account-confirm">Passwort bestätigen</Label>
+                <Input
+                  id="account-confirm"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                />
+              </div>
+              <Button size="sm" onClick={handleUpdatePassword} disabled={accountSaving || !newPassword}>
+                <Save className="w-4 h-4 mr-2" />
+                Passwort ändern
+              </Button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAccountDialog(false)}>Schließen</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Payout Request Dialog */}
+      <Dialog open={showPayoutDialog} onOpenChange={setShowPayoutDialog}>
+        <DialogContent aria-describedby="payout-dialog-desc">
+          <DialogHeader>
+            <DialogTitle>Auszahlung beantragen</DialogTitle>
+          </DialogHeader>
+          <DialogDescription id="payout-dialog-desc" className="sr-only">
+            Hier kannst du eine Auszahlung beantragen und optional ein PDF hochladen.
+          </DialogDescription>
+          <div className="space-y-4 px-1">
+            <div>
+              <p className="text-sm text-muted-foreground mb-3">
+                Dein aktueller Kontostand: <span className={currentBalance >= 0 ? 'text-green-400 font-semibold' : 'text-red-400 font-semibold'}>{formatCurrency(currentBalance)}</span>
+              </p>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="payout-amount">Betrag (€)</Label>
+              <Input
+                id="payout-amount"
+                type="number"
+                step="0.01"
+                min="0.01"
+                placeholder="z.B. 50,00"
+                value={payoutAmount}
+                onChange={(e) => setPayoutAmount(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="payout-note">Notiz (optional)</Label>
+              <Textarea
+                id="payout-note"
+                placeholder="z.B. Banküberweisung auf mein Konto"
+                value={payoutNote}
+                onChange={(e) => setPayoutNote(e.target.value)}
+                rows={2}
+              />
+            </div>
+            <div className="grid gap-2">
+              {/* PDF-Upload temporär deaktiviert */}
+            </div>
+            {payoutError && (
+              <p className="text-sm text-red-400">{payoutError}</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPayoutDialog(false)} disabled={payoutSubmitting}>
+              Abbrechen
+            </Button>
+            <Button onClick={handlePayoutRequest} disabled={payoutSubmitting}>
+              {payoutSubmitting ? 'Wird gesendet...' : 'Antrag senden'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
