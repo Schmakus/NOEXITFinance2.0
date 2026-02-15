@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,6 +16,12 @@ function Login() {
   const [logo, setLogo] = useState<string | null>(null)
   const [bandName, setBandName] = useState('NO EXIT')
   const { login } = useAuth()
+
+  // Passwort vergessen Dialog
+  const [showResetDialog, setShowResetDialog] = useState(false)
+  const [resetEmail, setResetEmail] = useState('')
+  const [resetLoading, setResetLoading] = useState(false)
+  const [resetMessage, setResetMessage] = useState('')
 
   useEffect(() => {
     fetchPublicSettings()
@@ -81,7 +89,6 @@ function Login() {
                 {error}
               </div>
             )}
-            
             <div className="space-y-2">
               <Label htmlFor="email">E-Mail</Label>
               <Input
@@ -94,7 +101,6 @@ function Login() {
                 required
               />
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="password">Passwort</Label>
               <Input
@@ -107,21 +113,91 @@ function Login() {
                 required
               />
             </div>
-
-            <Button
-              type="submit"
-              className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white transition-all"
-              disabled={isLoading}
-            >
-              {isLoading ? 'Wird angemeldet...' : 'Anmelden'}
-            </Button>
-
+            <div className="flex justify-between items-center">
+              <Button
+                type="submit"
+                className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white transition-all"
+                disabled={isLoading}
+              >
+                {isLoading ? 'Wird angemeldet...' : 'Anmelden'}
+              </Button>
+            </div>
             <div className="text-center text-sm text-muted-foreground border-t pt-4">
               Melde dich mit deinen Zugangsdaten an.
+            </div>
+            <div className="text-right mt-2">
+              <button
+                type="button"
+                className="text-xs text-amber-600 hover:underline"
+                onClick={() => setShowResetDialog(true)}
+              >
+                Passwort vergessen?
+              </button>
             </div>
           </form>
         </CardContent>
       </Card>
+
+      {/* Passwort vergessen Dialog */}
+      <Dialog open={showResetDialog} onOpenChange={setShowResetDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Passwort zurücksetzen</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Label htmlFor="reset-email">E-Mail-Adresse</Label>
+            <Input
+              id="reset-email"
+              type="email"
+              placeholder="deine@email.de"
+              value={resetEmail}
+              onChange={(e) => setResetEmail(e.target.value)}
+              autoComplete="email"
+              required
+            />
+            {resetMessage && (
+              <div className="text-sm text-green-600">{resetMessage}</div>
+            )}
+          </div>
+          <DialogFooter>
+            {resetMessage === 'E-Mail zum Zurücksetzen wurde gesendet.' ? (
+              <Button
+                type="button"
+                className="bg-gradient-to-r from-amber-500 to-amber-600 text-white"
+                onClick={() => {
+                  setShowResetDialog(false)
+                  setResetEmail('')
+                  setResetMessage('')
+                }}
+              >
+                OK
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                className="bg-gradient-to-r from-amber-500 to-amber-600 text-white"
+                disabled={resetLoading || !resetEmail}
+                onClick={async () => {
+                  setResetLoading(true)
+                  setResetMessage('')
+                  try {
+                    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail)
+                    if (error) {
+                      setResetMessage('Fehler beim Senden. Bitte versuche es erneut.')
+                    } else {
+                      setResetMessage('E-Mail zum Zurücksetzen wurde gesendet.')
+                    }
+                  } finally {
+                    setResetLoading(false)
+                  }
+                }}
+              >
+                {resetLoading ? 'Wird gesendet...' : 'Zurücksetzen'}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
