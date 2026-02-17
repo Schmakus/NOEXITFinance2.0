@@ -81,7 +81,7 @@ Voraussetzungen:
 ## Release Notes
 
 ```
-***WORKING***
+v1.5.2 (17.02.2026)
 
 v1.5.1 (17.02.2026)
 
