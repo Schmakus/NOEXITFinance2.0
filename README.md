@@ -10,24 +10,26 @@ Eine moderne **Finanzmanagement-Anwendung für Musikbands** mit aktuellem Tech-S
 ✅ **Gruppen** - Musikgruppen organisieren  
 ✅ **Konzerte** - Events und Auftritte verwalten  
 ✅ **Transaktionen** - Finanzielle Aktivitäten tracken  
+✅ **Auszahlungen beantragen** - Gage beantragen  
 ✅ **Tags** - Transaktionen kategorisieren  
 ✅ **Einstellungen** - Benutzerpräferenzen  
+✅ **Backup/Restore** - JSON Export & Restore (Admin)  
+✅ **CSV Export** - Kontoauszuege fuer alle Musiker (Admin/Superuser)  
 
 ## Tech Stack
 
 - **Frontend:** React 19, TypeScript, Vite 7
-- **Styling:** Tailwind CSS 3.4, shadcn/ui
-- **Routing:** React Router v6
+- **Styling:** Tailwind CSS 4, shadcn/ui
+- **Routing:** React Router v7
 - **State Management:** TanStack React Query
-- **Forms:** React Hook Form + Zod Validation
+- **Backend:** Supabase (Auth + Database)
 - **Icons:** Lucide React
-- **Utilities:** Date-fns, Lodash, Axios
 
 ## Installation
 
 ### Voraussetzungen
-- Node.js 25.6.0+
-- npm 11.8.0+
+- Node.js 20+ (LTS empfohlen)
+- npm 10+
 
 ### Setup
 
@@ -48,9 +50,6 @@ npm run dev
 # Browser öffnet sich auf: http://localhost:5173/
 ```
 
-### Demo Anmeldung
-Beliebige E-Mail und Passwort verwenden (Demo-Authentifizierung).
-
 ## Build
 
 ```bash
@@ -59,6 +58,65 @@ npm run build
 
 # Lokal testen
 npm run preview
+```
+
+## Release
+
+Ein Befehl erledigt Version, Tag, Push und GitHub Release.
+
+```bash
+# Patch/Minor/Major
+npm run release:patch
+npm run release:minor
+npm run release:major
+
+# Beta (Prerelease)
+npm run release:beta
+```
+
+Voraussetzungen:
+- Du bist auf `main`
+- GitHub CLI (`gh`) ist installiert und eingeloggt
+
+## Release Notes
+
+```
+***WORKING***
+
+v1.5.1 (17.02.2026)
+
+v1.5.0 (17.02.2026)
+- (Schmakus) New: Activity logging
+
+v1.4.2 (17.02.2026)
+- (Schmakus) some bugfixes
+
+v1.4.1 (17.02.2026)
+- (Schmakus) Fix: Release-Workflow
+
+v1.4.0 (17.02.2026)
+- (Schmakus) New: Add Passwort Vergessen funktion
+- (Schmakus) Fix: Version number in settings
+- (Schmakus) Fix: Open menu in desktop view
+
+v1.3.0 (14.02.2026)
+- (Schmakus) New: Auszahlung beantragen; inkl. Genehmigung und PDF Upload
+
+v1.2.1 (08.02.2026)
+- (Schmakus) Test release script
+- (Schmakus) Fix PayoutRequest; PDF Upload onhold
+
+v1.2.0 (08.02.2026)
+- (Schmakus) fix Authentification
+- (Schmakus) fix Buchungen
+- (Schmakus) Add archiv for deleted musicians
+- (Schmakus) Design fixes/changes
+- (Schmakus) Edit Layout, add PDF Export und eMail for Kontoauszüge
+- (Schmakus) DatePicker; Respnsive Design; Only DarkMode
+- (Schmakus) Rollenzuweisung optimiert
+
+v0.0.5 (04.02.2026)
+- Beispiel: Backup/Restore hinzugefuegt
 ```
 
 ## Linting & Formatierung
@@ -90,7 +148,7 @@ src/
 ├── contexts/            # React Contexts
 │   └── AuthContext.tsx  # Authentifizierung
 ├── lib/                 # Utilities & Konfiguration
-│   ├── api-client.ts    # Axios Client
+│   ├── api-client.ts    # Supabase API Client
 │   ├── query-client.ts  # TanStack Query
 │   └── utils.ts         # Utility Functions
 └── App.tsx              # Haupt-App Component
@@ -98,13 +156,7 @@ src/
 
 ## API Integration
 
-The app is configured to connect to a backend API at `http://localhost:3000/api` (configurable via `.env.local`).
-
-Alle API-Requests verwenden einen Bearer Token für Authentifizierung:
-
-```typescript
-Authorization: Bearer <auth_token>
-```
+Die App nutzt Supabase fuer Authentifizierung und Datenbank.
 
 ## UI Components
 
@@ -121,6 +173,26 @@ Ready-to-use shadcn/ui Components:
 - **TypeScript:** Strikte Typ-Überprüfung für Sicherheit
 - **ESLint:** Code-Qualitätsprüfungen
 
+## Conventional Commits Cheat-Sheet
+
+**Format:** `type(scope): kurze beschreibung`
+
+- `feat:` neue Funktion
+- `fix:` Bugfix
+- `docs:` nur Doku
+- `chore:` Wartung/Build
+- `refactor:` Code-Refactor ohne Feature/Bugfix
+- `perf:` Performance
+- `test:` Tests
+
+**Beispiele**
+
+```
+feat(settings): backup export hinzugefuegt
+fix(auth): lade-screen bei reload behoben
+chore(release): 2.1.0
+```
+
 ## Lizenz
 
-Privat - NOEXIT Band
+Privat - NOEXIT Partyrock

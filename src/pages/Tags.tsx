@@ -6,8 +6,12 @@ import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Plus, Pencil, Trash2, Tag } from 'lucide-react'
 import { useTags } from '@/contexts/TagsContext'
+import { useAuth } from '@/contexts/AuthContext'
+import { Spinner } from '@/components/ui/spinner'
+import { supabase } from '@/lib/supabase'
 
 function Tags() {
+  const { user } = useAuth()
   const { tags, tagNames, isLoading, addTag, removeTag, updateTag } = useTags()
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
@@ -25,6 +29,17 @@ function Tags() {
     }
     try {
       await addTag(name)
+      // Logging-Aufruf
+      if (user) {
+        await supabase.from('logs').insert({
+          type: 'tag',
+          action: 'create',
+          label: name,
+          description: 'Keyword erstellt',
+          user_id: user.id,
+          user_name: user.name,
+        })
+      }
       setNewTagName('')
       setError(null)
       setShowAddDialog(false)
@@ -44,6 +59,17 @@ function Tags() {
     }
     try {
       await updateTag(editingTag.id, name)
+      // Logging-Aufruf
+      if (user) {
+        await supabase.from('logs').insert({
+          type: 'tag',
+          action: 'update',
+          label: name,
+          description: 'Keyword bearbeitet',
+          user_id: user.id,
+          user_name: user.name,
+        })
+      }
       setShowEditDialog(false)
       setEditingTag(null)
       setEditName('')
@@ -58,25 +84,32 @@ function Tags() {
     if (!confirm('Dieses Keyword wirklich löschen?')) return
     try {
       await removeTag(id)
+      // Logging-Aufruf
+      if (user) {
+        await supabase.from('logs').insert({
+          type: 'tag',
+          action: 'delete',
+          label: id,
+          description: 'Keyword gelöscht',
+          user_id: user.id,
+          user_name: user.name,
+        })
+      }
     } catch (err) {
       console.error(err)
     }
   }
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <p className="text-muted-foreground">Keywords werden geladen...</p>
-      </div>
-    )
+    return <Spinner text="Keywords werden geladen..." />
   }
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Keywords</h1>
-          <p className="text-muted-foreground mt-2">Verwalte Keywords für Konzerte und Buchungen</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Keywords</h1>
+          <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-base">Verwalte Keywords für Konzerte und Buchungen</p>
         </div>
         <Button onClick={() => { setShowAddDialog(true); setError(null); setNewTagName('') }}>
           <Plus className="w-4 h-4 mr-2" />
@@ -103,7 +136,7 @@ function Tags() {
                 >
                   <Tag className="w-4 h-4 text-muted-foreground" />
                   <span className="font-medium text-sm">{tag.name}</span>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                     <Button
                       variant="ghost"
                       size="icon"

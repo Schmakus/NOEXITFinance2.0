@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { DatePicker } from '@/components/ui/date-picker'
 import {
   Dialog,
   DialogContent,
@@ -25,6 +26,9 @@ import {
   deleteTransactionsByConcert,
 } from '@/lib/api-client'
 import { useTags } from '@/contexts/TagsContext'
+import { useAuth } from '@/contexts/AuthContext'
+import { Spinner } from '@/components/ui/spinner'
+import { supabase } from '@/lib/supabase'
 import type { ConcertWithExpenses, GroupWithMembers } from '@/lib/database.types'
 
 interface LocalExpense {
@@ -35,6 +39,7 @@ interface LocalExpense {
 }
 
 function Concerts() {
+  const { user } = useAuth()
   const [concerts, setConcerts] = useState<ConcertWithExpenses[]>([])
   const [groups, setGroups] = useState<GroupWithMembers[]>([])
   const [loading, setLoading] = useState(true)
@@ -129,7 +134,7 @@ function Concerts() {
 
     const nettoGage = parseFloat(formData.nettoGage)
     const expenseTotal = expenses.reduce((sum, e) => sum + e.amount, 0)
-    const restBetrag = nettoGage - expenseTotal
+    // restBetrag wird weiter unten als const deklariert, daher hier entfernen
 
     const concertData = {
       name: formData.name,
@@ -146,18 +151,22 @@ function Concerts() {
     }))
 
     try {
-      let concertId: string
+      let concertId: string;
+      let action: 'create' | 'update' = 'create';
       if (editingId) {
-        const updated = await updateConcert(editingId, concertData, expenseData)
-        concertId = updated.id
+        const updated = await updateConcert(editingId, concertData, expenseData);
+        concertId = updated.id;
+        action = 'update';
       } else {
-        const created = await createConcert(concertData, expenseData)
-        concertId = created.id
+        const created = await createConcert(concertData, expenseData);
+        concertId = created.id;
+        action = 'create';
       }
 
       // Create transactions if group is selected and there's a positive rest
+      const restBetrag = nettoGage - expenseTotal;
       if (formData.groupId && restBetrag > 0) {
-        const members = getGroupMembers(formData.groupId)
+        const members = getGroupMembers(formData.groupId);
         const transactions = members.map((member) => ({
           musician_id: member.musician_id,
           concert_name: formData.name,
@@ -165,50 +174,108 @@ function Concerts() {
           date: formData.date,
           type: 'earn' as const,
           description: `Gagen Verteilung: ${formData.name}`,
-        }))
-        await replaceTransactionsByConcert(concertId, transactions)
+        }));
+        await replaceTransactionsByConcert(concertId, transactions);
       } else {
         // No group or no rest — remove any existing transactions
-        await deleteTransactionsByConcert(concertId)
+        await deleteTransactionsByConcert(concertId);
       }
 
-      setOpen(false)
-      resetForm()
-      await loadData()
+      // Logging-Aufruf
+      if (user) {
+        let changes: string[] = [];
+        let desc = '';
+        if (editingId) {
+          const oldConcert = concerts.find((c) => c.id === editingId);
+          if (oldConcert) {
+            if (concertData.netto_gage !== oldConcert.netto_gage) {
+              changes.push(`Gage von ${formatCurrency(oldConcert.netto_gage)} auf ${formatCurrency(concertData.netto_gage)}`);
+            }
+            if ((concertData.name || '-') !== (oldConcert.name || '-')) {
+              changes.push('Name geändert');
+            }
+            if ((concertData.location || '') !== (oldConcert.location || '')) {
+              changes.push('Ort geändert');
+            }
+            if ((concertData.date || '') !== (oldConcert.date || '')) {
+              changes.push('Datum geändert');
+            }
+            if ((concertData.group_id || '') !== (oldConcert.group_id || '')) {
+              changes.push('Gruppe geändert');
+            }
+            if ((concertData.notes || '') !== (oldConcert.notes || '')) {
+              changes.push('Notiz geändert');
+            }
+            // Ausgaben-Änderungen
+            const oldExpenses = oldConcert.expenses.map(e => `${e.description}:${e.amount}:${e.keyword}`).join('|');
+            const newExpenses = expenseData.map(e => `${e.description}:${e.amount}:${e.keyword}`).join('|');
+            if (oldExpenses !== newExpenses) {
+              changes.push('Ausgaben geändert');
+            }
+            const groupName = concertData.group_id ? (groups.find(g => g.id === concertData.group_id)?.name || '-') : '';
+            desc = `Konzert: ${concertData.name}, Ort: ${concertData.location}, Datum: ${concertData.date}, Gage: ${formatCurrency(concertData.netto_gage)}${groupName ? ', Gruppe: ' + groupName : ''}${concertData.notes ? ', Notiz: ' + concertData.notes : ''}${expenseData.length ? ', Ausgaben: ' + expenseData.map(e => `${e.description} (${formatCurrency(e.amount)})`).join(', ') : ''}${changes.length ? ', ' + changes.join(', ') : ', keine Änderung'}`;
+          }
+        } else {
+          const groupName = concertData.group_id ? (groups.find(g => g.id === concertData.group_id)?.name || '-') : '';
+          desc = `Konzert: ${concertData.name}, Ort: ${concertData.location}, Datum: ${concertData.date}, Gage: ${formatCurrency(concertData.netto_gage)}${groupName ? ', Gruppe: ' + groupName : ''}${concertData.notes ? ', Notiz: ' + concertData.notes : ''}${expenseData.length ? ', Ausgaben: ' + expenseData.map(e => `${e.description} (${formatCurrency(e.amount)})`).join(', ') : ''}, neu erstellt`;
+        }
+        await supabase.from('logs').insert({
+          type: 'concert',
+          action,
+          label: concertData.name,
+          description: desc,
+          user_id: user.id,
+          user_name: user.name,
+        });
+      }
+
+      setOpen(false);
+      resetForm();
+      await loadData();
     } catch (err) {
-      console.error('Konzert speichern fehlgeschlagen:', err)
-      alert('Konzert konnte nicht gespeichert werden.')
+      console.error('Konzert speichern fehlgeschlagen:', err);
+      alert('Konzert konnte nicht gespeichert werden.');
     }
   }
 
   const handleDeleteConcert = async (id: string) => {
     if (!confirm('Konzert wirklich löschen?')) return
     try {
-      await apiDeleteConcert(id)
-      setConcerts((prev) => prev.filter((c) => c.id !== id))
+      const oldConcert = concerts.find((c) => c.id === id);
+      await apiDeleteConcert(id);
+      setConcerts((prev) => prev.filter((c) => c.id !== id));
+      // Logging-Aufruf
+      if (user && oldConcert) {
+        const groupName = oldConcert.group_id ? (groups.find(g => g.id === oldConcert.group_id)?.name || '-') : '';
+        const desc = `Konzert: ${oldConcert.name}, Ort: ${oldConcert.location}, Datum: ${oldConcert.date}, Gage: ${formatCurrency(oldConcert.netto_gage)}${groupName ? ', Gruppe: ' + groupName : ''}${oldConcert.notes ? ', Notiz: ' + oldConcert.notes : ''}${oldConcert.expenses.length ? ', Ausgaben: ' + oldConcert.expenses.map(e => `${e.description} (${formatCurrency(e.amount)})`).join(', ') : ''}, gelöscht`;
+        await supabase.from('logs').insert({
+          type: 'concert',
+          action: 'delete',
+          label: id,
+          description: desc,
+          user_id: user.id,
+          user_name: user.name,
+        });
+      }
     } catch (err) {
-      console.error('Konzert löschen fehlgeschlagen:', err)
-      alert('Konzert konnte nicht gelöscht werden.')
+      console.error('Konzert löschen fehlgeschlagen:', err);
+      alert('Konzert konnte nicht gelöscht werden.');
     }
   }
 
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0)
-  const restBetrag = parseFloat(formData.nettoGage || '0') - totalExpenses
+  // restBetrag wird nur in saveConcert benötigt
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <p className="text-muted-foreground">Konzerte werden geladen...</p>
-      </div>
-    )
+    return <Spinner text="Konzerte werden geladen..." />
   }
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Konzerte</h1>
-          <p className="text-muted-foreground mt-2">Verwalte deine Konzertabrechnungen</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Konzerte</h1>
+          <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-base">Verwalte deine Konzertabrechnungen</p>
         </div>
         <Dialog open={open} onOpenChange={(v: boolean) => { if (!v) resetForm(); setOpen(v) }}>
           <DialogTrigger asChild>
@@ -224,9 +291,9 @@ function Concerts() {
                 {editingId ? 'Aktualisiere die Konzertinformationen' : 'Erstelle ein neues Konzert mit Ausgaben'}
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4 pl-4 max-h-[70vh] overflow-y-auto">
+            <div className="grid gap-4 py-4 px-1">
               {/* Basic Info */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="name">Name/Anlass</Label>
                   <Input
@@ -247,15 +314,10 @@ function Concerts() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="date">Datum</Label>
-                  <Input
-                    id="date"
-                    type="date"
-                    value={formData.date}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  />
+                  <DatePicker value={formData.date} onChange={(v) => setFormData({ ...formData, date: v })} />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="nettoGage">Netto-Gage (€)</Label>
@@ -271,7 +333,7 @@ function Concerts() {
               </div>
 
               {/* Concert Summary */}
-              <div className="grid grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
+              <div className="grid grid-cols-3 gap-2 sm:gap-4 p-3 sm:p-4 bg-muted rounded-lg">
                 <div>
                   <p className="text-sm text-muted-foreground">Netto-Gage</p>
                   <p className="text-lg font-medium">{formatCurrency(parseFloat(formData.nettoGage || '0'))}</p>
@@ -282,7 +344,7 @@ function Concerts() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Restbetrag</p>
-                  <p className="text-lg font-medium text-green-600 dark:text-green-400">{formatCurrency(restBetrag)}</p>
+                  <p className="text-lg font-medium text-green-600 dark:text-green-400">{formatCurrency(parseFloat(formData.nettoGage || '0') - totalExpenses)}</p>
                 </div>
               </div>
 
@@ -308,7 +370,7 @@ function Concerts() {
 
                 {/* Add Expense Form */}
                 <div className="grid gap-2 p-3 border rounded-lg bg-muted/30">
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     <Input
                       placeholder="Beschreibung"
                       value={expenseForm.description}
@@ -425,7 +487,7 @@ function Concerts() {
                 <CardContent>
                   <div className="space-y-4">
                     {/* Summary */}
-                    <div className="grid grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
+                    <div className="grid grid-cols-3 gap-2 sm:gap-4 p-3 sm:p-4 bg-muted rounded-lg">
                       <div>
                         <p className="text-sm text-muted-foreground">Netto-Gage</p>
                         <p className="text-lg font-medium">{formatCurrency(concert.netto_gage)}</p>

@@ -1,7 +1,57 @@
+// USER: Update own payout request (only if pending)
+export async function updatePayoutRequestUser(
+  id: string,
+  musicianId: string,
+  updates: { amount?: number; note?: string }
+): Promise<DbPayoutRequest> {
+  const { data, error } = await supabase
+    .from('payout_requests')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('musician_id', musicianId)
+    .eq('status', 'pending')
+    .select()
+  if (error) throw error
+  if (!data || data.length === 0) {
+    throw new Error('Bearbeitung nicht möglich: Antrag existiert nicht, gehört nicht dir oder ist nicht mehr ausstehend.')
+  }
+  const row = data[0]
+  return { ...row, amount: Number(row.amount) }
+}
+
+// USER: Delete own payout request (only if pending)
+export async function deletePayoutRequestUser(id: string, musicianId: string): Promise<void> {
+  const { error } = await supabase
+    .from('payout_requests')
+    .delete()
+    .eq('id', id)
+    .eq('musician_id', musicianId)
+    .eq('status', 'pending')
+  if (error) throw error
+}
+// PDF Upload für Auszahlungsanträge
+export async function uploadPayoutRequestPdf(requestId: string, file: File): Promise<string> {
+  const ext = file.name.split('.').pop()?.toLowerCase() || 'pdf'
+  if (file.type !== 'application/pdf' && ext !== 'pdf') {
+    throw new Error('Nur PDF-Dateien sind erlaubt.')
+  }
+  const path = `${requestId}.${ext}`
+  const { data, error } = await supabase.storage
+    .from('payout-request-pdfs')
+    .upload(path, file, { upsert: true, contentType: 'application/pdf' })
+  if (error) {
+    // Supabase errors are objects, so throw a readable error
+    throw new Error(error.message || error.error_description || JSON.stringify(error))
+  }
+  if (!data) {
+    throw new Error('PDF Upload fehlgeschlagen: Keine Daten von Supabase erhalten.')
+  }
+  return path
+}
 // ============================================
 // Supabase API-Funktionen
 // ============================================
-import { supabase, supabaseAdmin } from './supabase'
+import { supabase, getSupabaseAdmin } from './supabase'
 import type {
   DbMusician,
   DbGroup,
@@ -9,10 +59,15 @@ import type {
   DbConcertExpense,
   DbBooking,
   DbTransaction,
+  DbTransactionArchive,
   DbTag,
   DbAppSetting,
+  DbPayoutRequest,
   GroupWithMembers,
   ConcertWithExpenses,
+  BookingWithDetails,
+  TransactionArchiveWithMusician,
+  PayoutRequestWithMusician,
 } from './database.types'
 
 // ============================================
@@ -20,19 +75,29 @@ import type {
 // ============================================
 
 export async function createAuthUser(email: string, password: string): Promise<string> {
-  if (!supabaseAdmin) throw new Error('Service Role Key fehlt – Admin-Funktionen nicht verfügbar')
-  const { data, error } = await supabaseAdmin.auth.admin.createUser({
+  const admin = getSupabaseAdmin()
+  if (!admin) throw new Error('Service Role Key fehlt – Admin-Funktionen nicht verfügbar')
+  const { data, error } = await admin.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
   })
   if (error) throw error
+  if (!data || !data.user) throw new Error('User konnte nicht erstellt werden')
   return data.user.id
 }
 
 export async function deleteAuthUser(authUserId: string): Promise<void> {
-  if (!supabaseAdmin) throw new Error('Service Role Key fehlt – Admin-Funktionen nicht verfügbar')
-  const { error } = await supabaseAdmin.auth.admin.deleteUser(authUserId)
+  const admin = getSupabaseAdmin()
+  if (!admin) throw new Error('Service Role Key fehlt – Admin-Funktionen nicht verfügbar')
+  const { error } = await admin.auth.admin.deleteUser(authUserId)
+  if (error) throw error
+}
+
+export async function updateAuthUserPassword(authUserId: string, newPassword: string): Promise<void> {
+  const admin = getSupabaseAdmin()
+  if (!admin) throw new Error('Service Role Key fehlt – Admin-Funktionen nicht verfügbar')
+  const { error } = await admin.auth.admin.updateUserById(authUserId, { password: newPassword })
   if (error) throw error
 }
 
@@ -44,6 +109,26 @@ export async function fetchMusicians(): Promise<DbMusician[]> {
   const { data, error } = await supabase
     .from('musicians')
     .select('*')
+    .is('archived_at', null)
+    .order('name')
+  if (error) throw error
+  return (data ?? []).map((m: any) => ({ ...m, balance: Number(m.balance) }))
+}
+
+export async function fetchAllMusicians(): Promise<DbMusician[]> {
+  const { data, error } = await supabase
+    .from('musicians')
+    .select('*')
+    .order('name')
+  if (error) throw error
+  return (data ?? []).map((m: any) => ({ ...m, balance: Number(m.balance) }))
+}
+
+export async function fetchArchivedMusicians(): Promise<DbMusician[]> {
+  const { data, error } = await supabase
+    .from('musicians')
+    .select('*')
+    .not('archived_at', 'is', null)
     .order('name')
   if (error) throw error
   return (data ?? []).map((m: any) => ({ ...m, balance: Number(m.balance) }))
@@ -54,6 +139,17 @@ export async function fetchMusicianByUserId(userId: string): Promise<DbMusician 
     .from('musicians')
     .select('*')
     .eq('user_id', userId)
+    .is('archived_at', null)
+    .maybeSingle()
+  if (error) throw error
+  return data ? { ...data, balance: Number(data.balance) } : null
+}
+
+export async function fetchMusicianById(id: string): Promise<DbMusician | null> {
+  const { data, error } = await supabase
+    .from('musicians')
+    .select('*')
+    .eq('id', id)
     .maybeSingle()
   if (error) throw error
   return data ? { ...data, balance: Number(data.balance) } : null
@@ -104,6 +200,85 @@ export async function updateMusician(
 export async function deleteMusician(id: string): Promise<void> {
   const { error } = await supabase.from('musicians').delete().eq('id', id)
   if (error) throw error
+}
+
+export async function archiveMusician(id: string): Promise<void> {
+  const { data: musician, error: mErr } = await supabase
+    .from('musicians')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle()
+  if (mErr) throw mErr
+  if (!musician) throw new Error('Musiker nicht gefunden')
+
+  const balance = Number(musician.balance)
+  if (Math.abs(balance) > 0.01) {
+    throw new Error('Musiker kann nur archiviert werden, wenn der Kontostand 0,00€ ist')
+  }
+
+  const { data: transactions, error: tErr } = await supabase
+    .from('transactions')
+    .select('*')
+    .eq('musician_id', id)
+  if (tErr) throw tErr
+
+  if ((transactions ?? []).length > 0) {
+    const archiveRows = (transactions ?? []).map((t: any) => ({
+      ...t,
+      archived_at: new Date().toISOString(),
+    }))
+    const { error: aErr } = await supabase.from('transactions_archive').insert(archiveRows)
+    if (aErr) throw aErr
+
+    const { error: dErr } = await supabase
+      .from('transactions')
+      .delete()
+      .eq('musician_id', id)
+    if (dErr) throw dErr
+  }
+
+  const { error: uErr } = await supabase
+    .from('musicians')
+    .update({ archived_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq('id', id)
+  if (uErr) throw uErr
+}
+
+export async function restoreMusician(id: string): Promise<void> {
+  const { data: musician, error: mErr } = await supabase
+    .from('musicians')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle()
+  if (mErr) throw mErr
+  if (!musician) throw new Error('Musiker nicht gefunden')
+
+  const { data: archivedTx, error: tErr } = await supabase
+    .from('transactions_archive')
+    .select('*')
+    .eq('musician_id', id)
+  if (tErr) throw tErr
+
+  if ((archivedTx ?? []).length > 0) {
+    const restoreRows = (archivedTx ?? []).map((t: any) => {
+      const { archived_at, ...rest } = t
+      return rest
+    })
+    const { error: iErr } = await supabase.from('transactions').insert(restoreRows)
+    if (iErr) throw iErr
+
+    const { error: dErr } = await supabase
+      .from('transactions_archive')
+      .delete()
+      .eq('musician_id', id)
+    if (dErr) throw dErr
+  }
+
+  const { error: uErr } = await supabase
+    .from('musicians')
+    .update({ archived_at: null, updated_at: new Date().toISOString() })
+    .eq('id', id)
+  if (uErr) throw uErr
 }
 
 // ============================================
@@ -466,13 +641,42 @@ export async function fetchTransactions(): Promise<DbTransaction[]> {
 export async function fetchTransactionsWithMusician() {
   const { data, error } = await supabase
     .from('transactions')
-    .select('*, musicians(name)')
+    .select('*, musicians(name), bookings(type)')
     .order('date', { ascending: false })
   if (error) throw error
   return (data ?? []).map((t: any) => ({
     ...t,
     amount: Number(t.amount),
     musician_name: t.musicians?.name ?? 'Unbekannt',
+    booking_type: t.bookings?.type ?? null,
+  }))
+}
+
+export async function fetchArchivedTransactions(): Promise<DbTransactionArchive[]> {
+  const { data, error } = await supabase
+    .from('transactions_archive')
+    .select('*')
+    .order('date', { ascending: false })
+  if (error) throw error
+  return (data ?? []).map((t: any) => ({
+    ...t,
+    amount: Number(t.amount),
+    created_at: t.created_at ?? null,
+  }))
+}
+
+export async function fetchArchivedTransactionsWithMusician(): Promise<TransactionArchiveWithMusician[]> {
+  const { data, error } = await supabase
+    .from('transactions_archive')
+    .select('*, musicians(name), bookings(type)')
+    .order('date', { ascending: false })
+  if (error) throw error
+  return (data ?? []).map((t: any) => ({
+    ...t,
+    amount: Number(t.amount),
+    created_at: t.created_at ?? null,
+    musician_name: t.musicians?.name ?? 'Unbekannt',
+    booking_type: t.bookings?.type ?? null,
   }))
 }
 
@@ -624,6 +828,22 @@ export async function fetchSettings(): Promise<Record<string, string>> {
   return settings
 }
 
+// Public settings (logo, bandname) — uses admin client to bypass RLS on login page
+export async function fetchPublicSettings(): Promise<{ logo: string | null; bandname: string }> {
+  const admin = getSupabaseAdmin()
+  if (!admin) return { logo: null, bandname: 'NO EXIT' }
+  const { data, error } = await admin
+    .from('app_settings')
+    .select('key, value')
+    .in('key', ['logo', 'bandname'])
+  if (error) return { logo: null, bandname: 'NO EXIT' }
+  const settings: Record<string, string> = {}
+  ;(data ?? []).forEach((s: any) => {
+    if (s.value !== null) settings[s.key] = s.value
+  })
+  return { logo: settings.logo ?? null, bandname: settings.bandname ?? 'NO EXIT' }
+}
+
 export async function fetchSetting(key: string): Promise<string | null> {
   const { data, error } = await supabase
     .from('app_settings')
@@ -696,6 +916,12 @@ export async function deleteAllTransactions(): Promise<void> {
     .delete()
     .neq('id', '00000000-0000-0000-0000-000000000000')
   if (error) throw error
+
+  const { error: aErr } = await supabase
+    .from('transactions_archive')
+    .delete()
+    .neq('id', '00000000-0000-0000-0000-000000000000')
+  if (aErr) throw aErr
 }
 
 export async function deleteAllData(): Promise<void> {
@@ -729,6 +955,7 @@ export async function deleteAllData(): Promise<void> {
     concerts: ConcertWithExpenses[]
     bookings: DbBooking[]
     transactions: DbTransaction[]
+    transactions_archive: DbTransactionArchive[]
     tags: DbTag[]
     settings: Record<string, string>
   }
@@ -749,18 +976,20 @@ export async function deleteAllData(): Promise<void> {
     requireArray('concerts')
     requireArray('bookings')
     requireArray('transactions')
+    requireArray('transactions_archive')
     requireArray('tags')
 
     if (!isObj(data.settings)) throw new Error('Backup-Feld fehlt: settings')
   }
 
   export async function exportBackup(): Promise<BackupData> {
-    const [musicians, groups, concerts, bookings, transactions, tags, settings] = await Promise.all([
-      fetchMusicians(),
+    const [musicians, groups, concerts, bookings, transactions, transactionsArchive, tags, settings] = await Promise.all([
+      fetchAllMusicians(),
       fetchGroupsWithMembers(),
       fetchConcerts(),
       fetchBookings(),
       fetchTransactions(),
+      fetchArchivedTransactions(),
       fetchTags(),
       fetchSettings(),
     ])
@@ -773,6 +1002,7 @@ export async function deleteAllData(): Promise<void> {
       concerts,
       bookings,
       transactions,
+      transactions_archive: transactionsArchive,
       tags,
       settings,
     }
@@ -831,6 +1061,13 @@ export async function deleteAllData(): Promise<void> {
       if (error) throw error
     }
 
+    if (data.transactions_archive?.length) {
+      const { error } = await supabase
+        .from('transactions_archive')
+        .insert(data.transactions_archive)
+      if (error) throw error
+    }
+
     if (data.tags?.length) {
       const { error } = await supabase.from('tags').insert(data.tags)
       if (error) throw error
@@ -850,6 +1087,9 @@ export async function deleteAllData(): Promise<void> {
 
     const { error: tErr } = await supabase.from('transactions').delete().neq('id', emptyUuid)
     if (tErr) throw tErr
+
+    const { error: taErr } = await supabase.from('transactions_archive').delete().neq('id', emptyUuid)
+    if (taErr) throw taErr
 
     const { error: ceErr } = await supabase.from('concert_expenses').delete().neq('id', emptyUuid)
     if (ceErr) throw ceErr
@@ -877,6 +1117,216 @@ export async function deleteAllData(): Promise<void> {
   }
 
   // ============================================
+  // AUSZAHLUNGSANTRÄGE (Payout Requests)
+  // ============================================
+
+  export async function fetchPendingPayoutRequestCount(): Promise<number> {
+    const { count, error } = await supabase
+      .from('payout_requests')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'pending')
+    if (error) return 0
+    return count ?? 0
+  }
+
+  export async function fetchPayoutBookings(): Promise<BookingWithDetails[]> {
+    const { data, error } = await supabase
+      .from('bookings')
+      .select('*, groups(name)')
+      .eq('type', 'payout')
+      .order('date', { ascending: false })
+    if (error) throw error
+    return (data ?? []).map((b: any) => ({
+      id: b.id,
+      description: b.description,
+      amount: Number(b.amount),
+      type: b.type,
+      date: b.date,
+      group_id: b.group_id,
+      musician_id: b.musician_id,
+      payout_musician_ids: b.payout_musician_ids ?? [],
+      keywords: b.keywords ?? [],
+      notes: b.notes,
+      created_at: b.created_at,
+      updated_at: b.updated_at,
+      group_name: b.groups?.name ?? null,
+    }))
+  }
+
+  export async function fetchPayoutRequests(): Promise<PayoutRequestWithMusician[]> {
+    const { data, error } = await supabase
+      .from('payout_requests')
+      .select('*, musicians!payout_requests_musician_id_fkey(name)')
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    // Fetch reviewer names separately
+    const reviewerIds = [...new Set((data ?? []).map((r: any) => r.reviewed_by).filter(Boolean))]
+    let reviewerMap: Record<string, string> = {}
+    if (reviewerIds.length > 0) {
+      const { data: reviewers } = await supabase
+        .from('musicians')
+        .select('id, name')
+        .in('id', reviewerIds)
+      if (reviewers) {
+        reviewerMap = Object.fromEntries(reviewers.map((r: any) => [r.id, r.name]))
+      }
+    }
+    return (data ?? []).map((r: any) => ({
+      id: r.id,
+      musician_id: r.musician_id,
+      amount: Number(r.amount),
+      note: r.note,
+      status: r.status,
+      admin_note: r.admin_note,
+      reviewed_by: r.reviewed_by,
+      reviewed_at: r.reviewed_at,
+      created_at: r.created_at,
+      updated_at: r.updated_at,
+      musician_name: r.musicians?.name ?? 'Unbekannt',
+      reviewed_by_name: r.reviewed_by ? (reviewerMap[r.reviewed_by] ?? undefined) : undefined,
+    }))
+  }
+
+  export async function fetchMyPayoutRequests(musicianId: string): Promise<DbPayoutRequest[]> {
+    const { data, error } = await supabase
+      .from('payout_requests')
+      .select('*')
+      .eq('musician_id', musicianId)
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return (data ?? []).map((r: any) => ({
+      ...r,
+      amount: Number(r.amount),
+    }))
+  }
+
+  export async function createPayoutRequest(musicianId: string, amount: number, note: string): Promise<DbPayoutRequest> {
+    const { data, error } = await supabase
+      .from('payout_requests')
+      .insert({
+        musician_id: musicianId,
+        amount,
+        note: note || null,
+      })
+      .select()
+      .single()
+    if (error) throw error
+    return { ...data, amount: Number(data.amount) }
+  }
+
+  export async function updatePayoutRequestAdmin(
+    id: string,
+    updates: { amount?: number; note?: string; admin_note?: string; pdf_url?: string }
+  ): Promise<DbPayoutRequest> {
+    const { data, error } = await supabase
+      .from('payout_requests')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single()
+    if (error) throw error
+    return { ...data, amount: Number(data.amount) }
+  }
+
+  export async function approvePayoutRequest(
+    requestId: string,
+    reviewerId: string,
+    adminNote: string
+  ): Promise<void> {
+    // 1. Load request
+    const { data: req, error: rErr } = await supabase
+      .from('payout_requests')
+      .select('*')
+      .eq('id', requestId)
+      .single()
+    if (rErr) throw rErr
+
+    const amount = Number(req.amount)
+    const musicianId = req.musician_id
+
+    // 2. Create payout booking
+    const booking = await createBooking({
+      description: `Auszahlung (Antrag)${req.note ? ': ' + req.note : ''}`,
+      amount,
+      type: 'payout',
+      date: new Date().toISOString().slice(0, 10),
+      group_id: null,
+      payout_musician_ids: [musicianId],
+      keywords: ['Auszahlung'],
+      notes: adminNote || '',
+    })
+
+    // 3. Create transaction (expense for the musician)
+    await createTransactions([{
+      musician_id: musicianId,
+      booking_id: booking.id,
+      amount: -amount,
+      date: new Date().toISOString().slice(0, 10),
+      type: 'expense',
+      description: `Auszahlung (Antrag)${req.note ? ': ' + req.note : ''}`,
+    }])
+
+    // 4. Mark request as approved
+    const { error: uErr } = await supabase
+      .from('payout_requests')
+      .update({
+        status: 'approved',
+        admin_note: adminNote || null,
+        reviewed_by: reviewerId,
+        reviewed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', requestId)
+    if (uErr) throw uErr
+  }
+
+  export async function rejectPayoutRequest(
+    requestId: string,
+    reviewerId: string,
+    adminNote: string
+  ): Promise<void> {
+    // 1. Load request
+    const { data: req, error: rErr } = await supabase
+      .from('payout_requests')
+      .select('*')
+      .eq('id', requestId)
+      .single()
+    if (rErr) throw rErr
+
+    const musicianId = req.musician_id
+
+    // 2. Create booking with 0€ to document the rejection
+    await createBooking({
+      description: `Auszahlung abgelehnt${req.note ? ': ' + req.note : ''}`,
+      amount: 0,
+      type: 'payout',
+      date: new Date().toISOString().slice(0, 10),
+      group_id: null,
+      payout_musician_ids: [musicianId],
+      keywords: ['Ablehnung'],
+      notes: adminNote || 'Auszahlungsantrag abgelehnt',
+    })
+
+    // 3. Mark request as rejected
+    const { error: uErr } = await supabase
+      .from('payout_requests')
+      .update({
+        status: 'rejected',
+        admin_note: adminNote || null,
+        reviewed_by: reviewerId,
+        reviewed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', requestId)
+    if (uErr) throw uErr
+  }
+
+  export async function deletePayoutRequest(id: string): Promise<void> {
+    const { error } = await supabase.from('payout_requests').delete().eq('id', id)
+    if (error) throw error
+  }
+
+  // ============================================
   // CSV EXPORT
   // ============================================
 
@@ -892,6 +1342,24 @@ export async function deleteAllData(): Promise<void> {
       const description = `"${(t.description || '').replace(/"/g, '""')}"` // CSV escape
       const concert = `"${(t.concert_name || '').replace(/"/g, '""')}"`
       return `${date},${musician},${type},${amount},${description},${concert}`
+    })
+
+    return header + rows.join('\n')
+  }
+
+  export async function exportArchivedTransactionsCSV(): Promise<string> {
+    const transactions = await fetchArchivedTransactionsWithMusician()
+
+    const header = 'Datum,Musiker,Typ,Betrag,Beschreibung,Konzert,Archiviert\n'
+    const rows = transactions.map((t) => {
+      const date = t.date || ''
+      const musician = t.musician_name
+      const type = t.type === 'earn' ? 'Einnahme' : 'Ausgabe'
+      const amount = t.amount.toFixed(2)
+      const description = `"${(t.description || '').replace(/"/g, '""')}"`
+      const concert = `"${(t.concert_name || '').replace(/"/g, '""')}"`
+      const archived = t.archived_at ? new Date(t.archived_at).toISOString().split('T')[0] : ''
+      return `${date},${musician},${type},${amount},${description},${concert},${archived}`
     })
 
     return header + rows.join('\n')

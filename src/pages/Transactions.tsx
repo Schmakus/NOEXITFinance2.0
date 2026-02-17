@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { TrendingUp, TrendingDown } from 'lucide-react'
+import { Banknote, TrendingUp, TrendingDown } from 'lucide-react'
 import { fetchMusicians, fetchTransactionsWithMusician } from '@/lib/api-client'
 import type { DbMusician } from '@/lib/database.types'
+import { Spinner } from '@/components/ui/spinner'
 
 interface TransactionRow {
   id: string
@@ -11,6 +12,7 @@ interface TransactionRow {
   musician_name: string
   concert_id: string | null
   booking_id: string | null
+  booking_type?: 'expense' | 'income' | 'payout' | null
   concert_name: string | null
   amount: number
   date: string | null
@@ -49,18 +51,19 @@ function Transactions() {
   }, {} as Record<string, TransactionRow[]>)
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <p className="text-muted-foreground">Transaktionen werden geladen...</p>
-      </div>
-    )
+    return <Spinner text="Transaktionen werden geladen..." />
   }
+
+  const isPayout = (t: TransactionRow) =>
+    t.booking_type === 'payout' ||
+    (t.description ?? '').toLowerCase().includes('auszahlung') ||
+    (t.concert_name ?? '').toLowerCase().includes('auszahlung')
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold">Transaktionen</h1>
-        <p className="text-muted-foreground mt-2">Verfolge alle Finanztransaktionen</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Transaktionen</h1>
+          <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-base">Verfolge alle Finanztransaktionen</p>
       </div>
 
       {transactions.length === 0 ? (
@@ -90,16 +93,25 @@ function Transactions() {
                     className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
                   >
                     <div className="flex items-center gap-3 flex-1">
-                      <div className={`p-2 rounded-full ${transaction.type === 'earn' ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
-                        {transaction.type === 'earn' ? (
+                      {(() => {
+                        const payout = transaction.type === 'expense' && isPayout(transaction)
+                        const iconWrapClass = payout
+                          ? 'bg-amber-100 dark:bg-amber-900/30'
+                          : transaction.type === 'earn'
+                            ? 'bg-green-100 dark:bg-green-900/30'
+                            : 'bg-red-100 dark:bg-red-900/30'
+                        const icon = payout ? (
+                          <Banknote className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                        ) : transaction.type === 'earn' ? (
                           <TrendingUp className="w-4 h-4 text-green-600 dark:text-green-400" />
                         ) : (
                           <TrendingDown className="w-4 h-4 text-red-600 dark:text-red-400" />
-                        )}
-                      </div>
+                        )
+                        return <div className={`p-2 rounded-full ${iconWrapClass}`}>{icon}</div>
+                      })()}
                       <div className="flex-1">
                         <p className="font-medium text-sm">
-                          {transaction.musician_name} - {transaction.description}
+                          {transaction.musician_name} - {isPayout(transaction) ? 'Auszahlung' : transaction.description}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {transaction.concert_name ?? '-'} • {transaction.date ? formatDate(new Date(transaction.date)) : '-'}

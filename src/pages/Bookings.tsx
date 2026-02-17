@@ -1,9 +1,10 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { DatePicker } from '@/components/ui/date-picker'
 import { Switch } from '@/components/ui/switch'
 import {
   Dialog,
@@ -14,7 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Plus, Edit2, Trash2, X } from 'lucide-react'
+import { Plus, Edit2, Trash2, X, Banknote, CircleDollarSign, TrendingDown } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import {
   fetchBookings,
@@ -27,9 +28,14 @@ import {
   deleteTransactionsByBooking,
 } from '@/lib/api-client'
 import { useTags } from '@/contexts/TagsContext'
+import { useAuth } from '@/contexts/AuthContext'
+import { Spinner } from '@/components/ui/spinner'
+import { supabase } from '@/lib/supabase'
 import type { DbBooking, DbMusician, GroupWithMembers } from '@/lib/database.types'
 
 function Bookings() {
+  const { user } = useAuth()
+  const canManage = user?.role === 'administrator' || user?.role === 'superuser'
   const [bookings, setBookings] = useState<(DbBooking & { group_name?: string })[]>([])
   const [musicians, setMusicians] = useState<DbMusician[]>([])
   const [groups, setGroups] = useState<GroupWithMembers[]>([])
@@ -88,6 +94,7 @@ function Bookings() {
   }
 
   const openAdd = () => {
+    if (!canManage) return
     resetForm()
     setOpen(true)
   }
@@ -121,6 +128,10 @@ function Bookings() {
   }, [form.groupId, groups])
 
   const saveBooking = async () => {
+    if (!canManage) {
+      alert('Keine Berechtigung: Nur Admins/Superuser koennen Buchungen verwalten.')
+      return
+    }
     if (!form.amount || !form.date) return
 
     const amount = parseFloat(form.amount)
@@ -137,13 +148,15 @@ function Bookings() {
 
     try {
       let bookingId: string
-
+      let action: 'create' | 'update'
       if (editingId) {
         const updated = await updateBooking(editingId, bookingData)
         bookingId = updated.id
+        action = 'update'
       } else {
         const created = await createBooking(bookingData)
         bookingId = created.id
+        action = 'create'
       }
 
       // Create transactions
@@ -186,23 +199,71 @@ function Bookings() {
         await deleteTransactionsByBooking(bookingId)
       }
 
+      // Logging-Aufruf
+      if (user) {
+        let changes: string[] = [];
+        let desc = '';
+        if (editingId) {
+          const oldBooking = bookings.find((b) => b.id === editingId);
+          if (oldBooking) {
+            if (bookingData.amount !== oldBooking.amount) {
+              changes.push(`Betrag von ${formatCurrency(oldBooking.amount)} auf ${formatCurrency(bookingData.amount)}`);
+            }
+            if ((bookingData.description || '-') !== (oldBooking.description || '-')) {
+              changes.push('Beschreibung geändert');
+            }
+            if ((bookingData.notes || '') !== (oldBooking.notes || '')) {
+              changes.push('Notiz geändert');
+            }
+            if ((bookingData.group_id || '') !== (oldBooking.group_id || '')) {
+              changes.push('Gruppe geändert');
+            }
+            desc = `${bookingData.type === 'payout' ? 'Auszahlung' : bookingData.type === 'income' ? 'Einnahme' : 'Ausgabe'}: ${bookingData.description || '-'}, Betrag ${formatCurrency(bookingData.amount)}${bookingData.group_id ? ', Gruppe: ' + (groups.find((g) => g.id === bookingData.group_id)?.name || '-') : ''}${bookingData.payout_musician_ids && bookingData.payout_musician_ids.length ? ', an: ' + bookingData.payout_musician_ids.map(id => musicians.find(m => m.id === id)?.name).filter(Boolean).join(', ') : ''}${bookingData.notes ? ', Notiz: ' + bookingData.notes : ''}${changes.length ? ', ' + changes.join(', ') : ', keine Änderung'}`;
+          }
+        } else {
+          desc = `${bookingData.type === 'payout' ? 'Auszahlung' : bookingData.type === 'income' ? 'Einnahme' : 'Ausgabe'}: ${bookingData.description || '-'}, Betrag ${formatCurrency(bookingData.amount)}${bookingData.group_id ? ', Gruppe: ' + (groups.find((g) => g.id === bookingData.group_id)?.name || '-') : ''}${bookingData.payout_musician_ids && bookingData.payout_musician_ids.length ? ', an: ' + bookingData.payout_musician_ids.map(id => musicians.find(m => m.id === id)?.name).filter(Boolean).join(', ') : ''}${bookingData.notes ? ', Notiz: ' + bookingData.notes : ''}, neu erstellt`;
+        }
+        await supabase.from('logs').insert({
+          type: 'booking',
+          action,
+          label: bookingData.description,
+          description: desc,
+          user_id: user.id,
+          user_name: user.name,
+        });
+      }
+
       setOpen(false)
       resetForm()
       await loadData()
     } catch (err) {
       console.error('Buchung speichern fehlgeschlagen:', err)
-      alert('Buchung konnte nicht gespeichert werden.')
+      const msg = (err as any)?.message || (err as any)?.details || String(err)
+      alert(`Buchung konnte nicht gespeichert werden: ${msg}`)
     }
   }
 
   const handleDeleteBooking = async (id: string) => {
     if (!confirm('Buchung wirklich löschen?')) return
     try {
-      await apiDeleteBooking(id)
-      setBookings((prev) => prev.filter((b) => b.id !== id))
+      const oldBooking = bookings.find((b) => b.id === id);
+      await apiDeleteBooking(id);
+      setBookings((prev) => prev.filter((b) => b.id !== id));
+      // Logging-Aufruf
+      if (user && oldBooking) {
+        const desc = `${oldBooking.type === 'payout' ? 'Auszahlung' : oldBooking.type === 'income' ? 'Einnahme' : 'Ausgabe'}: ${oldBooking.description || '-'}, Betrag ${formatCurrency(oldBooking.amount)}${oldBooking.group_id ? ', Gruppe: ' + (groups.find((g) => g.id === oldBooking.group_id)?.name || '-') : ''}${oldBooking.payout_musician_ids && oldBooking.payout_musician_ids.length ? ', an: ' + oldBooking.payout_musician_ids.map(id => musicians.find(m => m.id === id)?.name).filter(Boolean).join(', ') : ''}${oldBooking.notes ? ', Notiz: ' + oldBooking.notes : ''}, gelöscht`;
+        await supabase.from('logs').insert({
+          type: 'booking',
+          action: 'delete',
+          label: id,
+          description: desc,
+          user_id: user.id,
+          user_name: user.name,
+        });
+      }
     } catch (err) {
-      console.error('Buchung löschen fehlgeschlagen:', err)
-      alert('Buchung konnte nicht gelöscht werden.')
+      console.error('Buchung löschen fehlgeschlagen:', err);
+      alert('Buchung konnte nicht gelöscht werden.');
     }
   }
 
@@ -213,35 +274,32 @@ function Bookings() {
   }, [bookings])
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <p className="text-muted-foreground">Buchungen werden geladen...</p>
-      </div>
-    )
+    return <Spinner text="Buchungen werden geladen..." />
   }
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Buchungen</h1>
-          <p className="text-muted-foreground mt-2">Erfasse einzelne Buchungen (Einnahmen, Ausgaben, Auszahlungen)</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Buchungen</h1>
+          <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-base">Erfasse einzelne Buchungen (Einnahmen, Ausgaben, Auszahlungen)</p>
         </div>
-        <Dialog open={open} onOpenChange={(v: boolean) => { if (!v) resetForm(); setOpen(v) }}>
-          <DialogTrigger asChild>
-            <Button onClick={openAdd}>
-              <Plus className="w-4 h-4 mr-2" />
-              Buchung hinzufügen
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[640px]">
+        {canManage && (
+          <Dialog open={open} onOpenChange={(v: boolean) => { if (!v) resetForm(); setOpen(v) }}>
+            <DialogTrigger asChild>
+              <Button onClick={openAdd}>
+                <Plus className="w-4 h-4 mr-2" />
+                Buchung hinzufügen
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[640px]">
             <DialogHeader>
               <DialogTitle>{editingId ? 'Buchung bearbeiten' : 'Neue Buchung'}</DialogTitle>
               <DialogDescription>Erfasse eine Ausgabe, Einnahme oder Auszahlung</DialogDescription>
             </DialogHeader>
 
-            <div className="grid gap-4 py-4 pl-4 max-h-[70vh] overflow-y-auto">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-4 py-4 px-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label>Typ</Label>
                   <select value={form.type} onChange={(e) => setForm((s) => ({ ...s, type: e.target.value, payoutMusicians: [] }))} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50">
@@ -266,7 +324,7 @@ function Bookings() {
 
               <div className="grid gap-2">
                 <Label>Datum</Label>
-                <Input type="date" value={form.date} onChange={(e) => setForm((s) => ({ ...s, date: e.target.value }))} />
+                <DatePicker value={form.date} onChange={(v) => setForm((s) => ({ ...s, date: v }))} />
               </div>
 
               {form.type !== 'payout' && (
@@ -369,13 +427,14 @@ function Bookings() {
               <Button variant="outline" onClick={() => { setOpen(false); resetForm() }}>Abbrechen</Button>
               <Button onClick={saveBooking}>{editingId ? 'Aktualisieren' : 'Erstellen'}</Button>
             </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
+      <div className="space-y-3">
         {bookings.length === 0 ? (
-          <Card>
+          <Card className="bg-muted/40">
             <CardContent className="py-12 text-center text-muted-foreground">Noch keine Buchungen. Lege eine neue Buchung an.</CardContent>
           </Card>
         ) : (
@@ -388,62 +447,87 @@ function Bookings() {
                   .filter(Boolean)
               : []
 
+            const isPayout = b.type === 'payout'
+            const isIncome = b.type === 'income'
+            const iconWrapClass = isPayout
+              ? 'bg-amber-500/20 text-amber-300'
+              : isIncome
+                ? 'bg-green-500/20 text-green-300'
+                : 'bg-red-500/20 text-red-300'
+            const icon = isPayout ? (
+              <Banknote className="w-5 h-5" />
+            ) : isIncome ? (
+              <CircleDollarSign className="w-5 h-5" />
+            ) : (
+              <TrendingDown className="w-5 h-5" />
+            )
+            const typeLabel = isPayout ? 'Auszahlung' : isIncome ? 'Einnahme' : 'Ausgabe'
+
+            const hasDetails = (isPayout && payoutNames.length > 0)
+              || (!isPayout && groupMembers.length > 0)
+              || !!b.notes
+
             return (
-              <Card key={b.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle>
-                        {b.description || '-'}{' '}
-                        {b.group_name && <span className="text-sm text-muted-foreground">• {b.group_name}</span>}
-                      </CardTitle>
-                      <CardDescription>
-                        {b.date ? formatDate(new Date(b.date)) : '-'} • {b.type} • {formatCurrency(b.amount)}
-                      </CardDescription>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => openEdit(b)}>
-                        <Edit2 className="w-4 h-4" />
-                      </Button>
-                      <Button variant="destructive" size="sm" onClick={() => handleDeleteBooking(b.id)}>
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {b.type === 'payout' && payoutNames.length > 0 && (
-                      <div className="text-sm space-y-1">
-                        <div className="font-medium text-muted-foreground">Auszahlung an:</div>
-                        <div className="space-y-1">
-                          {payoutNames.map((name) => (
-                            <div key={name} className="text-sm">{name}</div>
-                          ))}
-                        </div>
+              <Card key={b.id} className="bg-muted/40">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${iconWrapClass}`}>
+                        {icon}
                       </div>
-                    )}
-                    {(b.type === 'income' || b.type === 'expense') && groupMembers.length > 0 && (
-                      <div className="text-sm space-y-1">
-                        <div className="font-medium text-muted-foreground">Verteilung:</div>
-                        <div className="space-y-1">
-                          {groupMembers.map((m) => (
-                            <div key={m.musician_id} className="text-sm">{m.musician_name} ({m.percent}%)</div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {b.keywords.length > 0 && (
-                      <div className="flex gap-2 flex-wrap pt-2">
-                        {b.keywords.map((k) => (
-                          <span key={k} className="px-2 py-1 bg-primary text-primary-foreground rounded-full text-xs font-medium">
-                            {k}
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold truncate text-sm sm:text-base">{b.description || '-'}</p>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full border leading-none ${
+                            isPayout
+                              ? 'border-amber-400/60 text-amber-300'
+                              : isIncome
+                                ? 'border-green-400/60 text-green-300'
+                                : 'border-red-400/60 text-red-300'
+                          }`}>
+                            {typeLabel}
                           </span>
-                        ))}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {b.date ? formatDate(new Date(b.date)) : '-'}
+                          {b.group_name ? ` • ${b.group_name}` : ''}
+                        </p>
                       </div>
-                    )}
-                    {b.notes && <div className="text-sm text-muted-foreground pt-2">{b.notes}</div>}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <p className={`text-sm sm:text-base font-semibold whitespace-nowrap ${
+                        isIncome ? 'text-green-400' : 'text-red-400'
+                      }`}>
+                        {isIncome ? '+' : '-'}{formatCurrency(b.amount)}
+                      </p>
+                      {canManage && (
+                        <div className="flex gap-0.5">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(b)}>
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-300" onClick={() => handleDeleteBooking(b.id)}>
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </div>
+
+                  {hasDetails && (
+                    <div className="mt-2 pt-2 border-t border-border/50 ml-[52px] space-y-1">
+                      {isPayout && payoutNames.length > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          <span className="font-medium">An:</span> {payoutNames.join(', ')}
+                        </p>
+                      )}
+                      {!isPayout && groupMembers.length > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          {groupMembers.map((m) => `${m.musician_name} (${m.percent}%)`).join(', ')}
+                        </p>
+                      )}
+                      {b.notes && <p className="text-xs text-muted-foreground italic">{b.notes}</p>}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )
