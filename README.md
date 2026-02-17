@@ -83,6 +83,8 @@ Voraussetzungen:
 ## Release Notes
 
 ```
+***WORKING***
+
 v1.4.0 (17.02.2026)
 - (Schmakus) New: Add Passwort Vergessen funktion
 - (Schmakus) Fix: Version number in settings
