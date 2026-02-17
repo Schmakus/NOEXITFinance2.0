@@ -83,6 +83,8 @@ Voraussetzungen:
 ## Release Notes
 
 ```
+***WORKING***
+
 v1.4.1 (17.02.2026)
 - (Schmakus) Fix: Release-Workflow
 
