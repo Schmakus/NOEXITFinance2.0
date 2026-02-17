@@ -10,6 +10,7 @@ Eine moderne **Finanzmanagement-Anwendung für Musikbands** mit aktuellem Tech-S
 ✅ **Gruppen** - Musikgruppen organisieren  
 ✅ **Konzerte** - Events und Auftritte verwalten  
 ✅ **Transaktionen** - Finanzielle Aktivitäten tracken  
+✅ **Auszahlungen beantragen** - Gage beantragen  
 ✅ **Tags** - Transaktionen kategorisieren  
 ✅ **Einstellungen** - Benutzerpräferenzen  
 ✅ **Backup/Restore** - JSON Export & Restore (Admin)  
@@ -49,9 +50,6 @@ npm run dev
 # Browser öffnet sich auf: http://localhost:5173/
 ```
 
-### Demo Anmeldung
-Beliebige E-Mail und Passwort verwenden (Demo-Authentifizierung).
-
 ## Build
 
 ```bash
@@ -84,6 +82,7 @@ Voraussetzungen:
 
 ```
 ***WORKING***
+- (Schmakus) New: Activity logging
 
 v1.4.2 (17.02.2026)
 - (Schmakus) some bugfixes

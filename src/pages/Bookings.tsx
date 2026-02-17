@@ -30,6 +30,7 @@ import {
 import { useTags } from '@/contexts/TagsContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { Spinner } from '@/components/ui/spinner'
+import { supabase } from '@/lib/supabase'
 import type { DbBooking, DbMusician, GroupWithMembers } from '@/lib/database.types'
 
 function Bookings() {
@@ -147,13 +148,15 @@ function Bookings() {
 
     try {
       let bookingId: string
-
+      let action: 'create' | 'update'
       if (editingId) {
         const updated = await updateBooking(editingId, bookingData)
         bookingId = updated.id
+        action = 'update'
       } else {
         const created = await createBooking(bookingData)
         bookingId = created.id
+        action = 'create'
       }
 
       // Create transactions
@@ -196,6 +199,40 @@ function Bookings() {
         await deleteTransactionsByBooking(bookingId)
       }
 
+      // Logging-Aufruf
+      if (user) {
+        let changes: string[] = [];
+        let desc = '';
+        if (editingId) {
+          const oldBooking = bookings.find((b) => b.id === editingId);
+          if (oldBooking) {
+            if (bookingData.amount !== oldBooking.amount) {
+              changes.push(`Betrag von ${formatCurrency(oldBooking.amount)} auf ${formatCurrency(bookingData.amount)}`);
+            }
+            if ((bookingData.description || '-') !== (oldBooking.description || '-')) {
+              changes.push('Beschreibung geändert');
+            }
+            if ((bookingData.notes || '') !== (oldBooking.notes || '')) {
+              changes.push('Notiz geändert');
+            }
+            if ((bookingData.group_id || '') !== (oldBooking.group_id || '')) {
+              changes.push('Gruppe geändert');
+            }
+            desc = `${bookingData.type === 'payout' ? 'Auszahlung' : bookingData.type === 'income' ? 'Einnahme' : 'Ausgabe'}: ${bookingData.description || '-'}, Betrag ${formatCurrency(bookingData.amount)}${bookingData.group_id ? ', Gruppe: ' + (groups.find((g) => g.id === bookingData.group_id)?.name || '-') : ''}${bookingData.payout_musician_ids && bookingData.payout_musician_ids.length ? ', an: ' + bookingData.payout_musician_ids.map(id => musicians.find(m => m.id === id)?.name).filter(Boolean).join(', ') : ''}${bookingData.notes ? ', Notiz: ' + bookingData.notes : ''}${changes.length ? ', ' + changes.join(', ') : ', keine Änderung'}`;
+          }
+        } else {
+          desc = `${bookingData.type === 'payout' ? 'Auszahlung' : bookingData.type === 'income' ? 'Einnahme' : 'Ausgabe'}: ${bookingData.description || '-'}, Betrag ${formatCurrency(bookingData.amount)}${bookingData.group_id ? ', Gruppe: ' + (groups.find((g) => g.id === bookingData.group_id)?.name || '-') : ''}${bookingData.payout_musician_ids && bookingData.payout_musician_ids.length ? ', an: ' + bookingData.payout_musician_ids.map(id => musicians.find(m => m.id === id)?.name).filter(Boolean).join(', ') : ''}${bookingData.notes ? ', Notiz: ' + bookingData.notes : ''}, neu erstellt`;
+        }
+        await supabase.from('logs').insert({
+          type: 'booking',
+          action,
+          label: bookingData.description,
+          description: desc,
+          user_id: user.id,
+          user_name: user.name,
+        });
+      }
+
       setOpen(false)
       resetForm()
       await loadData()
@@ -209,11 +246,24 @@ function Bookings() {
   const handleDeleteBooking = async (id: string) => {
     if (!confirm('Buchung wirklich löschen?')) return
     try {
-      await apiDeleteBooking(id)
-      setBookings((prev) => prev.filter((b) => b.id !== id))
+      const oldBooking = bookings.find((b) => b.id === id);
+      await apiDeleteBooking(id);
+      setBookings((prev) => prev.filter((b) => b.id !== id));
+      // Logging-Aufruf
+      if (user && oldBooking) {
+        const desc = `${oldBooking.type === 'payout' ? 'Auszahlung' : oldBooking.type === 'income' ? 'Einnahme' : 'Ausgabe'}: ${oldBooking.description || '-'}, Betrag ${formatCurrency(oldBooking.amount)}${oldBooking.group_id ? ', Gruppe: ' + (groups.find((g) => g.id === oldBooking.group_id)?.name || '-') : ''}${oldBooking.payout_musician_ids && oldBooking.payout_musician_ids.length ? ', an: ' + oldBooking.payout_musician_ids.map(id => musicians.find(m => m.id === id)?.name).filter(Boolean).join(', ') : ''}${oldBooking.notes ? ', Notiz: ' + oldBooking.notes : ''}, gelöscht`;
+        await supabase.from('logs').insert({
+          type: 'booking',
+          action: 'delete',
+          label: id,
+          description: desc,
+          user_id: user.id,
+          user_name: user.name,
+        });
+      }
     } catch (err) {
-      console.error('Buchung löschen fehlgeschlagen:', err)
-      alert('Buchung konnte nicht gelöscht werden.')
+      console.error('Buchung löschen fehlgeschlagen:', err);
+      alert('Buchung konnte nicht gelöscht werden.');
     }
   }
 

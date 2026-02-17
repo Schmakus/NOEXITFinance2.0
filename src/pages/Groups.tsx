@@ -23,8 +23,11 @@ import {
 } from '@/lib/api-client'
 import type { DbMusician, GroupWithMembers } from '@/lib/database.types'
 import { Spinner } from '@/components/ui/spinner'
+import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/contexts/AuthContext'
 
 function Groups() {
+  const { user } = useAuth()
   const [groups, setGroups] = useState<GroupWithMembers[]>([])
   const [musicians, setMusicians] = useState<DbMusician[]>([])
   const [loading, setLoading] = useState(true)
@@ -124,17 +127,52 @@ function Groups() {
     }
 
     try {
+      let action: 'create' | 'update' = 'create';
+      let logDesc = '';
       if (editingId) {
-        await updateGroup(editingId, name.trim(), members)
+        const oldGroup = groups.find((g) => g.id === editingId);
+        await updateGroup(editingId, name.trim(), members);
+        action = 'update';
+        if (oldGroup) {
+          const changes: string[] = [];
+          if (name.trim() !== oldGroup.name) changes.push(`Name von "${oldGroup.name}" auf "${name.trim()}"`);
+          // Mitglieder vergleichen
+          const oldMembers = oldGroup.members.map(m => `${m.musician_name} (${m.percent.toFixed(2)}%)`).sort().join(', ');
+          const newMembers = members.map(m => {
+            const mu = musicians.find(x => x.id === m.musician_id);
+            return `${mu?.name || m.musician_id} (${m.percent.toFixed(2)}%)`;
+          }).sort().join(', ');
+          if (oldMembers !== newMembers) changes.push(`Mitglieder geändert: alt=[${oldMembers}], neu=[${newMembers}]`);
+          logDesc = `Gruppe: ${oldGroup.name}, ${changes.length ? changes.join(', ') : 'keine Änderung'}`;
+        } else {
+          logDesc = `Gruppe bearbeitet`;
+        }
       } else {
-        await createGroup(name.trim(), members)
+        await createGroup(name.trim(), members);
+        action = 'create';
+        const newMembers = members.map(m => {
+          const mu = musicians.find(x => x.id === m.musician_id);
+          return `${mu?.name || m.musician_id} (${m.percent.toFixed(2)}%)`;
+        }).sort().join(', ');
+        logDesc = `Gruppe: ${name.trim()}, Mitglieder: [${newMembers}], neu erstellt`;
       }
-      setOpen(false)
-      resetForm()
-      await loadData()
+      // Logging-Aufruf
+      if (user) {
+        await supabase.from('logs').insert({
+          type: 'group',
+          action,
+          label: name.trim(),
+          description: logDesc,
+          user_id: user.id,
+          user_name: user.name,
+        });
+      }
+      setOpen(false);
+      resetForm();
+      await loadData();
     } catch (err) {
-      console.error('Gruppe speichern fehlgeschlagen:', err)
-      setError('Gruppe konnte nicht gespeichert werden.')
+      console.error('Gruppe speichern fehlgeschlagen:', err);
+      setError('Gruppe konnte nicht gespeichert werden.');
     }
   }
 
@@ -143,6 +181,17 @@ function Groups() {
     try {
       await apiDeleteGroup(id)
       setGroups((prev) => prev.filter((g) => g.id !== id))
+      // Logging-Aufruf
+      if (user) {
+        await supabase.from('logs').insert({
+          type: 'group',
+          action: 'delete',
+          label: id,
+          description: 'Gruppe gelöscht',
+          user_id: user.id,
+          user_name: user.name,
+        })
+      }
     } catch (err) {
       console.error('Gruppe löschen fehlgeschlagen:', err)
       alert('Gruppe konnte nicht gelöscht werden.')

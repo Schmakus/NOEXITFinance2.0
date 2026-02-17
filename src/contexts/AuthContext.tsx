@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react'
+import { getLogActionUrl } from '@/lib/log-action-url'
 import { supabase } from '@/lib/supabase'
 import { fetchMusicianByUserId } from '@/lib/api-client'
 
@@ -107,23 +108,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [loadProfile])
 
   const login = useCallback(async (email: string, password: string) => {
-    const { error, data } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) throw error
+    const { error, data } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
 
     if (data.session?.user) {
-      const success = await loadProfile(data.session.user.id, data.session.user.email ?? '')
-      profileLoadedRef.current = success
+      const success = await loadProfile(data.session.user.id, data.session.user.email ?? '');
+      profileLoadedRef.current = success;
       if (!success) {
-        await supabase.auth.signOut()
-        throw new Error('Kein Musiker-Profil gefunden. Bitte wende dich an den Administrator.')
+        await supabase.auth.signOut();
+        throw new Error('Kein Musiker-Profil gefunden. Bitte wende dich an den Administrator.');
       }
+      // Logging-Aufruf
+      try {
+        const now = new Date().toLocaleString();
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        await supabase.from('logs').insert({
+          type: 'login',
+          action: 'login',
+          label: data.session.user.email,
+          description: `Login am ${now} (${data.session.user.email})`,
+          user_id: uuidRegex.test(data.session.user.id) ? data.session.user.id : null,
+          user_name: data.session.user.email,
+        });
+      } catch {}
     }
   }, [loadProfile])
 
   const logout = useCallback(async () => {
-    await supabase.auth.signOut()
-    setUser(null)
-  }, [])
+    // Logging-Aufruf (before signOut, while user is still available)
+    if (user) {
+      try {
+        const now = new Date().toLocaleString();
+        // user_id nur setzen, wenn es wie ein UUID aussieht (vereinfachte Prüfung)
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        // Fallbacks für label und user_name
+        const label = user.email || user.name || 'Unbekannt';
+        const userName = user.name || user.email || 'Unbekannt';
+        await supabase.from('logs').insert({
+          type: 'login',
+          action: 'logout',
+          label,
+          description: `Logout am ${now} (${label})`,
+          user_id: uuidRegex.test(user.id) ? user.id : null,
+          user_name: userName,
+        });
+      } catch {}
+    }
+    await supabase.auth.signOut();
+    setUser(null);
+  }, [user])
 
   const updateEmail = useCallback(async (newEmail: string) => {
     const { error } = await supabase.auth.updateUser({ email: newEmail })

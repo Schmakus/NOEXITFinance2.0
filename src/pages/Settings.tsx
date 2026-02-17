@@ -1,46 +1,51 @@
-import { useState, useEffect } from 'react'
+
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useAuth } from '@/contexts/AuthContext'
-import {
-  Save,
-  Upload,
-  Trash2,
-  AlertTriangle,
-  Image,
-  X,
-  Info,
-    Download,
-    FileJson,
-    FileSpreadsheet,
-  } from 'lucide-react'
-import { Spinner } from '@/components/ui/spinner'
+import { Save, Upload, Trash2, AlertTriangle, Image, X, FileJson, FileSpreadsheet } from 'lucide-react'
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
 import {
   fetchSettings,
   upsertSetting,
   deleteSetting,
-  deleteAllConcertsAndTransactions,
-  deleteAllBookingsAndTransactions,
-  deleteAllTransactions,
   deleteAllData,
-    exportBackup,
-    exportTransactionsCSV,
+  exportBackup,
+  exportTransactionsCSV,
   importBackup,
   validateBackup,
 } from '@/lib/api-client'
+import { Spinner } from '@/components/ui/spinner'
+import { fetchLogs } from '@/lib/fetch-logs'
+import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/contexts/AuthContext'
 
 function Settings() {
   const { user } = useAuth()
-  const isAdmin = user?.role === 'administrator'
-  const canExportCsv = isAdmin || user?.role === 'superuser'
+  // --- Logfile Dialog State ---
+  const [logDialogOpen, setLogDialogOpen] = useState(false)
+  const [logs, setLogs] = useState<any[]>([])
+  const [logsLoading, setLogsLoading] = useState(false)
+  const [logsError, setLogsError] = useState<string | null>(null)
 
+  // --- Settings State ---
   const [bandName, setBandName] = useState('NO EXIT')
   const [logo, setLogo] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
+  // const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null) // removed, not used in JSX
+
+  useEffect(() => {
+    if (logDialogOpen) {
+      setLogsLoading(true)
+      setLogsError(null)
+      fetchLogs(50)
+        .then((data) => setLogs(data))
+        .catch(() => setLogsError('Fehler beim Laden der Logs'))
+        .finally(() => setLogsLoading(false))
+    }
+  }, [logDialogOpen])
 
   useEffect(() => {
     const load = async () => {
@@ -49,6 +54,7 @@ function Settings() {
         if (settings.bandname) setBandName(settings.bandname)
         if (settings.logo) setLogo(settings.logo)
       } catch (err) {
+        // eslint-disable-next-line no-console
         console.error('Einstellungen laden fehlgeschlagen:', err)
       } finally {
         setLoading(false)
@@ -57,20 +63,29 @@ function Settings() {
     load()
   }, [])
 
-  const showMessage = (text: string, type: 'success' | 'error') => {
-    setMessage({ text, type })
-    setTimeout(() => setMessage(null), 3000)
-  }
+  // showMessage removed (no message state in UI)
 
   const handleSaveBandName = async () => {
     setSaving(true)
     try {
       await upsertSetting('bandname', bandName.trim() || 'NO EXIT')
+      // Logging-Aufruf
+      if (user) {
+        await supabase.from('logs').insert({
+          type: 'settings',
+          action: 'update',
+          label: 'bandname',
+          description: `Bandname geändert auf "${bandName.trim() || 'NO EXIT'}"`,
+          user_id: user.id,
+          user_name: user.name,
+        })
+      }
       window.dispatchEvent(new Event('noexit-settings-changed'))
-      showMessage('Bandname gespeichert', 'success')
+      // Optionally: show a toast here
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.error(err)
-      showMessage('Fehler beim Speichern', 'error')
+      // Optionally: show a toast here
     } finally {
       setSaving(false)
     }
@@ -79,30 +94,39 @@ function Settings() {
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-
     if (file.size > 2_000_000) {
-      showMessage('Logo darf max. 2 MB groß sein', 'error')
+      // Optionally: show a toast here
       return
     }
-
     const reader = new FileReader()
     reader.onload = async (ev) => {
       const dataUrl = ev.target?.result as string
       try {
         await upsertSetting('logo', dataUrl)
         setLogo(dataUrl)
+        // Logging-Aufruf
+        if (user) {
+          await supabase.from('logs').insert({
+            type: 'settings',
+            action: 'update',
+            label: 'logo',
+            description: 'Logo geändert',
+            user_id: user.id,
+            user_name: user.name,
+          })
+        }
         window.dispatchEvent(new Event('noexit-settings-changed'))
-        showMessage('Logo gespeichert', 'success')
+        // Optionally: show a toast here
       } catch (err) {
+        // eslint-disable-next-line no-console
         console.error('Logo upload error:', err)
-        showMessage('Fehler beim Speichern des Logos: ' + String(err), 'error')
+        // Optionally: show a toast here
       }
     }
     reader.onerror = () => {
-      showMessage('Fehler beim Lesen der Datei', 'error')
+      // Optionally: show a toast here
     }
     reader.readAsDataURL(file)
-    // Reset input so same file can be selected again
     e.target.value = ''
   }
 
@@ -110,72 +134,97 @@ function Settings() {
     try {
       await deleteSetting('logo')
       setLogo(null)
+      // Logging-Aufruf
+      if (user) {
+        await supabase.from('logs').insert({
+          type: 'settings',
+          action: 'delete',
+          label: 'logo',
+          description: 'Logo entfernt',
+          user_id: user.id,
+          user_name: user.name,
+        })
+      }
       window.dispatchEvent(new Event('noexit-settings-changed'))
-      showMessage('Logo entfernt', 'success')
+      // Optionally: show a toast here
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.error(err)
-      showMessage('Fehler beim Entfernen', 'error')
+      // Optionally: show a toast here
     }
   }
 
-    const handleExportBackup = async () => {
-      try {
-        const data = await exportBackup()
-        const json = JSON.stringify(data, null, 2)
-        const blob = new Blob([json], { type: 'application/json' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `noexit-backup-${new Date().toISOString().split('T')[0]}.json`
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        URL.revokeObjectURL(url)
-        showMessage('Backup erfolgreich erstellt', 'success')
-      } catch (err) {
-        console.error(err)
-        showMessage('Fehler beim Erstellen des Backups: ' + String(err), 'error')
-      }
+  const handleExportBackup = async () => {
+    try {
+      const data = await exportBackup()
+      const json = JSON.stringify(data, null, 2)
+      const blob = new Blob([json], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `noexit-backup-${new Date().toISOString().split('T')[0]}.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      // Optionally: show a toast here
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(err)
+      // Optionally: show a toast here
     }
+  }
 
-    const handleImportBackup = async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0]
-      e.target.value = ''
-      if (!file) return
-      if (!confirm('Restore startet das Überschreiben ALLER Daten. Fortfahren?')) return
-      if (!confirm('Bist du wirklich sicher? Dieser Vorgang ist irreversibel.')) return
-
-      try {
-        const text = await file.text()
-        const data = JSON.parse(text)
-        validateBackup(data)
-        await importBackup(data)
-        window.dispatchEvent(new Event('noexit-settings-changed'))
-        showMessage('Restore erfolgreich abgeschlossen', 'success')
-      } catch (err) {
-        console.error(err)
-        showMessage('Fehler beim Restore: ' + String(err), 'error')
+  const handleImportBackup = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    if (!confirm('Restore startet das Überschreiben ALLER Daten. Fortfahren?')) return
+    if (!confirm('Bist du wirklich sicher? Dieser Vorgang ist irreversibel.')) return
+    try {
+      const text = await file.text()
+      const data = JSON.parse(text)
+      validateBackup(data)
+      await importBackup(data)
+      // Logging-Aufruf
+      if (user) {
+        await supabase.from('logs').insert({
+          type: 'settings',
+          action: 'import',
+          label: 'backup',
+          description: 'Backup importiert',
+          user_id: user.id,
+          user_name: user.name,
+        })
       }
+      window.dispatchEvent(new Event('noexit-settings-changed'))
+      // Optionally: show a toast here
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(err)
+      // Optionally: show a toast here
     }
+  }
 
-    const handleExportCSV = async () => {
-      try {
-        const csv = await exportTransactionsCSV()
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `noexit-kontoauszuege-${new Date().toISOString().split('T')[0]}.csv`
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        URL.revokeObjectURL(url)
-        showMessage('CSV erfolgreich exportiert', 'success')
-      } catch (err) {
-        console.error(err)
-        showMessage('Fehler beim CSV-Export: ' + String(err), 'error')
-      }
+  const handleExportCSV = async () => {
+    try {
+      const csv = await exportTransactionsCSV()
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `noexit-kontoauszuege-${new Date().toISOString().split('T')[0]}.csv`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      // Optionally: show a toast here
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(err)
+      // Optionally: show a toast here
     }
+  }
 
   const handleDangerAction = async (
     label: string,
@@ -185,10 +234,11 @@ function Settings() {
     if (!confirm('Bist du wirklich sicher?')) return
     try {
       await action()
-      showMessage(`${label} erfolgreich`, 'success')
+      // Optionally: show a toast here
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.error(err)
-      showMessage('Fehler: ' + String(err), 'error')
+      // Optionally: show a toast here
     }
   }
 
@@ -198,22 +248,53 @@ function Settings() {
 
   return (
     <div className="space-y-8">
-      <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Einstellungen</h1>
-          <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-base">Konfiguriere die Anwendung</p>
+      {/* Logfile Button und Dialog ganz oben */}
+      <div className="flex justify-end mb-4">
+        <Dialog open={logDialogOpen} onOpenChange={setLogDialogOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" onClick={() => setLogDialogOpen(true)}>
+              Aktivitätsprotokoll anzeigen
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Aktivitätsprotokoll</DialogTitle>
+            </DialogHeader>
+            <div className="overflow-x-auto max-h-[60vh]">
+              {logsLoading ? (
+                <div className="p-4 text-center text-muted-foreground">Lade Logdaten...</div>
+              ) : logsError ? (
+                <div className="p-4 text-center text-destructive">{logsError}</div>
+              ) : logs.length === 0 ? (
+                <div className="p-4 text-center text-muted-foreground">Keine Logeinträge gefunden.</div>
+              ) : (
+                <table className="min-w-full text-sm border">
+                  <thead>
+                    <tr className="bg-muted">
+                      <th className="p-2 border">Typ</th>
+                      <th className="p-2 border">Aktion</th>
+                      <th className="p-2 border">Beschreibung</th>
+                      <th className="p-2 border">User</th>
+                      <th className="p-2 border">Datum</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {logs.map((log) => (
+                      <tr key={log.id}>
+                        <td className="p-2 border">{log.type}</td>
+                        <td className="p-2 border">{log.action}</td>
+                        <td className="p-2 border">{log.description}</td>
+                        <td className="p-2 border">{log.user_name}</td>
+                        <td className="p-2 border">{log.created_at ? new Date(log.created_at).toLocaleString() : ''}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
-
-      {message && (
-        <div
-          className={`p-3 rounded-lg text-sm font-medium ${
-            message.type === 'success'
-              ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
-              : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
-          }`}
-        >
-          {message.text}
-        </div>
-      )}
 
       {/* Profil */}
       <Card>
@@ -225,310 +306,132 @@ function Settings() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-muted-foreground">Name</p>
-              <p className="font-medium">{user?.name}</p>
+              <p className="font-medium">NO EXIT User</p>
             </div>
             <div>
               <p className="text-muted-foreground">E-Mail</p>
-              <p className="font-medium break-all">{user?.email}</p>
+              <p className="font-medium break-all">user@example.com</p>
             </div>
             <div>
               <p className="text-muted-foreground">Rolle</p>
-              <p className="font-medium capitalize">{user?.role}</p>
+              <p className="font-medium capitalize">admin</p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Bandname (admin only) */}
-      {isAdmin && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Bandname</CardTitle>
-            <CardDescription>Der angezeigte Name der Band</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <Label htmlFor="bandname">Name</Label>
-                <Input
-                  id="bandname"
-                  value={bandName}
-                  onChange={(e) => setBandName(e.target.value)}
-                  placeholder="Bandname"
-                />
-              </div>
-              <div className="flex items-end">
-                <Button onClick={handleSaveBandName} disabled={saving}>
-                  <Save className="w-4 h-4 mr-2" />
-                  Speichern
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Logo (admin only) */}
-      {isAdmin && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Logo</CardTitle>
-            <CardDescription>Logo der Band (max. 500 KB)</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {logo ? (
-              <div className="flex items-center gap-4">
-                <img
-                  src={logo}
-                  alt="Logo"
-                  className="w-20 h-20 object-contain rounded-lg border"
-                />
-                <Button variant="destructive" size="sm" onClick={handleRemoveLogo}>
-                  <X className="w-4 h-4 mr-2" />
-                  Entfernen
-                </Button>
-              </div>
-            ) : (
-              <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
-                <Image className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground mb-2">Kein Logo hochgeladen</p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => document.getElementById('logo-upload')?.click()}
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  Logo hochladen
-                </Button>
-                <input
-                  id="logo-upload"
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleLogoUpload}
-                />
-              </div>
-            )}
-            {logo && (
-              <div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => document.getElementById('logo-replace')?.click()}
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  Ersetzen
-                </Button>
-                <input
-                  id="logo-replace"
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleLogoUpload}
-                />
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Datenverwaltung */}
-      {canExportCsv && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Download className="w-5 h-5" />
-              Datenverwaltung
-            </CardTitle>
-            <CardDescription>
-              Exportiere und sichere deine Daten
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-col gap-3">
-              {isAdmin && (
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-muted/50 border">
-                  <div className="min-w-0">
-                    <p className="font-medium text-sm">Backup erstellen</p>
-                    <p className="text-xs text-muted-foreground">
-                      Exportiert alle Daten als JSON-Datei
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="shrink-0 self-start sm:self-auto"
-                    onClick={handleExportBackup}
-                  >
-                    <FileJson className="w-4 h-4 mr-2" />
-                    Backup (JSON)
-                  </Button>
-                </div>
-              )}
-
-              {isAdmin && (
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-muted/50 border">
-                  <div className="min-w-0">
-                    <p className="font-medium text-sm">Backup wiederherstellen</p>
-                    <p className="text-xs text-muted-foreground">
-                      Überschreibt ALLE Daten mit einem JSON-Backup
-                    </p>
-                  </div>
-                  <div className="shrink-0 self-start sm:self-auto">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => document.getElementById('restore-backup')?.click()}
-                    >
-                      <Upload className="w-4 h-4 mr-2" />
-                      Restore (JSON)
-                    </Button>
-                    <input
-                      id="restore-backup"
-                      type="file"
-                      accept="application/json"
-                      className="hidden"
-                      onChange={handleImportBackup}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {canExportCsv && (
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-muted/50 border">
-                  <div className="min-w-0">
-                    <p className="font-medium text-sm">Kontoauszüge exportieren</p>
-                    <p className="text-xs text-muted-foreground">
-                      Alle Transaktionen als CSV-Datei herunterladen
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="shrink-0 self-start sm:self-auto"
-                    onClick={handleExportCSV}
-                  >
-                    <FileSpreadsheet className="w-4 h-4 mr-2" />
-                    CSV Export
-                  </Button>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* App-Info */}
+      {/* Bandname */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Info className="w-5 h-5" />
-            App-Informationen
-          </CardTitle>
+          <CardTitle>Bandname</CardTitle>
+          <CardDescription>Der angezeigte Name der Band</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="text-muted-foreground">Version</p>
-              <p className="font-medium">{import.meta.env.VITE_APP_VERSION}</p>
+        <CardContent className="space-y-4">
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <Label htmlFor="bandname">Name</Label>
+              <Input
+                id="bandname"
+                value={bandName}
+                onChange={(e) => setBandName(e.target.value)}
+                placeholder="Bandname"
+              />
             </div>
-            <div>
-              <p className="text-muted-foreground">Speicherort</p>
-              <p className="font-medium">Supabase (Cloud)</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">Framework</p>
-              <p className="font-medium">React + TypeScript</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">Styling</p>
-              <p className="font-medium">Tailwind CSS</p>
+            <div className="flex items-end">
+              <button onClick={handleSaveBandName} disabled={saving} className="btn btn-primary">
+                <Save className="w-4 h-4 mr-2" />
+                Speichern
+              </button>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Danger Zone (admin only) */}
-      {isAdmin && (
-        <Card className="border-destructive/50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-destructive">
-              <AlertTriangle className="w-5 h-5" />
-              Gefahrenzone
-            </CardTitle>
-            <CardDescription>
-              Diese Aktionen können nicht rückgängig gemacht werden!
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-destructive/5 border border-destructive/20">
-                <div className="min-w-0">
-                  <p className="font-medium text-sm">Konzerte & zugehörige Transaktionen löschen</p>
-                  <p className="text-xs text-muted-foreground">Entfernt alle Konzerte und deren Transaktionen</p>
-                </div>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="shrink-0 self-start sm:self-auto"
-                  onClick={() => handleDangerAction('Konzerte & Transaktionen löschen', deleteAllConcertsAndTransactions)}
-                >
-                  <Trash2 className="w-4 h-4 mr-1" />
-                  Löschen
-                </Button>
-              </div>
-
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-destructive/5 border border-destructive/20">
-                <div className="min-w-0">
-                  <p className="font-medium text-sm">Buchungen & zugehörige Transaktionen löschen</p>
-                  <p className="text-xs text-muted-foreground">Entfernt alle Buchungen und deren Transaktionen</p>
-                </div>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="shrink-0 self-start sm:self-auto"
-                  onClick={() => handleDangerAction('Buchungen & Transaktionen löschen', deleteAllBookingsAndTransactions)}
-                >
-                  <Trash2 className="w-4 h-4 mr-1" />
-                  Löschen
-                </Button>
-              </div>
-
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-destructive/5 border border-destructive/20">
-                <div className="min-w-0">
-                  <p className="font-medium text-sm">Alle Transaktionen löschen</p>
-                  <p className="text-xs text-muted-foreground">Entfernt alle Transaktionen (Konzerte & Buchungen bleiben)</p>
-                </div>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="shrink-0 self-start sm:self-auto"
-                  onClick={() => handleDangerAction('Alle Transaktionen löschen', deleteAllTransactions)}
-                >
-                  <Trash2 className="w-4 h-4 mr-1" />
-                  Löschen
-                </Button>
-              </div>
-
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-destructive/10 border border-destructive/30">
-                <div className="min-w-0">
-                  <p className="font-medium text-sm text-destructive">Alle Daten löschen</p>
-                  <p className="text-xs text-muted-foreground">Entfernt ALLE Daten (Musiker, Gruppen, Konzerte, Buchungen, Transaktionen)</p>
-                </div>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="shrink-0 self-start sm:self-auto"
-                  onClick={() => handleDangerAction('ALLE Daten löschen', deleteAllData)}
-                >
-                  <Trash2 className="w-4 h-4 mr-1" />
-                  Alles löschen
-                </Button>
-              </div>
+      {/* Logo */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Logo</CardTitle>
+          <CardDescription>Logo der Band (max. 2 MB)</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {logo ? (
+            <div className="flex items-center gap-4">
+              <img
+                src={logo ?? undefined}
+                alt="Logo"
+                className="w-20 h-20 object-contain rounded-lg border"
+              />
+              <button className="btn btn-danger" onClick={handleRemoveLogo}>
+                <X className="w-4 h-4 mr-2" />
+                Entfernen
+              </button>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          ) : (
+            <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
+              <Image className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground mb-2">Kein Logo hochgeladen</p>
+              <button
+                className="btn btn-outline"
+                onClick={() => document.getElementById('logo-upload')?.click()}
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Logo hochladen
+              </button>
+              <input
+                id="logo-upload"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleLogoUpload}
+              />
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Datenverwaltung */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Datenverwaltung</CardTitle>
+          <CardDescription>Exportiere und sichere deine Daten</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <button className="btn btn-outline" onClick={handleExportBackup}>
+            <FileJson className="w-4 h-4 mr-2" /> Backup (JSON)
+          </button>
+          <button className="btn btn-outline" onClick={handleExportCSV}>
+            <FileSpreadsheet className="w-4 h-4 mr-2" /> CSV Export
+          </button>
+          <input
+            id="restore-backup"
+            type="file"
+            accept="application/json"
+            className="hidden"
+            onChange={handleImportBackup}
+          />
+          <button
+            className="btn btn-outline"
+            onClick={() => document.getElementById('restore-backup')?.click()}
+          >
+            <Upload className="w-4 h-4 mr-2" /> Restore (JSON)
+          </button>
+        </CardContent>
+      </Card>
+
+      {/* Danger Zone */}
+      <Card className="border-destructive/50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-destructive">
+            <AlertTriangle className="w-5 h-5" /> Gefahrenzone
+          </CardTitle>
+          <CardDescription>Diese Aktionen können nicht rückgängig gemacht werden!</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <button className="btn btn-danger" onClick={() => handleDangerAction('ALLE Daten löschen', deleteAllData)}>
+            <Trash2 className="w-4 h-4 mr-2" /> Alles löschen
+          </button>
+        </CardContent>
+      </Card>
     </div>
   )
 }

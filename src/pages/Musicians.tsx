@@ -28,6 +28,7 @@ import {
 import type { DbMusician } from '@/lib/database.types'
 import { useAuth } from '@/contexts/AuthContext'
 import { Spinner } from '@/components/ui/spinner'
+import { supabase } from '@/lib/supabase'
 
 function Musicians() {
   const { user } = useAuth()
@@ -90,6 +91,17 @@ function Musicians() {
     try {
       await archiveMusician(id)
       setMusicians((prev) => prev.filter((m) => m.id !== id))
+      // Logging-Aufruf
+      if (user) {
+        await supabase.from('logs').insert({
+          type: 'musician',
+          action: 'archive',
+          label: id,
+          description: 'Musiker archiviert',
+          user_id: user.id,
+          user_name: user.name,
+        })
+      }
     } catch (err) {
       console.error('Musiker löschen fehlgeschlagen:', err)
       alert(err instanceof Error ? err.message : 'Musiker konnte nicht archiviert werden.')
@@ -101,6 +113,17 @@ function Musicians() {
     try {
       await restoreMusician(id)
       setMusicians((prev) => prev.filter((m) => m.id !== id))
+      // Logging-Aufruf
+      if (user) {
+        await supabase.from('logs').insert({
+          type: 'musician',
+          action: 'restore',
+          label: id,
+          description: 'Musiker wiederhergestellt',
+          user_id: user.id,
+          user_name: user.name,
+        })
+      }
     } catch (err) {
       console.error('Musiker wiederherstellen fehlgeschlagen:', err)
       alert(err instanceof Error ? err.message : 'Musiker konnte nicht wiederhergestellt werden.')
@@ -120,28 +143,43 @@ function Musicians() {
     }
 
     try {
+      let action: 'create' | 'update' = 'create';
+      let logDesc = '';
       if (editingId) {
         // Update password if provided
         if (formData.password) {
           if (formData.password.length < 6) {
-            alert('Das Passwort muss mindestens 6 Zeichen lang sein.')
-            return
+            alert('Das Passwort muss mindestens 6 Zeichen lang sein.');
+            return;
           }
-          const musician = musicians.find((m) => m.id === editingId)
+          const musician = musicians.find((m) => m.id === editingId);
           if (musician?.user_id) {
-            await updateAuthUserPassword(musician.user_id, formData.password)
+            await updateAuthUserPassword(musician.user_id, formData.password);
           }
         }
+        const oldMusician = musicians.find((m) => m.id === editingId);
         const updated = await updateMusician(editingId, {
           name: formData.name,
           email: formData.email,
           balance: parseFloat(formData.balance || '0'),
           role: formData.role,
-        })
-        setMusicians((prev) => prev.map((m) => (m.id === editingId ? updated : m)))
+        });
+        setMusicians((prev) => prev.map((m) => (m.id === editingId ? updated : m)));
+        action = 'update';
+        // Log-Änderungen
+        if (oldMusician) {
+          const changes: string[] = [];
+          if (formData.name !== oldMusician.name) changes.push(`Name von "${oldMusician.name}" auf "${formData.name}"`);
+          if (formData.email !== oldMusician.email) changes.push(`E-Mail von "${oldMusician.email}" auf "${formData.email}"`);
+          if (formData.role !== oldMusician.role) changes.push(`Rolle von "${oldMusician.role}" auf "${formData.role}"`);
+          if (parseFloat(formData.balance || '0') !== oldMusician.balance) changes.push(`Kontostand von ${formatCurrency(oldMusician.balance)} auf ${formatCurrency(parseFloat(formData.balance || '0'))}`);
+          logDesc = `Musiker: ${oldMusician.name}, ${changes.length ? changes.join(', ') : 'keine Änderung'}`;
+        } else {
+          logDesc = `Musiker bearbeitet`;
+        }
       } else {
         // 1. Create Supabase Auth user
-        const authUserId = await createAuthUser(formData.email, formData.password)
+        const authUserId = await createAuthUser(formData.email, formData.password);
         try {
           // 2. Create musician record linked to auth user
           const created = await createMusician({
@@ -150,20 +188,34 @@ function Musicians() {
             balance: parseFloat(formData.balance || '0'),
             role: formData.role,
             user_id: authUserId,
-          })
-          setMusicians((prev) => [...prev, created])
+          });
+          setMusicians((prev) => [...prev, created]);
         } catch (err) {
           // Rollback: delete auth user if musician creation fails
-          try { await deleteAuthUser(authUserId) } catch { /* ignore */ }
-          throw err
+          try { await deleteAuthUser(authUserId); } catch { /* ignore */ }
+          throw err;
         }
+        action = 'create';
+        logDesc = `Musiker: ${formData.name}, neu erstellt`;
       }
 
-      setIsOpen(false)
-      setFormData({ name: '', email: '', password: '', balance: '', role: 'user' })
+      // Logging-Aufruf
+      if (user) {
+        await supabase.from('logs').insert({
+          type: 'musician',
+          action,
+          label: formData.name,
+          description: logDesc,
+          user_id: user.id,
+          user_name: user.name,
+        });
+      }
+
+      setIsOpen(false);
+      setFormData({ name: '', email: '', password: '', balance: '', role: 'user' });
     } catch (err: any) {
-      console.error('Musiker speichern fehlgeschlagen:', err)
-      alert(err?.message || 'Musiker konnte nicht gespeichert werden.')
+      console.error('Musiker speichern fehlgeschlagen:', err);
+      alert(err?.message || 'Musiker konnte nicht gespeichert werden.');
     }
   }
 

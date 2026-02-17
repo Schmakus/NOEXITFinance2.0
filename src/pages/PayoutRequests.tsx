@@ -22,8 +22,9 @@ import {
   updatePayoutRequestAdmin,
   deletePayoutRequest,
 } from '@/lib/api-client'
-import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { getLogActionUrl } from '@/lib/log-action-url'
+import { supabase } from '@/lib/supabase'
 import type { PayoutRequestWithMusician, BookingWithDetails } from '@/lib/database.types'
 import {
   Clock,
@@ -159,10 +160,30 @@ function PayoutRequests() {
     setSubmitting(true)
     setError('')
     try {
+      const oldRequest = requests.find((r) => r.id === actionId)
       await updatePayoutRequestAdmin(actionId, {
         amount,
         note: editNote || undefined,
       })
+      // Logging-Aufruf
+      if (user && oldRequest) {
+        const changes = []
+        if (amount !== oldRequest.amount) {
+          changes.push(`Betrag von ${formatCurrency(oldRequest.amount)} auf ${formatCurrency(amount)}`)
+        }
+        if ((editNote || '') !== (oldRequest.note || '')) {
+          changes.push(`Notiz geändert`)
+        }
+        const desc = `Auszahlung (Antrag): ${oldRequest.note || 'Keine Notiz'}, an ${oldRequest.musician_name}, ${changes.length ? changes.join(', ') : 'keine Änderung'}`
+        await supabase.from('logs').insert({
+          type: 'payout_request',
+          action: 'edit',
+          label: actionId,
+          description: desc,
+          user_id: user.id,
+          user_name: user.name,
+        })
+      }
       closeAction()
       await loadData()
     } catch (err) {
@@ -175,7 +196,20 @@ function PayoutRequests() {
   const handleDelete = async (id: string) => {
     if (!confirm('Antrag wirklich löschen?')) return
     try {
+      const oldRequest = requests.find((r) => r.id === id)
       await deletePayoutRequest(id)
+      // Logging-Aufruf
+      if (user && oldRequest) {
+        const desc = `Auszahlung (Antrag): ${oldRequest.note || 'Keine Notiz'}, an ${oldRequest.musician_name}, Betrag ${formatCurrency(oldRequest.amount)} gelöscht`
+        await supabase.from('logs').insert({
+          type: 'payout_request',
+          action: 'delete',
+          label: id,
+          description: desc,
+          user_id: user.id,
+          user_name: user.name,
+        })
+      }
       await loadData() // Nach dem Löschen Daten neu laden
     } catch (err) {
       setError('Löschen fehlgeschlagen: ' + (err instanceof Error ? err.message : String(err)))
