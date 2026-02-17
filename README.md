@@ -84,7 +84,9 @@ Voraussetzungen:
 
 ```
 ***WORKING***
-- (Schmakus) Add Passwort Vergessen funktion
+- (Schmakus) New: Add Passwort Vergessen funktion
+- (Schmakus) Fix: Version number in settings
+- (Schmakus) Fix: Open menu in desktop view
 
 v1.3.0 (14.02.2026)
 - (Schmakus) New: Auszahlung beantragen; inkl. Genehmigung und PDF Upload

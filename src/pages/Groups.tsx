@@ -181,7 +181,7 @@ function Groups() {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <Label>Musiker auswählen</Label>
-                  <Button variant="ghost" size="sm" onClick={distributeEven}>Gleichmäßig verteilen</Button>
+                  <Button size="sm" onClick={distributeEven}>Gleichmäßig verteilen</Button>
                 </div>
                 <div className="space-y-2">
                   {musicians.map((m) => (

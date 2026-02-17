@@ -21,8 +21,20 @@ import { fetchSettings, fetchPendingPayoutRequestCount } from '@/lib/api-client'
 function Layout() {
   const { user, logout, isAdmin, canManageBookings, canManageMusicians, canAccessSettings, canAccessArchive } = useAuth()
   const location = useLocation()
-  const [sidebarOpen, setSidebarOpen] = useState(false) // closed by default on mobile
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false)
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    // Sidebar auf Desktop für Admin/Superuser standardmäßig offen
+    if (typeof window !== 'undefined' && window.innerWidth >= 768 && (user?.role === 'administrator' || user?.role === 'superuser')) {
+      return true
+    }
+    return false
+  })
+  // Sidebar auf Desktop für Admin/Superuser nach Login/Reload automatisch öffnen
+  useEffect(() => {
+    if (!isMobile && (user?.role === 'administrator' || user?.role === 'superuser')) {
+      setSidebarOpen(true)
+    }
+  }, [isMobile, user?.role])
   const [bandName, setBandName] = useState<string>('NO EXIT')
   const [logo, setLogo] = useState<string | null>(null)
   const [pendingPayoutCount, setPendingPayoutCount] = useState(0)

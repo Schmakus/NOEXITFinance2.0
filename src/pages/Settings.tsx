@@ -430,7 +430,7 @@ function Settings() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-muted-foreground">Version</p>
-              <p className="font-medium">2.0</p>
+              <p className="font-medium">{import.meta.env.VITE_APP_VERSION}</p>
             </div>
             <div>
               <p className="text-muted-foreground">Speicherort</p>
