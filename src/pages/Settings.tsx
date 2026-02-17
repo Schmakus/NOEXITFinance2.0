@@ -491,6 +491,18 @@ function Settings() {
           </div>
         </CardContent>
       </Card>
+
+      {/* App-Informationen */}
+      <Card className="mt-8 border-muted-foreground/30">
+        <CardContent>
+          <div className="text-xs text-muted-foreground flex flex-col gap-1 items-center py-2">
+            <div>NOEXIT Finance&nbsp;2.0</div>
+            <div>Version: {import.meta.env.VITE_APP_VERSION || 'unbekannt'}</div>
+            <div>© 2022–2026 Schmakus</div>
+            <div>Maintainer: markus@noexit-liverock.de</div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
