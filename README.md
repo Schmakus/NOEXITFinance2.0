@@ -84,6 +84,7 @@ Voraussetzungen:
 
 ```
 ***WORKING***
+- (Schmakus) Fix: Release-Workflow
 
 v1.4.0 (17.02.2026)
 - (Schmakus) New: Add Passwort Vergessen funktion
