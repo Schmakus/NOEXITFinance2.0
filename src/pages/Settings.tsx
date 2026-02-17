@@ -11,6 +11,8 @@ import {
   upsertSetting,
   deleteSetting,
   deleteAllData,
+  deleteAllConcertsAndTransactions,
+  deleteAllBookingsAndTransactions,
   exportBackup,
   exportTransactionsCSV,
   importBackup,
@@ -234,6 +236,34 @@ function Settings() {
     if (!confirm('Bist du wirklich sicher?')) return
     try {
       await action()
+      // Logging für Admin-Löschaktionen
+      if (user && user.role === 'administrator') {
+        let logType = 'settings';
+        let logAction = 'delete';
+        let logLabel = '';
+        let logDescription = '';
+        if (label.includes('Konzerte')) {
+          logLabel = 'Konzerte & Transaktionen';
+          logDescription = 'Alle Konzerte und zugehörige Transaktionen gelöscht';
+        } else if (label.includes('Buchungen')) {
+          logLabel = 'Buchungen & Transaktionen';
+          logDescription = 'Alle Buchungen und zugehörige Transaktionen gelöscht';
+        } else if (label.includes('ALLE Daten')) {
+          logLabel = 'Alle Daten';
+          logDescription = 'Alle Daten im System gelöscht';
+        } else {
+          logLabel = label;
+          logDescription = `${label} gelöscht`;
+        }
+        await supabase.from('logs').insert({
+          type: logType,
+          action: logAction,
+          label: logLabel,
+          description: logDescription,
+          user_id: user.id,
+          user_name: user.name,
+        });
+      }
       // Optionally: show a toast here
     } catch (err) {
       // eslint-disable-next-line no-console
@@ -241,6 +271,12 @@ function Settings() {
       // Optionally: show a toast here
     }
   }
+
+  // Dangerzone Handler für gezieltes Löschen
+  // Hinweis: deleteAllMusicians gibt es nicht als Bulk-Delete, daher Button entfernen oder Funktion ergänzen
+  const handleDeleteAllConcerts = () => handleDangerAction('Alle Konzerte & zugehörige Transaktionen löschen', deleteAllConcertsAndTransactions)
+  const handleDeleteAllBookings = () => handleDangerAction('Alle Buchungen & zugehörige Transaktionen löschen', deleteAllBookingsAndTransactions)
+  const handleDeleteAllData = () => handleDangerAction('ALLE Daten löschen', deleteAllData)
 
   if (loading) {
     return <Spinner text="Einstellungen werden geladen..." />
@@ -389,47 +425,70 @@ function Settings() {
         </CardContent>
       </Card>
 
-      {/* Datenverwaltung */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Datenverwaltung</CardTitle>
-          <CardDescription>Exportiere und sichere deine Daten</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <button className="btn btn-outline" onClick={handleExportBackup}>
-            <FileJson className="w-4 h-4 mr-2" /> Backup (JSON)
-          </button>
-          <button className="btn btn-outline" onClick={handleExportCSV}>
-            <FileSpreadsheet className="w-4 h-4 mr-2" /> CSV Export
-          </button>
-          <input
-            id="restore-backup"
-            type="file"
-            accept="application/json"
-            className="hidden"
-            onChange={handleImportBackup}
-          />
-          <button
-            className="btn btn-outline"
-            onClick={() => document.getElementById('restore-backup')?.click()}
-          >
-            <Upload className="w-4 h-4 mr-2" /> Restore (JSON)
-          </button>
-        </CardContent>
-      </Card>
+      {/* Export/Import Card */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="border-primary/60 shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-primary"><FileJson className="w-5 h-5" /> Export</CardTitle>
+            <CardDescription>Exportiere deine Daten als Backup oder CSV</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-3">
+              <button className="btn btn-primary" onClick={handleExportBackup}>
+                <FileJson className="w-4 h-4 mr-2" /> Backup (JSON)
+              </button>
+              <button className="btn btn-primary" onClick={handleExportCSV}>
+                <FileSpreadsheet className="w-4 h-4 mr-2" /> CSV Export
+              </button>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-primary/60 shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-primary"><Upload className="w-5 h-5" /> Import</CardTitle>
+            <CardDescription>Stelle deine Daten aus einem Backup wieder her</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-3">
+              <input
+                id="restore-backup"
+                type="file"
+                accept="application/json"
+                className="hidden"
+                onChange={handleImportBackup}
+              />
+              <button
+                className="btn btn-primary"
+                onClick={() => document.getElementById('restore-backup')?.click()}
+              >
+                <Upload className="w-4 h-4 mr-2" /> Restore (JSON)
+              </button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Danger Zone */}
-      <Card className="border-destructive/50">
+      <Card className="border-destructive/60 shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-destructive">
             <AlertTriangle className="w-5 h-5" /> Gefahrenzone
           </CardTitle>
           <CardDescription>Diese Aktionen können nicht rückgängig gemacht werden!</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <button className="btn btn-danger" onClick={() => handleDangerAction('ALLE Daten löschen', deleteAllData)}>
-            <Trash2 className="w-4 h-4 mr-2" /> Alles löschen
-          </button>
+        <CardContent>
+          <div className="flex flex-col gap-3">
+            {/* Musiker löschen Button entfernt, da keine Bulk-Funktion vorhanden */}
+            <button className="btn btn-danger" onClick={handleDeleteAllConcerts}>
+              <Trash2 className="w-4 h-4 mr-2" /> Konzerte & Transaktionen löschen
+            </button>
+            <button className="btn btn-danger" onClick={handleDeleteAllBookings}>
+              <Trash2 className="w-4 h-4 mr-2" /> Buchungen & Transaktionen löschen
+            </button>
+            <button className="btn btn-danger" onClick={handleDeleteAllData}>
+              <Trash2 className="w-4 h-4 mr-2" /> Alles löschen
+            </button>
+          </div>
         </CardContent>
       </Card>
     </div>

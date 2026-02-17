@@ -12,7 +12,7 @@ create policy "Allow select for admins only" on logs
   using (
     exists (
       select 1 from musicians m
-      where m.id = auth.uid() and m.role = 'administrator'
+      where m.user_id = auth.uid() and m.role = 'administrator'
     )
   );
 
