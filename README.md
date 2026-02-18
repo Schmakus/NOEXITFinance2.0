@@ -81,6 +81,8 @@ Voraussetzungen:
 ## Release Notes
 
 ```
+***WORKING***
+
 v1.5.4 (18.02.2026)
 - Some fixes
 - Add change order of groups
