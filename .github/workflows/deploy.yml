@@ -1,18 +1,19 @@
-name: Deploy on Release
+name: Remote Deploy
 
 on:
   release:
-    types: [published]
+    types: [published] # Triggert nur, wenn du ein Release veröffentlichst
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Executing remote ssh commands using ssh key
+      - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
           script: |
             ./deploy.sh
