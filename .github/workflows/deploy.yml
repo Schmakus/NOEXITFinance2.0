@@ -1,12 +1,14 @@
 name: Remote Deploy
 
 on:
-  push:
+  pull_request:
     branches:
-      - main  # Das Deployment startet, sobald etwas auf 'main' landet (z.B. durch einen Merge)
+      - main
+    types: [closed]
 
 jobs:
   deploy:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
       - name: Notify Telegram Start
