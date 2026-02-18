@@ -1,8 +1,9 @@
 name: Remote Deploy
 
 on:
-  release:
-    types: [published]
+  push:
+    branches:
+      - main  # Das Deployment startet, sobald etwas auf 'main' landet (z.B. durch einen Merge)
 
 jobs:
   deploy:
