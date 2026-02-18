@@ -83,6 +83,9 @@ Voraussetzungen:
 ```
 ***WORKING***
 
+v1.5.9 (18.02.2026)
+- Buxfixes and deployment
+
 v1.5.8 (18.02.2026)
 
 v1.5.7 (18.02.2026)
