@@ -41,6 +41,8 @@ interface LocalExpense {
 function Concerts() {
   const { user } = useAuth()
   const [concerts, setConcerts] = useState<ConcertWithExpenses[]>([])
+  // AutoFill Vorschläge für Ausgaben-Beschreibung
+  const expenseDescriptionSuggestions: string[] = Array.from(new Set(concerts.flatMap((c: ConcertWithExpenses) => (c.expenses || []).map(e => typeof e.description === 'string' ? e.description : '')))).filter((v): v is string => !!v)
   const [groups, setGroups] = useState<GroupWithMembers[]>([])
   const [loading, setLoading] = useState(true)
   const { tagNames, addTag } = useTags()
@@ -375,7 +377,13 @@ function Concerts() {
                       placeholder="Beschreibung"
                       value={expenseForm.description}
                       onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })}
+                      list="expense-description-suggestions"
                     />
+                    <datalist id="expense-description-suggestions">
+                      {expenseDescriptionSuggestions.map((desc) => (
+                        <option key={desc} value={desc} />
+                      ))}
+                    </datalist>
                     <Input
                       placeholder="Betrag (€)"
                       type="number"
