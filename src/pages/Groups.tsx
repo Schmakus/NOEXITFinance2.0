@@ -1,4 +1,37 @@
 import { useState, useEffect } from 'react'
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy
+} from '@dnd-kit/sortable'
+import {CSS} from '@dnd-kit/utilities'
+// Hilfskomponente für Sortable Card
+function SortableGroupCard({group, children}: {group: GroupWithMembers, children: React.ReactNode}) {
+  const {attributes, listeners, setNodeRef, transform, transition, isDragging} = useSortable({id: group.id})
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+        cursor: 'grab',
+      }}
+      {...attributes}
+      {...listeners}
+    >
+      {children}
+    </div>
+  )
+}
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -36,6 +69,9 @@ function Groups() {
   const [name, setName] = useState('')
   const [selected, setSelected] = useState<Record<string, string>>({}) // musicianId -> percent string
   const [error, setError] = useState<string | null>(null)
+
+  // DnD-Kit Sensoren müssen immer außerhalb von Bedingungen/Hooks stehen!
+  const sensors = useSensors(useSensor(PointerSensor, {activationConstraint: {distance: 5}}))
 
   const loadData = async () => {
     try {
@@ -222,7 +258,7 @@ function Groups() {
               <DialogDescription>Definiere Verteilung in Prozent (Summe = 100%)</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
+              <div className="grid gap-2 px-1 sm:px-2">
                 <Label htmlFor="group-name">Gruppenname</Label>
                 <Input id="group-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="z. B. Hauptband" />
               </div>
@@ -286,36 +322,62 @@ function Groups() {
             </CardContent>
           </Card>
         ) : (
-          groups.map((g) => (
-            <Card key={g.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>{g.name}</CardTitle>
-                    <CardDescription>{g.members.length} Mitglieder</CardDescription>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => openEdit(g)}>
-                      <Edit2 className="w-4 h-4" />
-                    </Button>
-                    <Button variant="destructive" size="sm" onClick={() => deleteGroup(g.id)}>
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {g.members.map((m) => (
-                    <div key={m.id} className="inline-flex items-center gap-2 px-3 py-1 bg-muted rounded-full text-sm">
-                      <Users className="w-4 h-4 text-muted-foreground" />
-                      <div>{m.musician_name} ({m.percent.toFixed(2)}%)</div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          ))
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={async (event) => {
+              const {active, over} = event
+              if (active.id !== over?.id) {
+                const oldIndex = groups.findIndex(g => g.id === active.id)
+                const newIndex = groups.findIndex(g => g.id === over?.id)
+                const newGroups = arrayMove(groups, oldIndex, newIndex)
+                setGroups(newGroups)
+                // Reihenfolge in DB speichern
+                try {
+                  await Promise.all(newGroups.map((g, idx) =>
+                    supabase.from('groups').update({sort_order: idx}).eq('id', g.id)
+                  ))
+                } catch (e) {
+                  // Fehlerbehandlung optional
+                }
+              }
+            }}
+          >
+            <SortableContext items={groups.map(g => g.id)} strategy={verticalListSortingStrategy}>
+              {groups.map((g) => (
+                <SortableGroupCard key={g.id} group={g}>
+                  <Card className="hover:shadow-lg transition-shadow">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle>{g.name}</CardTitle>
+                          <CardDescription>{g.members.length} Mitglieder</CardDescription>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" onClick={() => openEdit(g)}>
+                            <Edit2 className="w-4 h-4" />
+                          </Button>
+                          <Button variant="destructive" size="sm" onClick={() => deleteGroup(g.id)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex flex-wrap gap-2">
+                        {g.members.map((m) => (
+                          <span key={m.musician_id} className="inline-flex items-center gap-2 px-3 py-1 bg-muted rounded-full text-sm">
+                            <Users className="w-4 h-4 text-muted-foreground" />
+                            {m.musician_name} ({m.percent.toFixed(2)}%)
+                          </span>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </SortableGroupCard>
+              ))}
+            </SortableContext>
+          </DndContext>
         )}
       </div>
     </div>

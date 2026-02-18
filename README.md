@@ -83,7 +83,9 @@ Voraussetzungen:
 ```
 ***WORKING***
 
-v1.5.1 (17.02.2026)
+v1.5.4 (18.02.2026)
+- Some fixes
+- Add change order of groups
 
 v1.5.0 (17.02.2026)
 - (Schmakus) New: Activity logging
