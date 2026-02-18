@@ -2,18 +2,47 @@ name: Remote Deploy
 
 on:
   release:
-    types: [published] # Triggert nur, wenn du ein Release veröffentlichst
+    types: [published]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Notify Telegram Start
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_TO }}
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          message: |
+            🚀 Deployment gestartet!
+            Release: ${{ github.event.release.tag_name }}
+            Projekt: NOEXITFinance2.0
+
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: 22
-          script: |
-            ./deploy.sh
+          script: ./deploy.sh
+
+      - name: Notify Telegram Success
+        if: success()
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_TO }}
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          message: |
+            ✅ Deployment erfolgreich!
+            Version ${{ github.event.release.tag_name }} ist jetzt live auf:
+            https://nefinanzen.duckdns.org
+
+      - name: Notify Telegram Failure
+        if: failure()
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_TO }}
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          message: |
+            ❌ Deployment fehlgeschlagen!
+            Da ist was schiefgelaufen. Bitte check die GitHub Actions Logs.
