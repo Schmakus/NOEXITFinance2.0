@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react'
-import { getLogActionUrl } from '@/lib/log-action-url'
 import { supabase } from '@/lib/supabase'
 import { fetchMusicianByUserId } from '@/lib/api-client'
 
