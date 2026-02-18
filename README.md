@@ -82,6 +82,7 @@ Voraussetzungen:
 
 ```
 ***WORKING***
+- Darstellung Kontoauszug
 
 v1.5.10 (18.02.2026)
 

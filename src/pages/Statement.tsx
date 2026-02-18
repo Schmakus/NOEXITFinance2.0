@@ -577,7 +577,7 @@ function Statement() {
                         </div>
                         <p className="text-sm text-muted-foreground">
                           {t.date ? formatDate(new Date(t.date)) : '-'}
-                          {t.concert_name ? ` • ${t.concert_name}` : ''}
+                          {t.concert_location ? ` • ${t.concert_location}` : ''}
                         </p>
                       </div>
                     </div>

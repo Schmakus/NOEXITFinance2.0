@@ -172,6 +172,7 @@ function Concerts() {
         const transactions = members.map((member) => ({
           musician_id: member.musician_id,
           concert_name: formData.name,
+          concert_location: formData.location,
           amount: Number((restBetrag * member.percent / 100).toFixed(2)),
           date: formData.date,
           type: 'earn' as const,
