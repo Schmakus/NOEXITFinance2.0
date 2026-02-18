@@ -23,7 +23,6 @@ import {
   deletePayoutRequest,
 } from '@/lib/api-client'
 import { useAuth } from '@/contexts/AuthContext'
-import { getLogActionUrl } from '@/lib/log-action-url'
 import { supabase } from '@/lib/supabase'
 import type { PayoutRequestWithMusician, BookingWithDetails } from '@/lib/database.types'
 import {
