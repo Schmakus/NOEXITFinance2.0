@@ -83,6 +83,7 @@ Voraussetzungen:
 ```
 ***WORKING***
 - Add AutoFill to concerts page
+- Fix Workflow
 
 v1.5.4 (18.02.2026)
 - Some fixes
