@@ -83,6 +83,10 @@ Voraussetzungen:
 ```
 ***WORKING***
 
+v1.5.5 (18.02.2026)
+- Add AutoFill to concerts page
+- Fix Workflow
+
 v1.5.4 (18.02.2026)
 - Some fixes
 - Add change order of groups
