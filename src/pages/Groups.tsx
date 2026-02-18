@@ -222,7 +222,7 @@ function Groups() {
               <DialogDescription>Definiere Verteilung in Prozent (Summe = 100%)</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
+              <div className="grid gap-2 px-1 sm:px-2">
                 <Label htmlFor="group-name">Gruppenname</Label>
                 <Input id="group-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="z. B. Hauptband" />
               </div>
