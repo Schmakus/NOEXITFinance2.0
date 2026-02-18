@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react'
+import { APP_VERSION } from '@/lib/version'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -497,7 +498,7 @@ function Settings() {
         <CardContent>
           <div className="text-xs text-muted-foreground flex flex-col gap-1 items-center py-2">
             <div>NOEXIT Finance&nbsp;2.0</div>
-            <div>Version: {import.meta.env.VITE_APP_VERSION || 'unbekannt'}</div>
+            <div>Version: {APP_VERSION}</div>
             <div>© 2022–2026 Schmakus</div>
             <div>Maintainer: markus@noexit-liverock.de</div>
           </div>
