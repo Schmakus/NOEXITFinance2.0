@@ -83,7 +83,7 @@ Voraussetzungen:
 ```
 ***WORKING***
 - Some fixes
-- Posibility to change order of groups
+- Add change order of groups
 
 v1.5.0 (17.02.2026)
 - (Schmakus) New: Activity logging

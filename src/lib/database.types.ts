@@ -17,6 +17,7 @@ export interface DbMusician {
 export interface DbGroup {
   id: string
   name: string
+  sort_order: number
   created_at: string
 }
 

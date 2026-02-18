@@ -41,7 +41,7 @@ export async function uploadPayoutRequestPdf(requestId: string, file: File): Pro
     .upload(path, file, { upsert: true, contentType: 'application/pdf' })
   if (error) {
     // Supabase errors are objects, so throw a readable error
-    throw new Error(error.message || error.error_description || JSON.stringify(error))
+    throw new Error(error.message || JSON.stringify(error))
   }
   if (!data) {
     throw new Error('PDF Upload fehlgeschlagen: Keine Daten von Supabase erhalten.')
@@ -285,11 +285,13 @@ export async function restoreMusician(id: string): Promise<void> {
 // GRUPPEN
 // ============================================
 
+
 export async function fetchGroups(): Promise<DbGroup[]> {
   const { data, error } = await supabase
     .from('groups')
     .select('*')
-    .order('name')
+    .order('sort_order', { ascending: true })
+    .order('name', { ascending: true })
   if (error) throw error
   return data ?? []
 }
@@ -298,7 +300,8 @@ export async function fetchGroupsWithMembers(): Promise<GroupWithMembers[]> {
   const { data: groups, error: gErr } = await supabase
     .from('groups')
     .select('*')
-    .order('name')
+    .order('sort_order', { ascending: true })
+    .order('name', { ascending: true })
   if (gErr) throw gErr
 
   const { data: members, error: mErr } = await supabase
