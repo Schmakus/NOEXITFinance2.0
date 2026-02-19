@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "eslint . --fix-dry-run",
+    "lint": "eslint .",
     "type-check": "tsc --noEmit",
     "preview": "vite preview",
     "release": "bash scripts/release.sh"

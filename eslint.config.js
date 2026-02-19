@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
   {
-    // Das hier schaltet das Meckern über "eslint-disable" Kommentare global aus
+    // Das hier ist der "Maulkorb" für ESLint
     linterOptions: {
       reportUnusedDisableDirectives: false
     },
