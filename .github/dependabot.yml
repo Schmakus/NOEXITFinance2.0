@@ -1,0 +1,10 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"      # Für deine package.json Pakete
+    directory: "/"                # Wo die package.json liegt
+    target-branch: "dev"          # Ganz wichtig: Updates gehen an dev, nicht main!
+    schedule:
+      interval: "weekly"          # Einmal pro Woche prüfen
+    open-pull-requests-limit: 5   # Maximal 5 PRs gleichzeitig (damit es übersichtlich bleibt)
+    labels:
+      - "dependencies"            # Markiert die PRs automatisch
