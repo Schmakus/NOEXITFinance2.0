@@ -23,7 +23,8 @@ import {
   updatePayoutRequestAdmin,
   deletePayoutRequest,
   updatePayoutRequestUser,
-  deletePayoutRequestUser
+  deletePayoutRequestUser,
+  fetchConcerts
 } from '@/lib/api-client'
 import { useAuth } from '@/contexts/AuthContext'
 import { Spinner } from '@/components/ui/spinner'
@@ -63,6 +64,7 @@ function Statement() {
   const canRequestPayout = (isUser || isSuperuser) && !!user && musicianId === user.id
   const [musician, setMusician] = useState<DbMusician | null>(null)
   const [transactions, setTransactions] = useState<TransactionWithMusician[]>([])
+  const [concerts, setConcerts] = useState([])
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
   const contentRef = useRef<HTMLDivElement | null>(null)
@@ -112,12 +114,14 @@ function Statement() {
     const load = async () => {
       if (!musicianId) return
       try {
-        const [m, t] = await Promise.all([
+        const [m, t, c] = await Promise.all([
           fetchMusicianById(musicianId),
           fetchTransactionsWithMusician(),
+          fetchConcerts(),
         ])
         setMusician(m)
         setTransactions(t.filter((row) => row.musician_id === musicianId))
+        setConcerts(c)
         // Load payout requests for own statement
         if ((isUser || isSuperuser) && user && musicianId === user.id) {
           const requests = await fetchMyPayoutRequests(musicianId)
@@ -577,7 +581,10 @@ function Statement() {
                         </div>
                         <p className="text-sm text-muted-foreground">
                           {t.date ? formatDate(new Date(t.date)) : '-'}
-                          {/* concert_location does not exist on TransactionWithMusician, so we omit it here. */}
+                          {t.concert_id && concerts.length > 0 ? (() => {
+                            const concert = concerts.find((c) => c.id === t.concert_id)
+                            return concert && concert.location ? ` • ${concert.location}` : ''
+                          })() : ''}
                         </p>
                       </div>
                     </div>
