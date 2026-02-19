@@ -577,7 +577,7 @@ function Statement() {
                         </div>
                         <p className="text-sm text-muted-foreground">
                           {t.date ? formatDate(new Date(t.date)) : '-'}
-                          {t.concert_location ? ` • ${t.concert_location}` : ''}
+                          {/* concert_location does not exist on TransactionWithMusician, so we omit it here. */}
                         </p>
                       </div>
                     </div>
