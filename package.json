@@ -9,7 +9,9 @@
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
     "preview": "vite preview",
-    "release": "bash scripts/release.sh"
+    "release:patch": "bash scripts/release.sh patch",
+    "release:minor": "bash scripts/release.sh minor",
+    "release:major": "bash scripts/release.sh major"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
