@@ -19,7 +19,8 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps
+        # Wir nutzen 'install' statt 'ci', da es mit Konflikten besser umgeht
+        run: npm install --legacy-peer-deps
 
       - name: Linting
         run: npm run lint
