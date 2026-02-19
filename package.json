@@ -8,11 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "version": "bash scripts/update-readme-version.sh",
-    "release:patch": "git add -A && git diff --cached --quiet || git commit -m \"chore: pre-release changes\" && npm version patch -m \"chore(release): %s\" && bash scripts/update-version-ts.sh && git add src/lib/version.ts && git commit -m 'chore: update version.ts' && git push --follow-tags && gh release create v$(node -p \"require('./package.json').version\") --generate-notes && bash scripts/post-release.sh",
-    "release:minor": "git add -A && git diff --cached --quiet || git commit -m \"chore: pre-release changes\" && npm version minor -m \"chore(release): %s\" && bash scripts/update-version-ts.sh && git add src/lib/version.ts && git commit -m 'chore: update version.ts' && git push --follow-tags && gh release create v$(node -p \"require('./package.json').version\") --generate-notes && bash scripts/post-release.sh",
-    "release:major": "git add -A && git diff --cached --quiet || git commit -m \"chore: pre-release changes\" && npm version major -m \"chore(release): %s\" && bash scripts/update-version-ts.sh && git add src/lib/version.ts && git commit -m 'chore: update version.ts' && git push --follow-tags && gh release create v$(node -p \"require('./package.json').version\") --generate-notes && bash scripts/post-release.sh",
-    "release:beta": "git add -A && git diff --cached --quiet || git commit -m \"chore: pre-release changes\" && npm version prerelease --preid=beta -m \"chore(release): %s\" && bash scripts/update-version-ts.sh && git add src/lib/version.ts && git commit -m 'chore: update version.ts' && git push --follow-tags && gh release create v$(node -p \"require('./package.json').version\") --prerelease --generate-notes && bash scripts/post-release.sh"
+    "release": "bash scripts/release.sh"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

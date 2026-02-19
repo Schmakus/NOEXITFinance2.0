@@ -3,8 +3,22 @@
     ".": {
       "release-type": "node",
       "package-name": "NOEXITFinance2.0",
-      "pull-request-title-pattern": "v${version}",
-      "auto-merge": true
+      "include-component-in-tag": false,
+      "pull-request-title-pattern": "chore: release v${version}",
+      "auto-merge": true,
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "regex",
+          "path": "src/lib/version.ts",
+          "pattern": "APP_VERSION = \"(.*)\";",
+          "replacement": "APP_VERSION = \"${version}\";"
+        }
+      ]
     }
   }
 }
