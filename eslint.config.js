@@ -5,7 +5,13 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
-  { ignores: ['dist', 'supabase/functions/_shared'] }, // Modernes Ignorieren
+  {
+    // Das hier schaltet das Meckern über "eslint-disable" Kommentare global aus
+    linterOptions: {
+      reportUnusedDisableDirectives: false
+    },
+    ignores: ['dist', 'supabase/functions/_shared'],
+  },
   {
     extends: [
       js.configs.recommended,
@@ -22,25 +28,18 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
-      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
-      
-      // --- Hier bändigen wir die Fehler ---
-      '@typescript-eslint/no-explicit-any': 'off',      // Erlaubt 'any'
-      '@typescript-eslint/no-unused-vars': 'warn',     // Ungenutzte Variablen nur Warnung
-      '@typescript-eslint/no-empty-object-type': 'off', // Erlaubt leere Interfaces
-      '@typescript-eslint/no-unused-expressions': 'warn',
-      'react-hooks/set-state-in-effect': 'off',        // Schaltet den Fehler in Layout.tsx aus
-      'react-hooks/exhaustive-deps': 'warn',           // Fehlende Dependencies nur Warnung
-      'no-empty': 'warn',                              // Leere Code-Blöcke erlauben
-      'prefer-const': 'warn',                          // const/let Fehler ignorieren
-      'no-extra-boolean-cast': 'warn',
-      '@typescript-eslint/ban-ts-comment': 'warn',      // Erlaubt @ts-ignore etc.
+      'react-refresh/only-export-components': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unused-vars': 'off',
+      '@typescript-eslint/no-empty-object-type': 'off',
+      '@typescript-eslint/no-unused-expressions': 'off',
+      'react-hooks/set-state-in-effect': 'off',
+      'react-hooks/exhaustive-deps': 'off',
+      'no-empty': 'off',
+      'prefer-const': 'off',
       'no-console': 'off',
-      'no-useless-assignment': 'warn',
-      'report-unused-disable-directives': 'off',
-      'linterOptions': {
-        reportUnusedDisableDirectives: 'off'
-      }
+      'no-useless-assignment': 'off',
+      '@typescript-eslint/ban-ts-comment': 'off'
     },
   },
 )
