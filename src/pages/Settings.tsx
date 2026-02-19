@@ -57,7 +57,7 @@ function Settings() {
         if (settings.bandname) setBandName(settings.bandname)
         if (settings.logo) setLogo(settings.logo)
       } catch (err) {
-        // eslint-disable-next-line no-console
+         
         console.error('Einstellungen laden fehlgeschlagen:', err)
       } finally {
         setLoading(false)
@@ -86,7 +86,7 @@ function Settings() {
       window.dispatchEvent(new Event('noexit-settings-changed'))
       // Optionally: show a toast here
     } catch (err) {
-      // eslint-disable-next-line no-console
+       
       console.error(err)
       // Optionally: show a toast here
     } finally {
@@ -121,7 +121,7 @@ function Settings() {
         window.dispatchEvent(new Event('noexit-settings-changed'))
         // Optionally: show a toast here
       } catch (err) {
-        // eslint-disable-next-line no-console
+         
         console.error('Logo upload error:', err)
         // Optionally: show a toast here
       }
@@ -151,7 +151,7 @@ function Settings() {
       window.dispatchEvent(new Event('noexit-settings-changed'))
       // Optionally: show a toast here
     } catch (err) {
-      // eslint-disable-next-line no-console
+       
       console.error(err)
       // Optionally: show a toast here
     }
@@ -172,7 +172,7 @@ function Settings() {
       URL.revokeObjectURL(url)
       // Optionally: show a toast here
     } catch (err) {
-      // eslint-disable-next-line no-console
+       
       console.error(err)
       // Optionally: show a toast here
     }
@@ -203,7 +203,7 @@ function Settings() {
       window.dispatchEvent(new Event('noexit-settings-changed'))
       // Optionally: show a toast here
     } catch (err) {
-      // eslint-disable-next-line no-console
+       
       console.error(err)
       // Optionally: show a toast here
     }
@@ -223,7 +223,7 @@ function Settings() {
       URL.revokeObjectURL(url)
       // Optionally: show a toast here
     } catch (err) {
-      // eslint-disable-next-line no-console
+       
       console.error(err)
       // Optionally: show a toast here
     }
@@ -239,8 +239,8 @@ function Settings() {
       await action()
       // Logging für Admin-Löschaktionen
       if (user && user.role === 'administrator') {
-        let logType = 'settings';
-        let logAction = 'delete';
+        const logType = 'settings';
+        const logAction = 'delete';
         let logLabel = '';
         let logDescription = '';
         if (label.includes('Konzerte')) {
@@ -267,7 +267,7 @@ function Settings() {
       }
       // Optionally: show a toast here
     } catch (err) {
-      // eslint-disable-next-line no-console
+       
       console.error(err)
       // Optionally: show a toast here
     }
@@ -333,35 +333,11 @@ function Settings() {
         </Dialog>
       </div>
 
-      {/* Profil */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Profil</CardTitle>
-          <CardDescription>Deine Kontoinformationen</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="text-muted-foreground">Name</p>
-              <p className="font-medium">NO EXIT User</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">E-Mail</p>
-              <p className="font-medium break-all">user@example.com</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">Rolle</p>
-              <p className="font-medium capitalize">admin</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Bandname */}
       <Card>
         <CardHeader>
           <CardTitle>Bandname</CardTitle>
-          <CardDescription>Der angezeigte Name der Band</CardDescription>
+          <CardDescription></CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex gap-2">
@@ -388,7 +364,7 @@ function Settings() {
       <Card>
         <CardHeader>
           <CardTitle>Logo</CardTitle>
-          <CardDescription>Logo der Band (max. 2 MB)</CardDescription>
+          <CardDescription>(max. 2 MB)</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {logo ? (

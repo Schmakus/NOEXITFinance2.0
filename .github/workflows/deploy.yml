@@ -1,14 +1,11 @@
 name: Remote Deploy
 
 on:
-  pull_request:
-    branches:
-      - main
-    types: [closed]
+  release:
+    types: [published] # Startet, sobald das Release (via release-please) erstellt wurde
 
 jobs:
   deploy:
-    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
       - name: Notify Telegram Start
@@ -17,17 +14,17 @@ jobs:
           to: ${{ secrets.TELEGRAM_TO }}
           token: ${{ secrets.TELEGRAM_TOKEN }}
           message: |
-            🚀 Deployment gestartet!
-            Release: ${{ github.event.release.tag_name }}
+            🚀 *Deployment gestartet!*
+            Version: ${{ github.event.release.tag_name }}
             Projekt: NOEXITFinance2.0
-
+            
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: ./deploy.sh
+          script: ./deploy.sh # Führt dein bestehendes deploy.sh auf dem Server aus
 
       - name: Notify Telegram Success
         if: success()
@@ -36,8 +33,9 @@ jobs:
           to: ${{ secrets.TELEGRAM_TO }}
           token: ${{ secrets.TELEGRAM_TOKEN }}
           message: |
-            ✅ Deployment erfolgreich!
-            Version ${{ github.event.release.tag_name }} ist jetzt live auf:
+            ✅ *Deployment erfolgreich!*
+            Version: ${{ github.event.release.tag_name }}
+            Die App ist jetzt live unter:
             https://nefinanzen.duckdns.org
 
       - name: Notify Telegram Failure
@@ -47,5 +45,6 @@ jobs:
           to: ${{ secrets.TELEGRAM_TO }}
           token: ${{ secrets.TELEGRAM_TOKEN }}
           message: |
-            ❌ Deployment fehlgeschlagen!
-            Da ist was schiefgelaufen. Bitte check die GitHub Actions Logs.
+            ❌ *Deployment fehlgeschlagen!*
+            Bei Version ${{ github.event.release.tag_name }} gab es Probleme.
+            Bitte prüfe die GitHub Actions Logs.

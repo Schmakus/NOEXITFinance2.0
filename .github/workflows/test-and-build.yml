@@ -1,0 +1,32 @@
+name: CI (Validate)
+
+on:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        # Wir nutzen 'install' statt 'ci', da es mit Konflikten besser umgeht
+        run: npm install --legacy-peer-deps
+
+      - name: Linting
+        run: npm run lint
+
+      - name: Type-Check
+        run: npm run type-check
+
+      - name: Build Test
+        run: npm run build

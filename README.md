@@ -82,17 +82,11 @@ Voraussetzungen:
 
 ```
 ***WORKING***
-
-v1.5.10 (18.02.2026)
+- Darstellung Kontoauszug angepasst
+- Diverse bugfixes
 
 v1.5.9 (18.02.2026)
 - Buxfixes and deployment
-
-v1.5.8 (18.02.2026)
-
-v1.5.7 (18.02.2026)
-
-v1.5.6 (18.02.2026)
 
 v1.5.5 (18.02.2026)
 - Add AutoFill to concerts page
@@ -132,8 +126,6 @@ v1.2.0 (08.02.2026)
 - (Schmakus) DatePicker; Respnsive Design; Only DarkMode
 - (Schmakus) Rollenzuweisung optimiert
 
-v0.0.5 (04.02.2026)
-- Beispiel: Backup/Restore hinzugefuegt
 ```
 
 ## Linting & Formatierung
