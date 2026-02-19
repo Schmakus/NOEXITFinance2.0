@@ -19,10 +19,10 @@ jobs:
       - name: Run Lint
         run: npm run lint
 
-  # SCHRITT 2: Das eigentliche Deployment (nur wenn validate erfolgreich war)
+  # SCHRITT 2: Das eigentliche Deployment
   deploy:
     runs-on: ubuntu-latest
-    needs: validate # <--- Das stellt sicher, dass Tests ERST laufen
+    needs: validate
     steps:
       - name: Notify Telegram Start
         uses: appleboy/telegram-action@master
@@ -41,9 +41,18 @@ jobs:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          # Wir übergeben die Version als Variable an dein Server-Skript
           script: |
-            cd /pfad/zu/deiner/app
+            # In das App-Verzeichnis wechseln (Pfad wurde aus deinem Log erkannt)
+            cd ~/var/www/app
+            
+            # Neuesten Stand holen
+            git pull origin main
+            
+            # WICHTIG: Installation mit Legacy-Flag, um ESLint 10 Konflikte zu lösen
+            npm install --legacy-peer-deps
+            
+            # Dein bestehendes deploy-Skript auf dem Server ausführen
+            chmod +x ./deploy.sh
             ./deploy.sh
 
       - name: Notify Telegram Success
