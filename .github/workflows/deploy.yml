@@ -1,8 +1,9 @@
 name: Remote Deploy
 
 on:
-  release:
-    types: [published] # Startet, sobald das Release (via release-please) erstellt wurde
+  push:
+    branches:
+      - main # Wird erst ausgelöst, wenn der PR gemergt wurde
 
 jobs:
   deploy:
