@@ -1,6 +1,9 @@
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 import {
   BarChart3,
   Users,
@@ -14,12 +17,14 @@ import {
   X,
   Archive,
   HandCoins,
+  UserRound,
 } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
 import { fetchSettings, fetchPendingPayoutRequestCount } from '@/lib/api-client'
 
 function Layout() {
-  const { user, logout, isAdmin, canManageBookings, canManageMusicians, canAccessSettings, canAccessArchive } = useAuth()
+  const { user, logout, isAdmin, isSuperuser, canManageBookings, canManageMusicians, canAccessSettings, canAccessArchive } = useAuth()
+  const [showAccountDialog, setShowAccountDialog] = useState(false)
   const location = useLocation()
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false)
   const [sidebarOpen, setSidebarOpen] = useState(() => {
@@ -193,6 +198,66 @@ function Layout() {
               <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
             </div>
           )}
+          {(isAdmin || isSuperuser) && (
+            <button
+              type="button"
+              onClick={() => setShowAccountDialog(true)}
+              className="flex items-center gap-2 px-2 py-1 text-xs text-muted-foreground hover:text-foreground cursor-pointer transition-colors mb-2"
+              style={{ fontWeight: 500 }}
+            >
+              <UserRound className="w-4 h-4" />
+              <span>Profil editieren</span>
+            </button>
+          )}
+                {/* Account Dialog für Admin/Superuser */}
+                {(isAdmin || isSuperuser) && (
+                  <Dialog open={showAccountDialog} onOpenChange={setShowAccountDialog}>
+                    <DialogContent
+                      aria-describedby="account-dialog-desc"
+                      className="[&>div[data-radix-dialog-overlay]]:bg-black/80"
+                      style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}
+                    >
+                      <DialogHeader>
+                        <DialogTitle>Mein Konto</DialogTitle>
+                      </DialogHeader>
+                      <DialogDescription id="account-dialog-desc" className="sr-only">
+                        Hier kannst du deine Kontodaten und dein Passwort ändern.
+                      </DialogDescription>
+                      <div className="space-y-6 px-1">
+                        {/* E-Mail ändern */}
+                        <div className="space-y-3">
+                          <h3 className="text-sm font-semibold flex items-center gap-2"><UserRound className="w-4 h-4" /> E-Mail ändern</h3>
+                          <div className="grid gap-2">
+                            <Label htmlFor="account-email">Neue E-Mail-Adresse</Label>
+                            <Input
+                              id="account-email"
+                              type="email"
+                              value={user?.email ?? ''}
+                              readOnly
+                            />
+                          </div>
+                          {/* Button für E-Mail-Änderung kann hier ergänzt werden, falls Admins/Superuser das dürfen */}
+                        </div>
+                        {/* Passwort ändern */}
+                        <div className="space-y-3">
+                          <h3 className="text-sm font-semibold flex items-center gap-2"><UserRound className="w-4 h-4" /> Passwort ändern</h3>
+                          <div className="grid gap-2">
+                            <Label htmlFor="account-password">Neues Passwort</Label>
+                            <Input id="account-password" type="password" placeholder="••••••••" />
+                          </div>
+                          <div className="grid gap-2">
+                            <Label htmlFor="account-confirm">Passwort bestätigen</Label>
+                            <Input id="account-confirm" type="password" placeholder="••••••••" />
+                          </div>
+                          {/* Button für Passwort-Änderung kann hier ergänzt werden */}
+                        </div>
+                      </div>
+                      <DialogFooter className="mt-6">
+                        <Button variant="outline" onClick={() => setShowAccountDialog(false)}>Schließen</Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                )}
           <Button
             variant="outline"
             size="sm"

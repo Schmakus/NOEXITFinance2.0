@@ -28,7 +28,7 @@ import {
 } from '@/lib/api-client'
 import { useAuth } from '@/contexts/AuthContext'
 import { Spinner } from '@/components/ui/spinner'
-import type { DbMusician, DbPayoutRequest, TransactionWithMusician } from '@/lib/database.types'
+import type { DbMusician, DbPayoutRequest, TransactionWithMusician, ConcertWithExpenses } from '@/lib/database.types'
 import {
   ArrowLeft,
   Banknote,
@@ -64,7 +64,7 @@ function Statement() {
   const canRequestPayout = (isUser || isSuperuser) && !!user && musicianId === user.id
   const [musician, setMusician] = useState<DbMusician | null>(null)
   const [transactions, setTransactions] = useState<TransactionWithMusician[]>([])
-  const [concerts, setConcerts] = useState([])
+  const [concerts, setConcerts] = useState<ConcertWithExpenses[]>([])
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
   const contentRef = useRef<HTMLDivElement | null>(null)
@@ -646,7 +646,7 @@ function Statement() {
 
       {/* Account Dialog (User only) */}
       <Dialog open={showAccountDialog} onOpenChange={setShowAccountDialog}>
-        <DialogContent aria-describedby="account-dialog-desc">
+        <DialogContent aria-describedby="account-dialog-desc" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
           <DialogHeader>
             <DialogTitle>Mein Konto</DialogTitle>
           </DialogHeader>
@@ -677,10 +677,12 @@ function Statement() {
                   placeholder="neue@email.de"
                 />
               </div>
-              <Button size="sm" onClick={handleUpdateEmail} disabled={accountSaving || newEmail === user?.email}>
-                <Save className="w-4 h-4 mr-2" />
-                E-Mail ändern
-              </Button>
+              {(!!newEmail && newEmail !== user?.email && !accountSaving) && (
+                <Button size="sm" onClick={handleUpdateEmail}>
+                  <Save className="w-4 h-4 mr-2" />
+                  E-Mail ändern
+                </Button>
+              )}
             </div>
 
             {/* Passwort ändern */}
@@ -706,13 +708,15 @@ function Statement() {
                   placeholder="••••••••"
                 />
               </div>
-              <Button size="sm" onClick={handleUpdatePassword} disabled={accountSaving || !newPassword}>
-                <Save className="w-4 h-4 mr-2" />
-                Passwort ändern
-              </Button>
+              {(!!newPassword && !accountSaving) && (
+                <Button size="sm" onClick={handleUpdatePassword}>
+                  <Save className="w-4 h-4 mr-2" />
+                  Passwort ändern
+                </Button>
+              )}
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="mt-6">
             <Button variant="outline" onClick={() => setShowAccountDialog(false)}>Schließen</Button>
           </DialogFooter>
         </DialogContent>
