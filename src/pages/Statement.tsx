@@ -23,11 +23,12 @@ import {
   updatePayoutRequestAdmin,
   deletePayoutRequest,
   updatePayoutRequestUser,
-  deletePayoutRequestUser
+  deletePayoutRequestUser,
+  fetchConcerts
 } from '@/lib/api-client'
 import { useAuth } from '@/contexts/AuthContext'
 import { Spinner } from '@/components/ui/spinner'
-import type { DbMusician, DbPayoutRequest, TransactionWithMusician } from '@/lib/database.types'
+import type { DbMusician, DbPayoutRequest, TransactionWithMusician, ConcertWithExpenses } from '@/lib/database.types'
 import {
   ArrowLeft,
   Banknote,
@@ -63,6 +64,7 @@ function Statement() {
   const canRequestPayout = (isUser || isSuperuser) && !!user && musicianId === user.id
   const [musician, setMusician] = useState<DbMusician | null>(null)
   const [transactions, setTransactions] = useState<TransactionWithMusician[]>([])
+  const [concerts, setConcerts] = useState<ConcertWithExpenses[]>([])
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
   const contentRef = useRef<HTMLDivElement | null>(null)
@@ -112,12 +114,14 @@ function Statement() {
     const load = async () => {
       if (!musicianId) return
       try {
-        const [m, t] = await Promise.all([
+        const [m, t, c] = await Promise.all([
           fetchMusicianById(musicianId),
           fetchTransactionsWithMusician(),
+          fetchConcerts(),
         ])
         setMusician(m)
         setTransactions(t.filter((row) => row.musician_id === musicianId))
+        setConcerts(c)
         // Load payout requests for own statement
         if ((isUser || isSuperuser) && user && musicianId === user.id) {
           const requests = await fetchMyPayoutRequests(musicianId)
@@ -577,7 +581,10 @@ function Statement() {
                         </div>
                         <p className="text-sm text-muted-foreground">
                           {t.date ? formatDate(new Date(t.date)) : '-'}
-                          {/* concert_location does not exist on TransactionWithMusician, so we omit it here. */}
+                          {t.concert_id && concerts.length > 0 ? (() => {
+                            const concert = concerts.find((c) => c.id === t.concert_id)
+                            return concert && concert.location ? ` • ${concert.location}` : ''
+                          })() : ''}
                         </p>
                       </div>
                     </div>
@@ -639,7 +646,7 @@ function Statement() {
 
       {/* Account Dialog (User only) */}
       <Dialog open={showAccountDialog} onOpenChange={setShowAccountDialog}>
-        <DialogContent aria-describedby="account-dialog-desc">
+        <DialogContent aria-describedby="account-dialog-desc" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
           <DialogHeader>
             <DialogTitle>Mein Konto</DialogTitle>
           </DialogHeader>
@@ -670,10 +677,12 @@ function Statement() {
                   placeholder="neue@email.de"
                 />
               </div>
-              <Button size="sm" onClick={handleUpdateEmail} disabled={accountSaving || newEmail === user?.email}>
-                <Save className="w-4 h-4 mr-2" />
-                E-Mail ändern
-              </Button>
+              {(!!newEmail && newEmail !== user?.email && !accountSaving) && (
+                <Button size="sm" onClick={handleUpdateEmail}>
+                  <Save className="w-4 h-4 mr-2" />
+                  E-Mail ändern
+                </Button>
+              )}
             </div>
 
             {/* Passwort ändern */}
@@ -699,13 +708,15 @@ function Statement() {
                   placeholder="••••••••"
                 />
               </div>
-              <Button size="sm" onClick={handleUpdatePassword} disabled={accountSaving || !newPassword}>
-                <Save className="w-4 h-4 mr-2" />
-                Passwort ändern
-              </Button>
+              {(!!newPassword && !accountSaving) && (
+                <Button size="sm" onClick={handleUpdatePassword}>
+                  <Save className="w-4 h-4 mr-2" />
+                  Passwort ändern
+                </Button>
+              )}
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="mt-6">
             <Button variant="outline" onClick={() => setShowAccountDialog(false)}>Schließen</Button>
           </DialogFooter>
         </DialogContent>

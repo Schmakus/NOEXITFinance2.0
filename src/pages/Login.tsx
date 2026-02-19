@@ -62,7 +62,7 @@ function Login() {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 via-amber-950 to-slate-900">
-      <Card className="w-full max-w-md shadow-2xl">
+      <Card className="w-full max-w-md shadow-2xl" style={{ backgroundColor: '#18181b' }}>
         <CardHeader className="space-y-2">
           <div className="flex items-center gap-3">
             {logo ? (
