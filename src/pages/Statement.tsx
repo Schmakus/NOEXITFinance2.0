@@ -295,7 +295,7 @@ function Statement() {
     setPayoutError('')
     try {
       // PDF-Upload temporär deaktiviert
-      let newReq = await createPayoutRequest(musicianId, amount, payoutNote)
+      const newReq = await createPayoutRequest(musicianId, amount, payoutNote)
       setPayoutRequests((prev) => [newReq, ...prev])
       setShowPayoutDialog(false)
       setPayoutAmount('')
@@ -564,7 +564,7 @@ function Statement() {
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="font-semibold">{t.description || '-'}</p>
-                          {Boolean(payout) ? (
+                          {payout ? (
                             <span className="text-xs px-2 py-0.5 rounded-full border border-amber-400/60 text-amber-300">
                               Auszahlung
                             </span>

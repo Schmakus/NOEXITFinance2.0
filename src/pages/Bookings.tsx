@@ -201,7 +201,7 @@ function Bookings() {
 
       // Logging-Aufruf
       if (user) {
-        let changes: string[] = [];
+        const changes: string[] = [];
         let desc = '';
         if (editingId) {
           const oldBooking = bookings.find((b) => b.id === editingId);

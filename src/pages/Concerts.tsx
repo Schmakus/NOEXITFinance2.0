@@ -186,7 +186,7 @@ function Concerts() {
 
       // Logging-Aufruf
       if (user) {
-        let changes: string[] = [];
+        const changes: string[] = [];
         let desc = '';
         if (editingId) {
           const oldConcert = concerts.find((c) => c.id === editingId);

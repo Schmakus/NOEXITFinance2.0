@@ -38,6 +38,9 @@ export default tseslint.config(
       'no-console': 'off',
       'no-useless-assignment': 'warn',
       'report-unused-disable-directives': 'off',
+      'linterOptions': {
+        reportUnusedDisableDirectives: 'off'
+      }
     },
   },
 )
