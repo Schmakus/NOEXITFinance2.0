@@ -1,4 +1,4 @@
-name: CI (Lint & Build)
+name: CI (Validate)
 
 on:
   pull_request:
@@ -19,13 +19,13 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci # Sicherer als 'install' in der CI
+        run: npm ci
 
-      - name: Run ESLint
+      - name: Linting
         run: npm run lint
 
-      - name: Type-Check (TypeScript)
-        run: npm run type-check # Falls vorhanden, sonst tsc
+      - name: Type-Check
+        run: npm run type-check
 
       - name: Build Test
         run: npm run build
