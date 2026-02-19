@@ -42,6 +42,10 @@ git merge dev --no-edit
 git tag -a "v$NEW_VERSION" -m "Release v$NEW_VERSION"
 git push origin main --tags
 
+# NEU: Erstelle ein echtes GitHub Release (das triggert die Actions zuverlässig)
+echo "🎁 Erstelle GitHub Release..."
+gh release create "v$NEW_VERSION" --title "Release v$NEW_VERSION" --notes "Automatisches Release v$NEW_VERSION"
+
 # 7. Zurück zu dev
 git checkout dev
 

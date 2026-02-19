@@ -3,9 +3,7 @@ name: Remote Deploy
 on:
   push:
     tags:
-      - 'v*' # Reagiert jetzt auf deine manuellen Releases (v1.6.0, etc.)
-    branches:
-      - main # Optional: Falls du doch mal direkt in main pushst ohne Tag
+      - 'v*'
 
 jobs:
   # SCHRITT 1: Die Qualitätskontrolle (Tests)
