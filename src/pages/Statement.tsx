@@ -192,13 +192,11 @@ function Statement() {
       kind: 'transaction' as const,
       data: t,
     }))
-    // Only show pending requests for users who can request payouts
-    const pendingEntries: StatementEntry[] = canRequestPayout
-      ? payoutRequests
-          .filter((r) => r.status === 'pending')
-          .map((r) => ({ kind: 'payout-request' as const, data: r }))
-      : []
-    const all = [...txEntries, ...pendingEntries]
+    // Show all payout requests except deleted
+    const requestEntries: StatementEntry[] = payoutRequests
+      .filter((r) => r.status !== 'deleted')
+      .map((r) => ({ kind: 'payout-request' as const, data: r }))
+    const all = [...txEntries, ...requestEntries]
     all.sort((a, b) => {
       const dateA = a.kind === 'transaction' ? (a.data.date ?? '') : (a.data.created_at ?? '')
       const dateB = b.kind === 'transaction' ? (b.data.date ?? '') : (b.data.created_at ?? '')
@@ -564,6 +562,9 @@ function Statement() {
             statementEntries.map((entry) => {
               if (entry.kind === 'payout-request') {
                 const r = entry.data
+                let batchLabel = 'Genehmigung ausstehend…'
+                if (r.status === 'approved') batchLabel = 'Genehmigt'
+                if (r.status === 'rejected') batchLabel = 'Abgelehnt'
                 return (
                   <Card key={`pr-${r.id}`} className="bg-muted/40 border-amber-500/30" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
                     <CardContent className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -575,12 +576,15 @@ function Statement() {
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="font-semibold">Auszahlung beantragt</p>
                             <span className="text-xs px-2 py-0.5 rounded-full border border-amber-400/60 text-amber-300 animate-pulse">
-                              Genehmigung ausstehend…
+                              {batchLabel}
                             </span>
                           </div>
                           <p className="text-sm text-muted-foreground">
                             {r.created_at ? formatDate(new Date(r.created_at)) : '-'}
                             {r.note ? ` • ${r.note}` : ''}
+                            {r.status === 'rejected' && r.admin_note ? (
+                              <><br /><span className="text-xs text-red-400">Begründung: {r.admin_note}</span></>
+                            ) : null}
                           </p>
                         </div>
                       </div>
