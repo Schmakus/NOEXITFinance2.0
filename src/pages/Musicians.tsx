@@ -406,16 +406,16 @@ function Musicians() {
                     <div className="flex gap-2">
                       {!showArchived ? (
                         <>
-                          <Button variant="outline" size="sm" onClick={() => handleEdit(musician)}>
-                            <Edit2 className="w-4 h-4" />
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(musician)}>
+                            <Edit2 className="w-3.5 h-3.5" />
                           </Button>
                           <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-destructive hover:text-destructive"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-red-400 hover:text-red-300"
                             onClick={() => handleDelete(musician.id)}
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </Button>
                         </>
                       ) : (

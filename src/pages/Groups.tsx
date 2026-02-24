@@ -354,11 +354,11 @@ function Groups() {
                           <CardDescription>{g.members.length} Mitglieder</CardDescription>
                         </div>
                         <div className="flex gap-2">
-                          <Button variant="outline" size="sm" onClick={() => openEdit(g)}>
-                            <Edit2 className="w-4 h-4" />
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(g)}>
+                            <Edit2 className="w-3.5 h-3.5" />
                           </Button>
-                          <Button variant="destructive" size="sm" onClick={() => deleteGroup(g.id)}>
-                            <Trash2 className="w-4 h-4" />
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-300" onClick={() => deleteGroup(g.id)}>
+                            <Trash2 className="w-3.5 h-3.5" />
                           </Button>
                         </div>
                       </div>
