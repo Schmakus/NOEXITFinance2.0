@@ -444,7 +444,7 @@ function Statement() {
               Auszahlung beantragen
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={handlePdfExport} disabled={exporting}>
+          <Button variant="outline" size="sm" onClick={handlePdfExport} disabled={exporting} className="btn-amber">
             <FileDown className="w-4 h-4 mr-2" />
             PDF Export
           </Button>
@@ -551,7 +551,7 @@ function Statement() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            className="h-7 w-7 btn-amber"
                             title="Bearbeiten"
                             onClick={() => openEditRequest(r)}
                           >

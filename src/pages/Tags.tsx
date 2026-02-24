@@ -111,7 +111,7 @@ function Tags() {
           <h1 className="text-2xl sm:text-3xl font-bold">Keywords</h1>
           <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-base">Verwalte Keywords für Konzerte und Buchungen</p>
         </div>
-        <Button onClick={() => { setShowAddDialog(true); setError(null); setNewTagName('') }}>
+        <Button onClick={() => { setShowAddDialog(true); setError(null); setNewTagName('') }} className="btn-amber">
           <Plus className="w-4 h-4 mr-2" />
           Neues Keyword
         </Button>

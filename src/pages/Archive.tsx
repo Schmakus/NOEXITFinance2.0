@@ -111,7 +111,7 @@ function ArchivePage() {
             </h1>
             <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-base">Archivierte Musiker und Kontoauszuege</p>
           </div>
-          <Button variant="outline" size="sm" onClick={handleExportArchiveCsv} disabled={exporting}>
+          <Button variant="outline" size="sm" onClick={handleExportArchiveCsv} disabled={exporting} className="btn-amber">
             <Download className="w-4 h-4 mr-2" />
             CSV Export
           </Button>

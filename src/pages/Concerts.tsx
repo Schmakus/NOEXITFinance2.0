@@ -282,7 +282,7 @@ function Concerts() {
         </div>
         <Dialog open={open} onOpenChange={(v: boolean) => { if (!v) resetForm(); setOpen(v) }}>
           <DialogTrigger asChild>
-            <Button onClick={openAdd}>
+            <Button onClick={openAdd} className="btn-amber">
               <Plus className="w-4 h-4 mr-2" />
               Konzert hinzufügen
             </Button>

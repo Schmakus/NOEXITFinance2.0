@@ -256,7 +256,7 @@ function Musicians() {
           {isAdmin && !showArchived && (
             <Dialog open={isOpen} onOpenChange={setIsOpen}>
               <DialogTrigger asChild>
-                <Button onClick={handleAdd}>
+                <Button onClick={handleAdd} className="btn-amber">
                   <Plus className="w-4 h-4 mr-2" />
                   Musiker hinzufuegen
                 </Button>

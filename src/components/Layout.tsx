@@ -141,7 +141,7 @@ function Layout() {
               <Link key={path} to={path} onClick={() => isMobile && setSidebarOpen(false)}>
                 <Button
                   variant={isActive ? 'secondary' : 'ghost'}
-                  className="w-full justify-start relative"
+                  className={`w-full justify-start relative${isActive ? ' btn-amber' : ''}`}
                   title={!sidebarOpen && !isMobile ? label : undefined}
                 >
                   <div className="relative">
