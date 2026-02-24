@@ -179,18 +179,19 @@ function Statement() {
     return all
   }, [filteredTransactions, payoutRequests, canRequestPayout])
 
+  // Gesamtsummen immer aus allen Transaktionen berechnen
   const totals = useMemo(() => {
-    const income = filteredTransactions
+    const income = transactions
       .filter((t) => t.type === 'earn')
       .reduce((sum, t) => sum + t.amount, 0)
-    const payouts = filteredTransactions
+    const payouts = transactions
       .filter((t) => t.type === 'expense' && isPayout(t))
       .reduce((sum, t) => sum + Math.abs(t.amount), 0)
-    const expenses = filteredTransactions
+    const expenses = transactions
       .filter((t) => t.type === 'expense' && !isPayout(t))
       .reduce((sum, t) => sum + Math.abs(t.amount), 0)
     return { income, payouts, expenses }
-  }, [filteredTransactions])
+  }, [transactions])
 
   const currentBalance = useMemo(() => {
     if (!musician) return 0
