@@ -468,7 +468,30 @@ function Statement() {
         </div>
         <div className="grid gap-2">
           <span className="text-xs text-muted-foreground">Bis</span>
-          <DatePicker value={toDate} onChange={setToDate} placeholder="Bis" />
+          <div className="flex items-center gap-2">
+            <DatePicker value={toDate} onChange={setToDate} placeholder="Bis" />
+            <Button
+              type="button"
+              variant="outline"
+              className="btn-amber px-3 py-1 text-xs h-8"
+              onClick={() => {
+                // Finde frühestes und spätestes Transaktionsdatum
+                let minDate = new Date()
+                let maxDate = new Date(0)
+                transactions.forEach(t => {
+                  if (t.date) {
+                    const d = new Date(t.date)
+                    if (d < minDate) minDate = d
+                    if (d > maxDate) maxDate = d
+                  }
+                })
+                setFromDate(toDateInput(minDate))
+                setToDate(toDateInput(maxDate))
+              }}
+            >
+              Max. Zeitraum
+            </Button>
+          </div>
         </div>
       </div>
 
