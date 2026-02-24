@@ -91,7 +91,11 @@ function DatePicker({ value, onChange, placeholder = "Datum wählen", className,
               {selectedDate ? format(selectedDate, "dd.MM.yyyy", { locale: de }) : placeholder}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
+          <PopoverContent
+            className="w-auto p-0 border border-border shadow-sm rounded-lg"
+            align="start"
+            style={{ backgroundColor: 'var(--color-amber-600)', color: '#23272f' }}
+          >
             <DayPicker
               mode="single"
               selected={selectedDate}
@@ -127,7 +131,7 @@ function DatePicker({ value, onChange, placeholder = "Datum wählen", className,
           value={inputValue}
           onChange={handleInputChange}
           placeholder="TT.MM.JJJJ"
-          className="w-32"
+          className="w-32 border border-border shadow-sm rounded-lg"
           disabled={disabled}
           maxLength={10}
         />
