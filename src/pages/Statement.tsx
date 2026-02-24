@@ -25,8 +25,9 @@ import {
   deletePayoutRequest,
   updatePayoutRequestUser,
   deletePayoutRequestUser,
-  fetchConcerts
-} from '@/lib/api-client'
+  fetchConcerts,
+  fetchMusicians
+} from './../lib/api-client'
 import { useAuth } from '@/contexts/AuthContext'
 import { Spinner } from '@/components/ui/spinner'
 import type { DbMusician, DbPayoutRequest, TransactionWithMusician, ConcertWithExpenses, PayoutRequestWithMusician } from '@/lib/database.types'
@@ -46,8 +47,8 @@ import {
   Pencil,
   Trash2,
 } from 'lucide-react'
-import { exportStatementPdf } from '@/lib/pdf-export'
-import type { PdfExportEntry } from '@/lib/pdf-export'
+import { exportStatementPdf } from './../lib/pdf-export'
+import type { PdfExportEntry } from './../lib/pdf-export'
 import { useSettings } from '@/contexts/SettingsContext'
 import { invertImageDataUrl } from '@/lib/invert-image'
 
@@ -139,13 +140,22 @@ function Statement() {
         setConcerts(c)
         // Load payout requests for own statement (user) or all (admin)
         if ((isUser || isSuperuser) && user && musicianId === user.id) {
-          // For user, fetch only their requests (does not include reviewed_by_name)
+          // For user, fetch only their requests
           const requests = await fetchMyPayoutRequests(musicianId)
-          // Patch in musician_name and reviewed_by_name for UI consistency
+          // Reviewer-IDs extrahieren (nur strings, keine null)
+          const reviewerIds = [...new Set(requests.map(r => typeof r.reviewed_by === 'string' ? r.reviewed_by : undefined).filter(Boolean))] as string[]
+          let reviewerMap: Record<string, string> = {}
+          if (reviewerIds.length > 0) {
+            const reviewers = await fetchMusicians()
+            reviewerIds.forEach(id => {
+              const found = reviewers.find(m => m.id === id)
+              if (found) reviewerMap[id] = found.name
+            })
+          }
           setPayoutRequests(requests.map(r => ({
             ...r,
             musician_name: musician?.name ?? '',
-            reviewed_by_name: undefined,
+            reviewed_by_name: (typeof r.reviewed_by === 'string' && r.reviewed_by !== null) ? reviewerMap[r.reviewed_by] : undefined,
           })))
         } else if (isSuperuser) {
           // For admin, fetch all payout requests (includes reviewed_by_name)
