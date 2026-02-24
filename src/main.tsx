@@ -7,6 +7,7 @@ import { queryClient } from './lib/query-client.ts'
 import { AuthProvider } from './contexts/AuthContext.tsx'
 import { ThemeProvider } from './contexts/ThemeContext.tsx'
 import { TagsProvider } from './contexts/TagsContext.tsx'
+import { SettingsProvider } from '@/contexts/SettingsContext'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -14,7 +15,9 @@ createRoot(document.getElementById('root')!).render(
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <TagsProvider>
+            <SettingsProvider>
             <App />
+            </SettingsProvider>
           </TagsProvider>
         </AuthProvider>
       </QueryClientProvider>

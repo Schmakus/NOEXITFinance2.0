@@ -45,6 +45,10 @@ import {
   Pencil,
   Trash2,
 } from 'lucide-react'
+import { exportStatementPdf } from '@/lib/pdf-export'
+import type { PdfExportEntry } from '@/lib/pdf-export'
+import { useSettings } from '@/contexts/SettingsContext'
+import { invertImageDataUrl } from '@/lib/invert-image'
 
 const isPayout = (t: TransactionWithMusician) =>
   t.booking_type === 'payout' ||
@@ -194,44 +198,58 @@ function Statement() {
     return musician.balance + txnTotal
   }, [musician, transactions])
 
+  const { logo } = useSettings()
   const handlePdfExport = async () => {
-    if (!contentRef.current) return
     setExporting(true)
     try {
-      const [{ toPng }, { jsPDF }] = await Promise.all([
-        import('html-to-image'),
-        import('jspdf'),
-      ])
-      const dataUrl = await toPng(contentRef.current, {
-        pixelRatio: 2,
-        backgroundColor: '#0b1220',
-      })
-      const img = new Image()
-      img.src = dataUrl
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve()
-        img.onerror = () => reject(new Error('Bild konnte nicht geladen werden'))
-      })
-      const pdf = new jsPDF('p', 'pt', 'a4')
-      const pageWidth = pdf.internal.pageSize.getWidth()
-      const pageHeight = pdf.internal.pageSize.getHeight()
-      const imgWidth = pageWidth
-      const imgHeight = (img.height * imgWidth) / img.width
-      let y = 0
-      if (imgHeight <= pageHeight) {
-        pdf.addImage(dataUrl, 'PNG', 0, 0, imgWidth, imgHeight)
-      } else {
-        let remainingHeight = imgHeight
-        while (remainingHeight > 0) {
-          pdf.addImage(dataUrl, 'PNG', 0, y, imgWidth, imgHeight)
-          remainingHeight -= pageHeight
-          if (remainingHeight > 0) {
-            pdf.addPage()
-            y -= pageHeight
+      // Logo aus SettingsContext verwenden und invertieren
+      let logoDataUrl: string | undefined = undefined
+      if (logo) {
+        const dataUrl = logo.startsWith('data:image') ? logo : `data:image/png;base64,${logo}`
+        logoDataUrl = await invertImageDataUrl(dataUrl)
+      }
+
+      // Tabellarische Daten vorbereiten
+      const entries: PdfExportEntry[] = statementEntries.map(entry => {
+        if (entry.kind === 'transaction') {
+          const t = entry.data
+          // Konzertinfos, falls vorhanden
+          let eventName = t.concert_name || ''
+          let eventLocation = ''
+          if (t.concert_id) {
+            const concert = concerts.find(c => c.id === t.concert_id)
+            if (concert) {
+              eventName = concert.name
+              eventLocation = concert.location || ''
+            }
+          }
+          return {
+            date: t.date ? formatDate(new Date(t.date)) : '',
+            description: t.description || '',
+            amount: t.amount,
+            eventName,
+            eventLocation,
+          }
+        } else {
+          // Payout-Request als eigene Zeile
+          const r = entry.data
+          return {
+            date: r.created_at ? formatDate(new Date(r.created_at)) : '',
+            description: 'Auszahlungsantrag' + (r.note ? ` (${r.note})` : ''),
+            amount: -Math.abs(r.amount),
+            eventName: '',
+            eventLocation: '',
           }
         }
-      }
-      pdf.save(`kontoauszug-${musician?.name ?? 'musiker'}.pdf`)
+      })
+
+      await exportStatementPdf({
+        logoDataUrl,
+        musicianName: musician?.name || '',
+        fromDate: fromDate ? formatDate(new Date(fromDate)) : '',
+        toDate: toDate ? formatDate(new Date(toDate)) : '',
+        entries,
+      })
     } catch (err) {
       console.error('PDF Export fehlgeschlagen:', err)
       alert('PDF Export fehlgeschlagen: ' + (err instanceof Error ? err.message : String(err)))
