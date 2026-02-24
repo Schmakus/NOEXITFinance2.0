@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -32,15 +32,10 @@ import {
   HandCoins,
   Pencil,
   Trash2,
-  Banknote,
 } from 'lucide-react'
 
 type TabFilter = 'pending' | 'all'
 
-// Union type for the combined list
-type PayoutEntry =
-  | { kind: 'request'; data: PayoutRequestWithMusician; sortDate: string }
-  | { kind: 'booking'; data: BookingWithDetails; sortDate: string }
 
 function PayoutRequests() {
   const { user } = useAuth()
@@ -49,7 +44,7 @@ function PayoutRequests() {
     (window as any).supabase = supabase;
   }
   const [requests, setRequests] = useState<PayoutRequestWithMusician[]>([])
-  const [payoutBookings, setPayoutBookings] = useState<BookingWithDetails[]>([])
+  const [, setPayoutBookings] = useState<BookingWithDetails[]>([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<TabFilter>('pending')
 
@@ -85,22 +80,6 @@ function PayoutRequests() {
   const pendingCount = pendingRequests.length
 
   // Combined & sorted list for "Alle" tab
-  const allEntries: PayoutEntry[] = useMemo(() => {
-    const entries: PayoutEntry[] = [
-      ...requests.map((r) => ({
-        kind: 'request' as const,
-        data: r,
-        sortDate: r.created_at ?? '',
-      })),
-      ...payoutBookings.map((b) => ({
-        kind: 'booking' as const,
-        data: b,
-        sortDate: b.date ?? '',
-      })),
-    ]
-    entries.sort((a, b) => b.sortDate.localeCompare(a.sortDate))
-    return entries
-  }, [requests, payoutBookings])
 
   const openAction = (id: string, type: 'approve' | 'reject' | 'edit') => {
     const req = requests.find((r) => r.id === id)
@@ -329,37 +308,6 @@ function PayoutRequests() {
   }
 
   // Render a booking card
-  const renderBookingCard = (b: BookingWithDetails) => (
-    <Card key={b.id} className="bg-muted/40" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
-      <CardContent className="p-3 sm:p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-green-500/20 text-green-300">
-              <Banknote className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <p className="font-semibold truncate">{b.description}</p>
-                <span className="text-xs px-2 py-0.5 rounded-full border border-green-400/60 text-green-300">
-                  Buchung
-                </span>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                {b.date ? formatDate(new Date(b.date)) : '-'}
-                {b.group_name ? ` • ${b.group_name}` : ''}
-              </p>
-              {b.notes && (
-                <p className="text-xs text-muted-foreground mt-0.5 truncate">{b.notes}</p>
-              )}
-            </div>
-          </div>
-          <p className="text-lg font-semibold text-amber-400 shrink-0">
-            {formatCurrency(b.amount)}
-          </p>
-        </div>
-      </CardContent>
-    </Card>
-  )
 
   return (
     <div className="space-y-6">
@@ -378,6 +326,7 @@ function PayoutRequests() {
           variant={tab === 'pending' ? 'default' : 'outline'}
           size="sm"
           onClick={() => setTab('pending')}
+          className={tab === 'pending' ? 'btn-amber' : ''}
         >
           Offen{pendingCount > 0 && ` (${pendingCount})`}
         </Button>
@@ -385,8 +334,9 @@ function PayoutRequests() {
           variant={tab === 'all' ? 'default' : 'outline'}
           size="sm"
           onClick={() => setTab('all')}
+          className={tab === 'all' ? 'btn-amber' : ''}
         >
-          Alle ({allEntries.length})
+          Alle ({requests.length})
         </Button>
       </div>
 
@@ -406,18 +356,14 @@ function PayoutRequests() {
 
       {/* All tab – requests + bookings combined, sorted by date */}
       {tab === 'all' && (
-        allEntries.length === 0 ? (
+        requests.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <HandCoins className="w-12 h-12 text-muted-foreground mb-4" />
             <p className="text-muted-foreground">Keine Auszahlungen vorhanden</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {allEntries.map((entry) =>
-              entry.kind === 'request'
-                ? renderRequestCard(entry.data)
-                : renderBookingCard(entry.data)
-            )}
+            {requests.map(renderRequestCard)}
           </div>
         )
       )}
