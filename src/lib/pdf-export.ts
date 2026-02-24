@@ -113,5 +113,5 @@ export async function exportStatementPdf({
     }
   })
 
-  doc.save(`kontoauszug-${musicianName}.pdf`)
+  doc.save(`Kontoauszug-${musicianName}_${fromDate}-${toDate}.pdf`)
 }
