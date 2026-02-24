@@ -19,6 +19,7 @@ import {
   fetchMusicianById,
   fetchTransactionsWithMusician,
   fetchMyPayoutRequests,
+  fetchPayoutRequests,
   createPayoutRequest,
   updatePayoutRequestAdmin,
   deletePayoutRequest,
@@ -28,7 +29,7 @@ import {
 } from '@/lib/api-client'
 import { useAuth } from '@/contexts/AuthContext'
 import { Spinner } from '@/components/ui/spinner'
-import type { DbMusician, DbPayoutRequest, TransactionWithMusician, ConcertWithExpenses } from '@/lib/database.types'
+import type { DbMusician, DbPayoutRequest, TransactionWithMusician, ConcertWithExpenses, PayoutRequestWithMusician } from '@/lib/database.types'
 import {
   ArrowLeft,
   Banknote,
@@ -74,7 +75,7 @@ function Statement() {
   const contentRef = useRef<HTMLDivElement | null>(null)
 
   // Payout request state
-  const [payoutRequests, setPayoutRequests] = useState<DbPayoutRequest[]>([])
+  const [payoutRequests, setPayoutRequests] = useState<PayoutRequestWithMusician[]>([])
   const [showPayoutDialog, setShowPayoutDialog] = useState(false)
   const [payoutAmount, setPayoutAmount] = useState('')
   const [payoutNote, setPayoutNote] = useState('')
@@ -136,10 +137,20 @@ function Statement() {
         setMusician(m)
         setTransactions(t.filter((row) => row.musician_id === musicianId))
         setConcerts(c)
-        // Load payout requests for own statement
+        // Load payout requests for own statement (user) or all (admin)
         if ((isUser || isSuperuser) && user && musicianId === user.id) {
+          // For user, fetch only their requests (does not include reviewed_by_name)
           const requests = await fetchMyPayoutRequests(musicianId)
-          setPayoutRequests(requests)
+          // Patch in musician_name and reviewed_by_name for UI consistency
+          setPayoutRequests(requests.map(r => ({
+            ...r,
+            musician_name: musician?.name ?? '',
+            reviewed_by_name: undefined,
+          })))
+        } else if (isSuperuser) {
+          // For admin, fetch all payout requests (includes reviewed_by_name)
+          const allRequests = await fetchPayoutRequests()
+          setPayoutRequests(allRequests)
         }
       } catch (err) {
         console.error('Kontoauszug laden fehlgeschlagen:', err)
@@ -345,7 +356,14 @@ function Statement() {
     try {
       // PDF-Upload temporär deaktiviert
       const newReq = await createPayoutRequest(musicianId, amount, payoutNote)
-      setPayoutRequests((prev) => [newReq, ...prev])
+      setPayoutRequests((prev) => [
+        {
+          ...newReq,
+          musician_name: musician?.name ?? '',
+          reviewed_by_name: undefined,
+        },
+        ...prev,
+      ])
       setShowPayoutDialog(false)
       setPayoutAmount('')
       setPayoutNote('')
@@ -390,7 +408,11 @@ function Statement() {
           note: editRequestNote || undefined,
         })
       }
-      setPayoutRequests((prev) => prev.map((r) => (r.id === editRequestId ? updated : r)))
+      setPayoutRequests((prev) => prev.map((r) =>
+        r.id === editRequestId
+          ? { ...updated, musician_name: musician?.name ?? '', reviewed_by_name: undefined }
+          : r
+      ))
       setEditRequestId(null)
     } catch (err) {
       let msg = ''
@@ -563,8 +585,17 @@ function Statement() {
               if (entry.kind === 'payout-request') {
                 const r = entry.data
                 let batchLabel = 'Genehmigung ausstehend…'
-                if (r.status === 'approved') batchLabel = 'Genehmigt'
-                if (r.status === 'rejected') batchLabel = 'Abgelehnt'
+                let batchClass = 'text-xs px-2 py-0.5 rounded-full border border-amber-400/60 text-amber-300 animate-pulse'
+                let showEditDelete = true
+                let displayAmount = r.amount
+                if (r.status === 'approved') {
+                  batchLabel = 'Genehmigt'
+                } else if (r.status === 'rejected') {
+                  batchLabel = 'Abgelehnt'
+                  batchClass = 'text-xs px-2 py-0.5 rounded-full border border-red-400/60 text-red-400'
+                  showEditDelete = false
+                  displayAmount = 0
+                }
                 return (
                   <Card key={`pr-${r.id}`} className="bg-muted/40 border-amber-500/30" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
                     <CardContent className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -575,43 +606,50 @@ function Statement() {
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="font-semibold">Auszahlung beantragt</p>
-                            <span className="text-xs px-2 py-0.5 rounded-full border border-amber-400/60 text-amber-300 animate-pulse">
-                              {batchLabel}
-                            </span>
+                            <span className={batchClass}>{batchLabel}</span>
                           </div>
                           <p className="text-sm text-muted-foreground">
                             {r.created_at ? formatDate(new Date(r.created_at)) : '-'}
                             {r.note ? ` • ${r.note}` : ''}
-                            {r.status === 'rejected' && r.admin_note ? (
-                              <><br /><span className="text-xs text-red-400">Begründung: {r.admin_note}</span></>
-                            ) : null}
+                            {(() => {
+                              if (r.status === 'rejected' && r.admin_note) {
+                                let reviewer = ''
+                                if ('reviewed_by_name' in r && r.reviewed_by_name) {
+                                  reviewer = ` (Bearbeiter: ${r.reviewed_by_name})`;
+                                }
+                                return <><br /><span className="text-xs text-red-400">Begründung: {r.admin_note}{reviewer} (beantragt: {formatCurrency(r.amount)})</span></>
+                              }
+                              return null
+                            })()}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
                         <p className="text-lg font-semibold text-amber-400">
-                          -{formatCurrency(r.amount)}
+                          -{formatCurrency(displayAmount)}
                         </p>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 btn-amber"
-                            title="Bearbeiten"
-                            onClick={() => openEditRequest(r)}
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-red-400"
-                            title="Löschen"
-                            onClick={() => handleDeleteRequest(r.id)}
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
-                        </div>
+                        {showEditDelete && (
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 btn-amber"
+                              title="Bearbeiten"
+                              onClick={() => openEditRequest(r)}
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-red-400"
+                              title="Löschen"
+                              onClick={() => handleDeleteRequest(r.id)}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
