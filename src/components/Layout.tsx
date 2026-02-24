@@ -276,7 +276,10 @@ function Layout() {
 
       {/* Bottom Navigation Bar — Mobile only */}
       {isMobile && (
-        <nav className="fixed bottom-0 left-0 right-0 z-30 bg-card border-t border-border shadow-lg safe-area-bottom">
+          <nav
+            className="fixed bottom-0 left-0 right-0 z-50 flex justify-around items-center border-t border-border md:hidden"
+            style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}
+          >
           <div className="flex items-center justify-around h-16">
             {bottomNavItems.map(({ icon: Icon, label, path }) => {
               const isActive = location.pathname === path
