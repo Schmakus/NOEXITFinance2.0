@@ -287,7 +287,7 @@ function Concerts() {
               Konzert hinzufügen
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[700px]">
+          <DialogContent className="sm:max-w-[700px]" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
             <DialogHeader>
               <DialogTitle>{editingId ? 'Konzert bearbeiten' : 'Neues Konzert anlegen'}</DialogTitle>
               <DialogDescription>
@@ -474,7 +474,7 @@ function Concerts() {
             const members = concert.group_id ? getGroupMembers(concert.group_id) : []
 
             return (
-              <Card key={concert.id} className="hover:shadow-lg transition-shadow">
+              <Card key={concert.id} className="hover:shadow-lg transition-shadow" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">

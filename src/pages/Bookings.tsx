@@ -292,7 +292,7 @@ function Bookings() {
                 Buchung hinzufügen
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[640px]">
+            <DialogContent className="sm:max-w-[640px]" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
             <DialogHeader>
               <DialogTitle>{editingId ? 'Buchung bearbeiten' : 'Neue Buchung'}</DialogTitle>
               <DialogDescription>Erfasse eine Ausgabe, Einnahme oder Auszahlung</DialogDescription>
@@ -434,7 +434,7 @@ function Bookings() {
 
       <div className="space-y-3">
         {bookings.length === 0 ? (
-          <Card className="bg-muted/40">
+          <Card className="bg-muted/40" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
             <CardContent className="py-12 text-center text-muted-foreground">Noch keine Buchungen. Lege eine neue Buchung an.</CardContent>
           </Card>
         ) : (
@@ -468,7 +468,7 @@ function Bookings() {
               || !!b.notes
 
             return (
-              <Card key={b.id} className="bg-muted/40">
+              <Card key={b.id} className="bg-muted/40" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
                 <CardContent className="p-3 sm:p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">

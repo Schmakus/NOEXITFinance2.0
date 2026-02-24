@@ -524,7 +524,7 @@ function Statement() {
               if (entry.kind === 'payout-request') {
                 const r = entry.data
                 return (
-                  <Card key={`pr-${r.id}`} className="bg-muted/40 border-amber-500/30">
+                  <Card key={`pr-${r.id}`} className="bg-muted/40 border-amber-500/30" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
                     <CardContent className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                         <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-amber-500/20 text-amber-300">
@@ -588,7 +588,7 @@ function Statement() {
                 <TrendingDown className="w-5 h-5" />
               )
               return (
-                <Card key={t.id} className="bg-muted/40">
+                <Card key={t.id} className="bg-muted/40" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
                   <CardContent className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                       <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${iconWrapClass}`}>
@@ -630,7 +630,7 @@ function Statement() {
 
       {/* Edit Payout Request Dialog */}
       <Dialog open={!!editRequestId} onOpenChange={(open) => { if (!open) setEditRequestId(null) }}>
-        <DialogContent aria-describedby="edit-request-dialog-desc">
+        <DialogContent aria-describedby="edit-request-dialog-desc" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
           <DialogHeader>
             <DialogTitle>Antrag bearbeiten</DialogTitle>
           </DialogHeader>
@@ -753,7 +753,7 @@ function Statement() {
 
       {/* Payout Request Dialog */}
       <Dialog open={showPayoutDialog} onOpenChange={setShowPayoutDialog}>
-        <DialogContent aria-describedby="payout-dialog-desc">
+        <DialogContent aria-describedby="payout-dialog-desc" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
           <DialogHeader>
             <DialogTitle>Auszahlung beantragen</DialogTitle>
           </DialogHeader>

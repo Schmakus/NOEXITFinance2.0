@@ -168,7 +168,7 @@ function Tags() {
 
       {/* Add Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent>
+        <DialogContent style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
           <DialogHeader>
             <DialogTitle>Neues Keyword</DialogTitle>
             <DialogDescription>Erstelle ein neues Keyword für Konzerte und Buchungen</DialogDescription>
@@ -195,7 +195,7 @@ function Tags() {
 
       {/* Edit Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent>
+        <DialogContent style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
           <DialogHeader>
             <DialogTitle>Keyword bearbeiten</DialogTitle>
             <DialogDescription>Ändere den Namen des Keywords</DialogDescription>

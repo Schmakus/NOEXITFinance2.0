@@ -136,7 +136,7 @@ function ArchivePage() {
             const musicianTransactions = transactionsByMusician[musician.id] || []
             const total = musicianTransactions.reduce((s, t) => s + t.amount, 0)
             return (
-              <Card key={musician.id}>
+              <Card key={musician.id} style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>

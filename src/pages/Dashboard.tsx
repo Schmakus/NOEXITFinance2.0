@@ -190,7 +190,7 @@ function Dashboard() {
 
       {/* Pending Payout Requests — Admin only */}
       {isAdmin && pendingRequests.length > 0 && (
-        <Card className="border-amber-500/50 bg-gradient-to-br from-amber-500/10 via-transparent to-amber-600/10">
+        <Card className="border-amber-500/50 bg-gradient-to-br from-amber-500/10 via-transparent to-amber-600/10" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-lg">
               <HandCoins className="w-5 h-5 text-amber-400" />
@@ -239,7 +239,7 @@ function Dashboard() {
       )}
 
       {/* Total Balance Card */}
-      <Card className="bg-gradient-to-br from-amber-500/20 via-transparent to-amber-600/20 border-amber-300 dark:border-amber-700">
+      <Card className="bg-gradient-to-br from-amber-500/20 via-transparent to-amber-600/20 border-amber-300 dark:border-amber-700" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Wallet className="w-5 h-5 text-amber-500" />

@@ -252,7 +252,7 @@ function Groups() {
               Gruppe hinzufügen
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[640px]">
+          <DialogContent className="sm:max-w-[640px]" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
             <DialogHeader>
               <DialogTitle>{editingId ? 'Gruppe bearbeiten' : 'Neue Gruppe erstellen'}</DialogTitle>
               <DialogDescription>Definiere Verteilung in Prozent (Summe = 100%)</DialogDescription>
@@ -346,7 +346,7 @@ function Groups() {
             <SortableContext items={groups.map(g => g.id)} strategy={verticalListSortingStrategy}>
               {groups.map((g) => (
                 <SortableGroupCard key={g.id} group={g}>
-                  <Card className="hover:shadow-lg transition-shadow">
+                  <Card className="hover:shadow-lg transition-shadow" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
                     <CardHeader>
                       <div className="flex items-center justify-between">
                         <div>

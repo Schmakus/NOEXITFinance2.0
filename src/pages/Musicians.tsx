@@ -261,7 +261,7 @@ function Musicians() {
                   Musiker hinzufuegen
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
+                <DialogContent style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }} className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>
                 {editingId ? 'Musiker bearbeiten' : 'Neuen Musiker hinzufügen'}
@@ -381,7 +381,7 @@ function Musicians() {
           </Card>
         ) : (
           musicians.map((musician) => (
-            <Card key={musician.id} className="hover:shadow-lg transition-shadow">
+            <Card key={musician.id} className="hover:shadow-lg transition-shadow" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
               <CardContent className="pt-6">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
