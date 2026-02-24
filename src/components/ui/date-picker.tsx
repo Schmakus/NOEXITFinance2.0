@@ -83,12 +83,12 @@ function DatePicker({ value, onChange, placeholder = "Datum wählen", className,
               variant="outline"
               disabled={disabled}
               className={cn(
-                "w-36 justify-start text-left font-normal h-10",
+                "w-10 justify-center text-center font-normal h-10 p-0 flex items-center",
                 !value && "text-muted-foreground"
               )}
+              aria-label="Datum wählen"
             >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {selectedDate ? format(selectedDate, "dd.MM.yyyy", { locale: de }) : placeholder}
+              <CalendarIcon className="h-5 w-5" />
             </Button>
           </PopoverTrigger>
           <PopoverContent
