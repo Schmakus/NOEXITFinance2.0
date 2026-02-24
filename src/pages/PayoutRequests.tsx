@@ -62,7 +62,7 @@ function PayoutRequests() {
   const loadData = async () => {
     try {
       const [data, bookings] = await Promise.all([
-        fetchPayoutRequests(),
+        fetchPayoutRequests() as Promise<PayoutRequestWithMusician[]>,
         fetchPayoutBookings(),
       ])
       setRequests(data)

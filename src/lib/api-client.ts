@@ -1,3 +1,4 @@
+// Fetch all payout requests with musician name (for UI)
 // USER: Update own payout request (only if pending)
 export async function updatePayoutRequestUser(
   id: string,

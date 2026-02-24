@@ -19,6 +19,7 @@ import { Plus, Edit2, Trash2, X, Banknote, CircleDollarSign, TrendingDown } from
 import { formatCurrency, formatDate } from '@/lib/utils'
 import {
   fetchBookings,
+  fetchPayoutRequests,
   createBooking,
   updateBooking,
   deleteBooking as apiDeleteBooking,
@@ -33,7 +34,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { supabase } from '@/lib/supabase'
 import type { DbBooking, DbMusician, GroupWithMembers } from '@/lib/database.types'
 
-type BookingWithDetailsAndPayout = (DbBooking & { group_name?: string, payout_request_id?: string })
+type BookingWithDetailsAndPayout = (DbBooking & { group_name?: string, payout_request_id?: string, payout_request_status?: string })
 
 function Bookings() {
   const { user } = useAuth()
@@ -61,12 +62,31 @@ function Bookings() {
 
   const loadData = async () => {
     try {
-      const [b, m, g] = await Promise.all([
+      const [b, m, g, payoutRequests] = await Promise.all([
         fetchBookings(),
         fetchMusicians(),
         fetchGroupsWithMembers(),
+        fetchPayoutRequests(),
       ])
-      setBookings(b)
+      // Map payout request status by id
+      const statusMap: Record<string, string> = {}
+      payoutRequests.forEach((pr: any) => {
+        statusMap[pr.id] = pr.status
+      })
+      // Inject status into bookings
+      setBookings(
+        b.map((booking: any) => {
+          if (booking.payout_request_id) {
+            const status = statusMap[booking.payout_request_id]
+            // If deleted, set amount to 0
+            if (booking.type === 'payout' && status === 'deleted') {
+              return { ...booking, payout_request_status: status, amount: 0 }
+            }
+            return { ...booking, payout_request_status: status }
+          }
+          return booking
+        })
+      )
       setMusicians(m)
       setGroups(g)
     } catch (err) {
@@ -455,21 +475,37 @@ function Bookings() {
                   .filter(Boolean)
               : []
 
+
             const isPayout = b.type === 'payout'
             const isIncome = b.type === 'income'
-            const iconWrapClass = isPayout
-              ? 'bg-amber-500/20 text-amber-300'
-              : isIncome
-                ? 'bg-green-500/20 text-green-300'
-                : 'bg-red-500/20 text-red-300'
-            const icon = isPayout ? (
-              <Banknote className="w-5 h-5" />
-            ) : isIncome ? (
-              <CircleDollarSign className="w-5 h-5" />
-            ) : (
-              <TrendingDown className="w-5 h-5" />
-            )
-            const typeLabel = isPayout ? 'Auszahlung' : isIncome ? 'Einnahme' : 'Ausgabe'
+
+            // Detect deleted payout (if payout_request_status is available)
+            const payoutRequestStatus = b.payout_request_status
+            const isDeletedPayout = isPayout && payoutRequestStatus === 'deleted'
+
+            const iconWrapClass = isDeletedPayout
+              ? 'bg-red-500/20 text-red-400'
+              : isPayout
+                ? 'bg-amber-500/20 text-amber-300'
+                : isIncome
+                  ? 'bg-green-500/20 text-green-300'
+                  : 'bg-red-500/20 text-red-300'
+
+            const icon = isDeletedPayout
+              ? <Banknote className="w-5 h-5" />
+              : isPayout
+                ? <Banknote className="w-5 h-5" />
+                : isIncome
+                  ? <CircleDollarSign className="w-5 h-5" />
+                  : <TrendingDown className="w-5 h-5" />
+
+            const typeLabel = isDeletedPayout
+              ? 'Auszahlung gelöscht'
+              : isPayout
+                ? 'Auszahlung'
+                : isIncome
+                  ? 'Einnahme'
+                  : 'Ausgabe'
 
             const hasDetails = (isPayout && payoutNames.length > 0)
               || (!isPayout && groupMembers.length > 0)
@@ -487,11 +523,13 @@ function Bookings() {
                         <div className="flex items-center gap-2">
                           <p className="font-semibold truncate text-sm sm:text-base">{b.description || '-'}</p>
                           <span className={`text-[10px] px-1.5 py-0.5 rounded-full border leading-none ${
-                            isPayout
-                              ? 'border-amber-400/60 text-amber-300'
-                              : isIncome
-                                ? 'border-green-400/60 text-green-300'
-                                : 'border-red-400/60 text-red-300'
+                            isDeletedPayout
+                              ? 'border-red-400/60 text-red-400 bg-red-900/40'
+                              : isPayout
+                                ? 'border-amber-400/60 text-amber-300'
+                                : isIncome
+                                  ? 'border-green-400/60 text-green-300'
+                                  : 'border-red-400/60 text-red-300'
                           }`}>
                             {typeLabel}
                           </span>

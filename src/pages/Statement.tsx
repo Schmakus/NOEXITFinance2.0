@@ -150,6 +150,15 @@ function Statement() {
     load()
   }, [musicianId, isUser, user])
 
+  // Build a map of payout booking IDs to their status
+  const payoutStatusMap = useMemo(() => {
+    const map: Record<string, string> = {}
+    payoutRequests.forEach((pr) => {
+      if (pr.status && pr.id) map[pr.id] = pr.status
+    })
+    return map
+  }, [payoutRequests])
+
   const filteredTransactions = useMemo(() => {
     const from = fromDate ? new Date(fromDate) : null
     const to = toDate ? new Date(toDate) : null
@@ -159,10 +168,19 @@ function Statement() {
         const d = new Date(t.date)
         if (from && d < from) return false
         if (to && d > new Date(to.getTime() + 24 * 60 * 60 * 1000 - 1)) return false
+        // Filter out deleted payouts by booking_id
+        if (t.booking_type === 'payout' && t.booking_id && payoutStatusMap[t.booking_id] === 'deleted') return false
         return true
       })
+      .map((t) => {
+        // Set amount to 0 for deleted payouts (defensive)
+        if (t.booking_type === 'payout' && t.booking_id && payoutStatusMap[t.booking_id] === 'deleted') {
+          return { ...t, amount: 0 }
+        }
+        return t
+      })
       .sort((a, b) => new Date(b.date ?? '').getTime() - new Date(a.date ?? '').getTime())
-  }, [transactions, fromDate, toDate])
+  }, [transactions, fromDate, toDate, payoutStatusMap])
 
   // Merge pending payout requests into the statement as entries
   type StatementEntry =
