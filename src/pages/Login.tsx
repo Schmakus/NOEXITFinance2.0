@@ -8,6 +8,7 @@ import { Eye, EyeOff } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { fetchPublicSettings } from '@/lib/api-client'
+import { DialogDescription } from '@radix-ui/react-dialog'
 
 function Login() {
   const [email, setEmail] = useState('')
@@ -154,10 +155,13 @@ function Login() {
 
       {/* Passwort vergessen Dialog */}
       <Dialog open={showResetDialog} onOpenChange={setShowResetDialog}>
-        <DialogContent>
+        <DialogContent aria-describedby="login-dialog-desc">
           <DialogHeader>
             <DialogTitle>Passwort zurücksetzen</DialogTitle>
           </DialogHeader>
+          <DialogDescription id="login-dialog-desc" className="sr-only">
+            Bitte gib deine E-Mail-Adresse ein, um dein Passwort zurückzusetzen.
+          </DialogDescription>
           <div className="space-y-4">
             <Label htmlFor="reset-email">E-Mail-Adresse</Label>
             <Input

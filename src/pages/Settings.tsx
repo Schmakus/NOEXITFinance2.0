@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Save, Upload, Trash2, AlertTriangle, Image, X, FileJson, FileSpreadsheet } from 'lucide-react'
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import {
   fetchSettings,
@@ -293,9 +293,12 @@ function Settings() {
               Aktivitätsprotokoll anzeigen
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-2xl" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
+          <DialogContent className="sm:max-w-2xl" aria-describedby="settings-dialog-desc" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
             <DialogHeader>
               <DialogTitle>Aktivitätsprotokoll</DialogTitle>
+            <DialogDescription id="settings-dialog-desc" className="sr-only">
+              Zeigt das Aktivitätsprotokoll dieser Anwendung an.
+            </DialogDescription>
             </DialogHeader>
             <div className="overflow-x-auto max-h-[60vh]">
               {logsLoading ? (
