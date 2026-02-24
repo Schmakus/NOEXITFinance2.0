@@ -24,7 +24,7 @@ function ProtectedRoute({ allowed, children }: { allowed: boolean; children: Rea
 }
 
 function App() {
-  const { isAuthenticated, isLoading, isAdmin, canManageBookings, canManageMusicians, canAccessSettings, canAccessArchive } = useAuth()
+  const { isAuthenticated, isLoading, isAdmin, isSuperuser, canManageBookings, canManageMusicians, canAccessSettings, canAccessArchive } = useAuth()
 
   const updateTitle = useCallback(async () => {
     try {
@@ -64,7 +64,7 @@ function App() {
               <Route path="/concerts" element={<ProtectedRoute allowed={canManageBookings}><Concerts /></ProtectedRoute>} />
               <Route path="/transactions" element={<ProtectedRoute allowed={canManageBookings}><Transactions /></ProtectedRoute>} />
               <Route path="/archive" element={<ProtectedRoute allowed={canAccessArchive}><Archive /></ProtectedRoute>} />
-              <Route path="/payout-requests" element={<ProtectedRoute allowed={isAdmin}><PayoutRequests /></ProtectedRoute>} />
+              <Route path="/payout-requests" element={<ProtectedRoute allowed={isAdmin || isSuperuser}><PayoutRequests /></ProtectedRoute>} />
               <Route path="/tags" element={<ProtectedRoute allowed={isAdmin}><Tags /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute allowed={canAccessSettings}><Settings /></ProtectedRoute>} />
               <Route path="/account" element={<Account />} />

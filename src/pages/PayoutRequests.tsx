@@ -313,7 +313,7 @@ function PayoutRequests() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 text-muted-foreground hover:text-red-400"
+                    className="h-7 w-7 text-red-400 hover:text-red-300"
                     title="Löschen"
                     onClick={() => handleDelete(r.id)}
                   >

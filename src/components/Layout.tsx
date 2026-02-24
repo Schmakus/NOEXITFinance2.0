@@ -57,9 +57,9 @@ function Layout() {
 
   // Settings werden jetzt über SettingsContext geladen
 
-  // Load pending payout request count for admins
+  // Load pending payout request count for admins and superusers
   useEffect(() => {
-    if (!isAdmin) return
+    if (!(isAdmin || isSuperuser)) return
     const loadCount = async () => {
       const count = await fetchPendingPayoutRequestCount()
       setPendingPayoutCount(count)
@@ -68,7 +68,7 @@ function Layout() {
     // Refresh count every 30 seconds
     const interval = setInterval(loadCount, 30_000)
     return () => clearInterval(interval)
-  }, [isAdmin, location.pathname])
+  }, [isAdmin, isSuperuser, location.pathname])
 
 
 
@@ -79,7 +79,7 @@ function Layout() {
     ...(canManageBookings ? [{ icon: DollarSign, label: 'Transaktionen', path: '/transactions' }] : []),
     ...(canManageMusicians ? [{ icon: Users, label: 'Musiker', path: '/musicians' }] : []),
     ...(isAdmin ? [{ icon: Music, label: 'Gruppen', path: '/groups' }] : []),
-    ...(isAdmin ? [{ icon: HandCoins, label: 'Auszahlungen', path: '/payout-requests', badge: pendingPayoutCount }] : []),
+    ...((isAdmin || isSuperuser) ? [{ icon: HandCoins, label: 'Auszahlungen', path: '/payout-requests', badge: pendingPayoutCount }] : []),
     ...(isAdmin ? [{ icon: Tag, label: 'Tags', path: '/tags' }] : []),
     ...(canAccessSettings ? [{ icon: Settings, label: 'Einstellungen', path: '/settings' }] : []),
     ...(canAccessArchive ? [{ icon: Archive, label: 'Archiv', path: '/archive' }] : []),
