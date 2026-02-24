@@ -598,8 +598,14 @@ function Statement() {
                 let batchClass = 'text-xs px-2 py-0.5 rounded-full border border-amber-400/60 text-amber-300 animate-pulse'
                 let showEditDelete = true
                 let displayAmount = r.amount
+                let reviewerSubtitle = null
                 if (r.status === 'approved') {
                   batchLabel = 'Genehmigt'
+                  batchClass = 'text-xs px-2 py-0.5 rounded-full border border-green-400/60 text-green-400'
+                  showEditDelete = false
+                  reviewerSubtitle = ('reviewed_by_name' in r && r.reviewed_by_name)
+                    ? `Genehmigt von: ${r.reviewed_by_name}`
+                    : null
                 } else if (r.status === 'rejected') {
                   batchLabel = 'Abgelehnt'
                   batchClass = 'text-xs px-2 py-0.5 rounded-full border border-red-400/60 text-red-400'
@@ -621,17 +627,20 @@ function Statement() {
                           <p className="text-sm text-muted-foreground">
                             {r.created_at ? formatDate(new Date(r.created_at)) : '-'}
                             {r.note ? ` • ${r.note}` : ''}
-                            {(() => {
-                              if (r.status === 'rejected' && r.admin_note) {
-                                let reviewer = ''
-                                if ('reviewed_by_name' in r && r.reviewed_by_name) {
-                                  reviewer = ` (Bearbeiter: ${r.reviewed_by_name})`;
-                                }
-                                return <><br /><span className="text-xs text-red-400">Begründung: {r.admin_note}{reviewer} (beantragt: {formatCurrency(r.amount)})</span></>
-                              }
-                              return null
-                            })()}
                           </p>
+                          {r.status === 'approved' && reviewerSubtitle && (
+                            <span className="text-xs text-green-400">{reviewerSubtitle}</span>
+                          )}
+                          {(() => {
+                            if (r.status === 'rejected' && r.admin_note) {
+                              let reviewer = ''
+                              if ('reviewed_by_name' in r && r.reviewed_by_name) {
+                                reviewer = ` (Bearbeiter: ${r.reviewed_by_name})`;
+                              }
+                              return <><br /><span className="text-xs text-red-400">Begründung: {r.admin_note}{reviewer} (beantragt: {formatCurrency(r.amount)})</span></>
+                            }
+                            return null
+                          })()}
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
