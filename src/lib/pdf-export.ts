@@ -61,9 +61,31 @@ export async function exportStatementPdf({
   y += 25
   doc.setFontSize(11).setFont('helvetica', 'normal')
   doc.text(`Name: ${musicianName}`, 40, y)
+
   doc.text(`Zeitraum: ${fromDate} – ${toDate}`, 40, y + 15)
-  
+
+  // Summen berechnen
+  const totalIncome = entries.filter(e => e.amount > 0).reduce((sum, e) => sum + e.amount, 0)
+  const totalExpense = entries.filter(e => e.amount < 0).reduce((sum, e) => sum + e.amount, 0)
+  // Auszahlungen: alle mit "Auszahlung" oder "payout" im description
+  const totalPayout = entries.filter(e => (e.description || '').toLowerCase().includes('auszahlung') || (e.description || '').toLowerCase().includes('payout')).reduce((sum, e) => sum + e.amount, 0)
+
   y += 40
+  
+  // Summenreihe
+  doc.setFontSize(11).setFont('helvetica', 'bold')
+  const colWidth = 140
+  const startX = 40
+  doc.text('Gesamteinnahmen', startX, y)
+  doc.text('Gesamtausgaben', startX + colWidth, y)
+  doc.text('Auszahlungen', startX + 2 * colWidth, y)
+  doc.setFont('helvetica', 'normal')
+  y += 18
+  doc.text(`${totalIncome.toFixed(2)} €`, startX, y)
+  doc.text(`${Math.abs(totalExpense).toFixed(2)} €`, startX + colWidth, y)
+  doc.text(`${Math.abs(totalPayout).toFixed(2)} €`, startX + 2 * colWidth, y)
+
+  y += 22
 
   // Tabelle
   autoTable(doc, {

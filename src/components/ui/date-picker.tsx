@@ -19,7 +19,7 @@ interface DatePickerProps {
   disabled?: boolean
 }
 
-function DatePicker({ value, onChange, placeholder = "Datum wählen", className, disabled }: DatePickerProps) {
+function DatePicker({ value, onChange, className, disabled }: DatePickerProps) {
   const [open, setOpen] = React.useState(false)
   const [inputValue, setInputValue] = React.useState<string>("")
   const [inputError, setInputError] = React.useState<string>("")
