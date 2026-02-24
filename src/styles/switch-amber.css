@@ -1,0 +1,17 @@
+.switch-amber[data-state="checked"] {
+  background: var(--color-amber-600) !important;
+  border-color: var(--color-amber-600) !important;
+}
+.switch-amber[data-state="unchecked"] {
+  background: #23272f !important;
+  border-color: #666 !important;
+}
+.switch-amber .switch-thumb {
+  background: #fff !important;
+  border: 1.5px solid #bbb !important;
+  box-shadow: 0 1px 4px 0 rgba(0,0,0,0.10);
+}
+.switch-amber[data-state="checked"] .switch-thumb {
+  background: #fff !important;
+  border: 1.5px solid var(--color-amber-600) !important;
+}

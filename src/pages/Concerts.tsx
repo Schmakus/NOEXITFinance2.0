@@ -176,7 +176,7 @@ function Concerts() {
           amount: Number((restBetrag * member.percent / 100).toFixed(2)),
           date: formData.date,
           type: 'earn' as const,
-          description: `Gagen Verteilung: ${formData.name}`,
+           description: `Gage: ${formData.name}`,
         }));
         await replaceTransactionsByConcert(concertId, transactions);
       } else {
@@ -282,12 +282,12 @@ function Concerts() {
         </div>
         <Dialog open={open} onOpenChange={(v: boolean) => { if (!v) resetForm(); setOpen(v) }}>
           <DialogTrigger asChild>
-            <Button onClick={openAdd}>
+            <Button onClick={openAdd} className="btn-amber">
               <Plus className="w-4 h-4 mr-2" />
               Konzert hinzufügen
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[700px]">
+          <DialogContent className="sm:max-w-[700px]" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
             <DialogHeader>
               <DialogTitle>{editingId ? 'Konzert bearbeiten' : 'Neues Konzert anlegen'}</DialogTitle>
               <DialogDescription>
@@ -474,7 +474,7 @@ function Concerts() {
             const members = concert.group_id ? getGroupMembers(concert.group_id) : []
 
             return (
-              <Card key={concert.id} className="hover:shadow-lg transition-shadow">
+              <Card key={concert.id} className="hover:shadow-lg transition-shadow" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -484,11 +484,11 @@ function Concerts() {
                       </CardDescription>
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => openEdit(concert)}>
-                        <Edit2 className="w-4 h-4" />
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(concert)}>
+                        <Edit2 className="w-3.5 h-3.5" />
                       </Button>
-                      <Button variant="destructive" size="sm" onClick={() => handleDeleteConcert(concert.id)}>
-                        <Trash2 className="w-4 h-4" />
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-300" onClick={() => handleDeleteConcert(concert.id)}>
+                        <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </div>
                   </div>

@@ -19,8 +19,9 @@ import {
   HandCoins,
   UserRound,
 } from 'lucide-react'
-import { useState, useEffect, useCallback } from 'react'
-import { fetchSettings, fetchPendingPayoutRequestCount } from '@/lib/api-client'
+import { useState, useEffect } from 'react'
+import { fetchPendingPayoutRequestCount } from '@/lib/api-client'
+import { useSettings } from '@/contexts/SettingsContext'
 
 function Layout() {
   const { user, logout, isAdmin, isSuperuser, canManageBookings, canManageMusicians, canAccessSettings, canAccessArchive } = useAuth()
@@ -40,8 +41,7 @@ function Layout() {
       setSidebarOpen(true)
     }
   }, [isMobile, user?.role])
-  const [bandName, setBandName] = useState<string>('NO EXIT')
-  const [logo, setLogo] = useState<string | null>(null)
+  const { logo, bandName } = useSettings()
   const [pendingPayoutCount, setPendingPayoutCount] = useState(0)
 
   // Track screen size
@@ -55,29 +55,7 @@ function Layout() {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  const loadSettingsFromSupabase = useCallback(async () => {
-    try {
-      const settings = await fetchSettings()
-      if (settings.bandname) setBandName(settings.bandname)
-      else setBandName('NO EXIT')
-      setLogo(settings.logo ?? null)
-    } catch {
-      setBandName('NO EXIT')
-    }
-  }, [])
-
-  useEffect(() => {
-    loadSettingsFromSupabase()
-
-    // Listen for same-window settings changes (dispatched by Settings page)
-    const handleSettingsChanged = () => {
-      loadSettingsFromSupabase()
-    }
-    window.addEventListener('noexit-settings-changed', handleSettingsChanged)
-    return () => {
-      window.removeEventListener('noexit-settings-changed', handleSettingsChanged)
-    }
-  }, [loadSettingsFromSupabase])
+  // Settings werden jetzt über SettingsContext geladen
 
   // Load pending payout request count for admins
   useEffect(() => {
@@ -163,7 +141,7 @@ function Layout() {
               <Link key={path} to={path} onClick={() => isMobile && setSidebarOpen(false)}>
                 <Button
                   variant={isActive ? 'secondary' : 'ghost'}
-                  className="w-full justify-start relative"
+                  className={`w-full justify-start relative${isActive ? ' btn-amber' : ''}`}
                   title={!sidebarOpen && !isMobile ? label : undefined}
                 >
                   <div className="relative">

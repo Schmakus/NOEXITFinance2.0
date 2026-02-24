@@ -237,7 +237,7 @@ function PayoutRequests() {
       'Abgelehnt'
 
     return (
-      <Card key={r.id} className="bg-muted/40">
+      <Card key={r.id} className="bg-muted/40" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
         <CardContent className="p-3 sm:p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
@@ -330,7 +330,7 @@ function PayoutRequests() {
 
   // Render a booking card
   const renderBookingCard = (b: BookingWithDetails) => (
-    <Card key={b.id} className="bg-muted/40">
+    <Card key={b.id} className="bg-muted/40" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
       <CardContent className="p-3 sm:p-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
@@ -424,7 +424,7 @@ function PayoutRequests() {
 
       {/* Approve / Reject / Edit Dialog */}
       <Dialog open={!!actionId} onOpenChange={(open) => { if (!open) closeAction() }}>
-        <DialogContent aria-describedby="payout-request-dialog-desc">
+        <DialogContent aria-describedby="payout-request-dialog-desc" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
           <DialogHeader>
             <DialogTitle>
               {actionType === 'approve' && 'Auszahlung genehmigen'}

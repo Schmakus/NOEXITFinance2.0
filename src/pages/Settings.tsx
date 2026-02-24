@@ -293,7 +293,7 @@ function Settings() {
               Aktivitätsprotokoll anzeigen
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-2xl">
+          <DialogContent className="sm:max-w-2xl" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
             <DialogHeader>
               <DialogTitle>Aktivitätsprotokoll</DialogTitle>
             </DialogHeader>
@@ -334,7 +334,7 @@ function Settings() {
       </div>
 
       {/* Bandname */}
-      <Card>
+      <Card style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
         <CardHeader>
           <CardTitle>Bandname</CardTitle>
           <CardDescription></CardDescription>
@@ -361,7 +361,7 @@ function Settings() {
       </Card>
 
       {/* Logo */}
-      <Card>
+      <Card style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
         <CardHeader>
           <CardTitle>Logo</CardTitle>
           <CardDescription>(max. 2 MB)</CardDescription>
@@ -404,7 +404,7 @@ function Settings() {
 
       {/* Export/Import Card */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="border-primary/60 shadow-sm">
+        <Card className="border-primary/60 shadow-sm" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-primary"><FileJson className="w-5 h-5" /> Export</CardTitle>
             <CardDescription>Exportiere deine Daten als Backup oder CSV</CardDescription>
@@ -420,7 +420,7 @@ function Settings() {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-primary/60 shadow-sm">
+        <Card className="border-primary/60 shadow-sm" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-primary"><Upload className="w-5 h-5" /> Import</CardTitle>
             <CardDescription>Stelle deine Daten aus einem Backup wieder her</CardDescription>
@@ -446,7 +446,7 @@ function Settings() {
       </div>
 
       {/* Danger Zone */}
-      <Card className="border-destructive/60 shadow-sm">
+      <Card className="border-destructive/60 shadow-sm" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-destructive">
             <AlertTriangle className="w-5 h-5" /> Gefahrenzone
@@ -470,7 +470,7 @@ function Settings() {
       </Card>
 
       {/* App-Informationen */}
-      <Card className="mt-8 border-muted-foreground/30">
+      <Card className="mt-8 border-muted-foreground/30" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
         <CardContent>
           <div className="text-xs text-muted-foreground flex flex-col gap-1 items-center py-2">
             <div>NOEXIT Finance&nbsp;2.0</div>

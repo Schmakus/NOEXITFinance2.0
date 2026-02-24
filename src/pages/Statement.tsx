@@ -45,6 +45,10 @@ import {
   Pencil,
   Trash2,
 } from 'lucide-react'
+import { exportStatementPdf } from '@/lib/pdf-export'
+import type { PdfExportEntry } from '@/lib/pdf-export'
+import { useSettings } from '@/contexts/SettingsContext'
+import { invertImageDataUrl } from '@/lib/invert-image'
 
 const isPayout = (t: TransactionWithMusician) =>
   t.booking_type === 'payout' ||
@@ -100,7 +104,12 @@ function Statement() {
     }
   }, [isUser, user, musicianId, navigate])
 
-  const today = useMemo(() => new Date(), [])
+  // Bis-Datum: größtes Transaktionsdatum, sonst heute
+  const maxTransactionDate = useMemo(() => {
+    if (transactions.length === 0) return new Date()
+    return new Date(Math.max(...transactions.map(t => t.date ? new Date(t.date).getTime() : 0)))
+  }, [transactions])
+
   const ninetyDaysAgo = useMemo(() => {
     const d = new Date()
     d.setDate(d.getDate() - 90)
@@ -108,7 +117,12 @@ function Statement() {
   }, [])
 
   const [fromDate, setFromDate] = useState(toDateInput(ninetyDaysAgo))
-  const [toDate, setToDate] = useState(toDateInput(today))
+  const [toDate, setToDate] = useState(() => toDateInput(maxTransactionDate))
+
+  // toDate aktualisieren, wenn sich maxTransactionDate ändert
+  useEffect(() => {
+    setToDate(toDateInput(maxTransactionDate))
+  }, [maxTransactionDate])
 
   useEffect(() => {
     const load = async () => {
@@ -175,18 +189,19 @@ function Statement() {
     return all
   }, [filteredTransactions, payoutRequests, canRequestPayout])
 
+  // Gesamtsummen immer aus allen Transaktionen berechnen
   const totals = useMemo(() => {
-    const income = filteredTransactions
+    const income = transactions
       .filter((t) => t.type === 'earn')
       .reduce((sum, t) => sum + t.amount, 0)
-    const payouts = filteredTransactions
+    const payouts = transactions
       .filter((t) => t.type === 'expense' && isPayout(t))
       .reduce((sum, t) => sum + Math.abs(t.amount), 0)
-    const expenses = filteredTransactions
+    const expenses = transactions
       .filter((t) => t.type === 'expense' && !isPayout(t))
       .reduce((sum, t) => sum + Math.abs(t.amount), 0)
     return { income, payouts, expenses }
-  }, [filteredTransactions])
+  }, [transactions])
 
   const currentBalance = useMemo(() => {
     if (!musician) return 0
@@ -194,44 +209,58 @@ function Statement() {
     return musician.balance + txnTotal
   }, [musician, transactions])
 
+  const { logo } = useSettings()
   const handlePdfExport = async () => {
-    if (!contentRef.current) return
     setExporting(true)
     try {
-      const [{ toPng }, { jsPDF }] = await Promise.all([
-        import('html-to-image'),
-        import('jspdf'),
-      ])
-      const dataUrl = await toPng(contentRef.current, {
-        pixelRatio: 2,
-        backgroundColor: '#0b1220',
-      })
-      const img = new Image()
-      img.src = dataUrl
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve()
-        img.onerror = () => reject(new Error('Bild konnte nicht geladen werden'))
-      })
-      const pdf = new jsPDF('p', 'pt', 'a4')
-      const pageWidth = pdf.internal.pageSize.getWidth()
-      const pageHeight = pdf.internal.pageSize.getHeight()
-      const imgWidth = pageWidth
-      const imgHeight = (img.height * imgWidth) / img.width
-      let y = 0
-      if (imgHeight <= pageHeight) {
-        pdf.addImage(dataUrl, 'PNG', 0, 0, imgWidth, imgHeight)
-      } else {
-        let remainingHeight = imgHeight
-        while (remainingHeight > 0) {
-          pdf.addImage(dataUrl, 'PNG', 0, y, imgWidth, imgHeight)
-          remainingHeight -= pageHeight
-          if (remainingHeight > 0) {
-            pdf.addPage()
-            y -= pageHeight
+      // Logo aus SettingsContext verwenden und invertieren
+      let logoDataUrl: string | undefined = undefined
+      if (logo) {
+        const dataUrl = logo.startsWith('data:image') ? logo : `data:image/png;base64,${logo}`
+        logoDataUrl = await invertImageDataUrl(dataUrl)
+      }
+
+      // Tabellarische Daten vorbereiten
+      const entries: PdfExportEntry[] = statementEntries.map(entry => {
+        if (entry.kind === 'transaction') {
+          const t = entry.data
+          // Konzertinfos, falls vorhanden
+          let eventName = t.concert_name || ''
+          let eventLocation = ''
+          if (t.concert_id) {
+            const concert = concerts.find(c => c.id === t.concert_id)
+            if (concert) {
+              eventName = concert.name
+              eventLocation = concert.location || ''
+            }
+          }
+          return {
+            date: t.date ? formatDate(new Date(t.date)) : '',
+            description: t.description || '',
+            amount: t.amount,
+            eventName,
+            eventLocation,
+          }
+        } else {
+          // Payout-Request als eigene Zeile
+          const r = entry.data
+          return {
+            date: r.created_at ? formatDate(new Date(r.created_at)) : '',
+            description: 'Auszahlungsantrag' + (r.note ? ` (${r.note})` : ''),
+            amount: -Math.abs(r.amount),
+            eventName: '',
+            eventLocation: '',
           }
         }
-      }
-      pdf.save(`kontoauszug-${musician?.name ?? 'musiker'}.pdf`)
+      })
+
+      await exportStatementPdf({
+        logoDataUrl,
+        musicianName: musician?.name || '',
+        fromDate: fromDate ? formatDate(new Date(fromDate)) : '',
+        toDate: toDate ? formatDate(new Date(toDate)) : '',
+        entries,
+      })
     } catch (err) {
       console.error('PDF Export fehlgeschlagen:', err)
       alert('PDF Export fehlgeschlagen: ' + (err instanceof Error ? err.message : String(err)))
@@ -415,7 +444,7 @@ function Statement() {
               Auszahlung beantragen
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={handlePdfExport} disabled={exporting}>
+          <Button variant="outline" size="sm" onClick={handlePdfExport} disabled={exporting} className="btn-amber">
             <FileDown className="w-4 h-4 mr-2" />
             PDF Export
           </Button>
@@ -495,7 +524,7 @@ function Statement() {
               if (entry.kind === 'payout-request') {
                 const r = entry.data
                 return (
-                  <Card key={`pr-${r.id}`} className="bg-muted/40 border-amber-500/30">
+                  <Card key={`pr-${r.id}`} className="bg-muted/40 border-amber-500/30" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
                     <CardContent className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                         <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-amber-500/20 text-amber-300">
@@ -522,7 +551,7 @@ function Statement() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            className="h-7 w-7 btn-amber"
                             title="Bearbeiten"
                             onClick={() => openEditRequest(r)}
                           >
@@ -559,7 +588,7 @@ function Statement() {
                 <TrendingDown className="w-5 h-5" />
               )
               return (
-                <Card key={t.id} className="bg-muted/40">
+                <Card key={t.id} className="bg-muted/40" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
                   <CardContent className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                       <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${iconWrapClass}`}>
@@ -601,7 +630,7 @@ function Statement() {
 
       {/* Edit Payout Request Dialog */}
       <Dialog open={!!editRequestId} onOpenChange={(open) => { if (!open) setEditRequestId(null) }}>
-        <DialogContent aria-describedby="edit-request-dialog-desc">
+        <DialogContent aria-describedby="edit-request-dialog-desc" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
           <DialogHeader>
             <DialogTitle>Antrag bearbeiten</DialogTitle>
           </DialogHeader>
@@ -724,7 +753,7 @@ function Statement() {
 
       {/* Payout Request Dialog */}
       <Dialog open={showPayoutDialog} onOpenChange={setShowPayoutDialog}>
-        <DialogContent aria-describedby="payout-dialog-desc">
+        <DialogContent aria-describedby="payout-dialog-desc" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
           <DialogHeader>
             <DialogTitle>Auszahlung beantragen</DialogTitle>
           </DialogHeader>

@@ -111,7 +111,7 @@ function ArchivePage() {
             </h1>
             <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-base">Archivierte Musiker und Kontoauszuege</p>
           </div>
-          <Button variant="outline" size="sm" onClick={handleExportArchiveCsv} disabled={exporting}>
+          <Button variant="outline" size="sm" onClick={handleExportArchiveCsv} disabled={exporting} className="btn-amber">
             <Download className="w-4 h-4 mr-2" />
             CSV Export
           </Button>
@@ -136,7 +136,7 @@ function ArchivePage() {
             const musicianTransactions = transactionsByMusician[musician.id] || []
             const total = musicianTransactions.reduce((s, t) => s + t.amount, 0)
             return (
-              <Card key={musician.id}>
+              <Card key={musician.id} style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>

@@ -19,7 +19,7 @@ interface DatePickerProps {
   disabled?: boolean
 }
 
-function DatePicker({ value, onChange, placeholder = "Datum wählen", className, disabled }: DatePickerProps) {
+function DatePicker({ value, onChange, className, disabled }: DatePickerProps) {
   const [open, setOpen] = React.useState(false)
   const [inputValue, setInputValue] = React.useState<string>("")
   const [inputError, setInputError] = React.useState<string>("")
@@ -83,15 +83,19 @@ function DatePicker({ value, onChange, placeholder = "Datum wählen", className,
               variant="outline"
               disabled={disabled}
               className={cn(
-                "w-36 justify-start text-left font-normal h-10",
+                "w-10 justify-center text-center font-normal h-10 p-0 flex items-center",
                 !value && "text-muted-foreground"
               )}
+              aria-label="Datum wählen"
             >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {selectedDate ? format(selectedDate, "dd.MM.yyyy", { locale: de }) : placeholder}
+              <CalendarIcon className="h-5 w-5" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
+          <PopoverContent
+            className="w-auto p-0 border border-border shadow-sm rounded-lg"
+            align="start"
+            style={{ backgroundColor: 'var(--color-amber-600)', color: '#23272f' }}
+          >
             <DayPicker
               mode="single"
               selected={selectedDate}
@@ -127,7 +131,7 @@ function DatePicker({ value, onChange, placeholder = "Datum wählen", className,
           value={inputValue}
           onChange={handleInputChange}
           placeholder="TT.MM.JJJJ"
-          className="w-32"
+          className="w-32 border border-border shadow-sm rounded-lg"
           disabled={disabled}
           maxLength={10}
         />

@@ -111,7 +111,7 @@ function Tags() {
           <h1 className="text-2xl sm:text-3xl font-bold">Keywords</h1>
           <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-base">Verwalte Keywords für Konzerte und Buchungen</p>
         </div>
-        <Button onClick={() => { setShowAddDialog(true); setError(null); setNewTagName('') }}>
+        <Button onClick={() => { setShowAddDialog(true); setError(null); setNewTagName('') }} className="btn-amber">
           <Plus className="w-4 h-4 mr-2" />
           Neues Keyword
         </Button>
@@ -168,7 +168,7 @@ function Tags() {
 
       {/* Add Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent>
+        <DialogContent style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
           <DialogHeader>
             <DialogTitle>Neues Keyword</DialogTitle>
             <DialogDescription>Erstelle ein neues Keyword für Konzerte und Buchungen</DialogDescription>
@@ -195,7 +195,7 @@ function Tags() {
 
       {/* Edit Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent>
+        <DialogContent style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
           <DialogHeader>
             <DialogTitle>Keyword bearbeiten</DialogTitle>
             <DialogDescription>Ändere den Namen des Keywords</DialogDescription>

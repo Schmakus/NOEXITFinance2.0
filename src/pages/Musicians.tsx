@@ -256,12 +256,12 @@ function Musicians() {
           {isAdmin && !showArchived && (
             <Dialog open={isOpen} onOpenChange={setIsOpen}>
               <DialogTrigger asChild>
-                <Button onClick={handleAdd}>
+                <Button onClick={handleAdd} className="btn-amber">
                   <Plus className="w-4 h-4 mr-2" />
                   Musiker hinzufuegen
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
+                <DialogContent style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }} className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>
                 {editingId ? 'Musiker bearbeiten' : 'Neuen Musiker hinzufügen'}
@@ -381,7 +381,7 @@ function Musicians() {
           </Card>
         ) : (
           musicians.map((musician) => (
-            <Card key={musician.id} className="hover:shadow-lg transition-shadow">
+            <Card key={musician.id} className="hover:shadow-lg transition-shadow" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
               <CardContent className="pt-6">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
@@ -406,16 +406,16 @@ function Musicians() {
                     <div className="flex gap-2">
                       {!showArchived ? (
                         <>
-                          <Button variant="outline" size="sm" onClick={() => handleEdit(musician)}>
-                            <Edit2 className="w-4 h-4" />
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(musician)}>
+                            <Edit2 className="w-3.5 h-3.5" />
                           </Button>
                           <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-destructive hover:text-destructive"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-red-400 hover:text-red-300"
                             onClick={() => handleDelete(musician.id)}
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </Button>
                         </>
                       ) : (
