@@ -57,9 +57,9 @@ function Layout() {
 
   // Settings werden jetzt über SettingsContext geladen
 
-  // Load pending payout request count for admins
+  // Load pending payout request count for admins and superusers
   useEffect(() => {
-    if (!isAdmin) return
+    if (!(isAdmin || isSuperuser)) return
     const loadCount = async () => {
       const count = await fetchPendingPayoutRequestCount()
       setPendingPayoutCount(count)
@@ -68,7 +68,7 @@ function Layout() {
     // Refresh count every 30 seconds
     const interval = setInterval(loadCount, 30_000)
     return () => clearInterval(interval)
-  }, [isAdmin, location.pathname])
+  }, [isAdmin, isSuperuser, location.pathname])
 
 
 
@@ -79,7 +79,7 @@ function Layout() {
     ...(canManageBookings ? [{ icon: DollarSign, label: 'Transaktionen', path: '/transactions' }] : []),
     ...(canManageMusicians ? [{ icon: Users, label: 'Musiker', path: '/musicians' }] : []),
     ...(isAdmin ? [{ icon: Music, label: 'Gruppen', path: '/groups' }] : []),
-    ...(isAdmin ? [{ icon: HandCoins, label: 'Auszahlungen', path: '/payout-requests', badge: pendingPayoutCount }] : []),
+    ...((isAdmin || isSuperuser) ? [{ icon: HandCoins, label: 'Auszahlungen', path: '/payout-requests', badge: pendingPayoutCount }] : []),
     ...(isAdmin ? [{ icon: Tag, label: 'Tags', path: '/tags' }] : []),
     ...(canAccessSettings ? [{ icon: Settings, label: 'Einstellungen', path: '/settings' }] : []),
     ...(canAccessArchive ? [{ icon: Archive, label: 'Archiv', path: '/archive' }] : []),
@@ -276,7 +276,10 @@ function Layout() {
 
       {/* Bottom Navigation Bar — Mobile only */}
       {isMobile && (
-        <nav className="fixed bottom-0 left-0 right-0 z-30 bg-card border-t border-border shadow-lg safe-area-bottom">
+          <nav
+            className="fixed bottom-0 left-0 right-0 z-50 flex justify-around items-center border-t border-border md:hidden"
+            style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}
+          >
           <div className="flex items-center justify-around h-16">
             {bottomNavItems.map(({ icon: Icon, label, path }) => {
               const isActive = location.pathname === path

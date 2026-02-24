@@ -65,7 +65,7 @@ function Dashboard() {
         setMusicians(m)
         setTransactions(t)
         if (!isUser) {
-          const pr = await fetchPayoutRequests()
+          const pr: PayoutRequestWithMusician[] = await fetchPayoutRequests()
           setPayoutRequests(pr)
         }
       } catch (err) {
@@ -95,7 +95,7 @@ function Dashboard() {
 
   const reloadPayoutRequests = async () => {
     try {
-      const pr = await fetchPayoutRequests()
+      const pr: PayoutRequestWithMusician[] = await fetchPayoutRequests()
       setPayoutRequests(pr)
     } catch { /* ignore */ }
   }

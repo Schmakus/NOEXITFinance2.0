@@ -19,16 +19,18 @@ import {
   fetchMusicianById,
   fetchTransactionsWithMusician,
   fetchMyPayoutRequests,
+  fetchPayoutRequests,
   createPayoutRequest,
   updatePayoutRequestAdmin,
   deletePayoutRequest,
   updatePayoutRequestUser,
   deletePayoutRequestUser,
-  fetchConcerts
-} from '@/lib/api-client'
+  fetchConcerts,
+  fetchMusicians
+} from './../lib/api-client'
 import { useAuth } from '@/contexts/AuthContext'
 import { Spinner } from '@/components/ui/spinner'
-import type { DbMusician, DbPayoutRequest, TransactionWithMusician, ConcertWithExpenses } from '@/lib/database.types'
+import type { DbMusician, DbPayoutRequest, TransactionWithMusician, ConcertWithExpenses, PayoutRequestWithMusician } from '@/lib/database.types'
 import {
   ArrowLeft,
   Banknote,
@@ -45,8 +47,8 @@ import {
   Pencil,
   Trash2,
 } from 'lucide-react'
-import { exportStatementPdf } from '@/lib/pdf-export'
-import type { PdfExportEntry } from '@/lib/pdf-export'
+import { exportStatementPdf } from './../lib/pdf-export'
+import type { PdfExportEntry } from './../lib/pdf-export'
 import { useSettings } from '@/contexts/SettingsContext'
 import { invertImageDataUrl } from '@/lib/invert-image'
 
@@ -74,7 +76,7 @@ function Statement() {
   const contentRef = useRef<HTMLDivElement | null>(null)
 
   // Payout request state
-  const [payoutRequests, setPayoutRequests] = useState<DbPayoutRequest[]>([])
+  const [payoutRequests, setPayoutRequests] = useState<PayoutRequestWithMusician[]>([])
   const [showPayoutDialog, setShowPayoutDialog] = useState(false)
   const [payoutAmount, setPayoutAmount] = useState('')
   const [payoutNote, setPayoutNote] = useState('')
@@ -136,10 +138,29 @@ function Statement() {
         setMusician(m)
         setTransactions(t.filter((row) => row.musician_id === musicianId))
         setConcerts(c)
-        // Load payout requests for own statement
+        // Load payout requests for own statement (user) or all (admin)
         if ((isUser || isSuperuser) && user && musicianId === user.id) {
+          // For user, fetch only their requests
           const requests = await fetchMyPayoutRequests(musicianId)
-          setPayoutRequests(requests)
+          // Reviewer-IDs extrahieren (nur strings, keine null)
+          const reviewerIds = [...new Set(requests.map(r => typeof r.reviewed_by === 'string' ? r.reviewed_by : undefined).filter(Boolean))] as string[]
+          let reviewerMap: Record<string, string> = {}
+          if (reviewerIds.length > 0) {
+            const reviewers = await fetchMusicians()
+            reviewerIds.forEach(id => {
+              const found = reviewers.find(m => m.id === id)
+              if (found) reviewerMap[id] = found.name
+            })
+          }
+          setPayoutRequests(requests.map(r => ({
+            ...r,
+            musician_name: musician?.name ?? '',
+            reviewed_by_name: (typeof r.reviewed_by === 'string' && r.reviewed_by !== null) ? reviewerMap[r.reviewed_by] : undefined,
+          })))
+        } else if (isSuperuser) {
+          // For admin, fetch all payout requests (includes reviewed_by_name)
+          const allRequests = await fetchPayoutRequests()
+          setPayoutRequests(allRequests)
         }
       } catch (err) {
         console.error('Kontoauszug laden fehlgeschlagen:', err)
@@ -150,6 +171,15 @@ function Statement() {
     load()
   }, [musicianId, isUser, user])
 
+  // Build a map of payout booking IDs to their status
+  const payoutStatusMap = useMemo(() => {
+    const map: Record<string, string> = {}
+    payoutRequests.forEach((pr) => {
+      if (pr.status && pr.id) map[pr.id] = pr.status
+    })
+    return map
+  }, [payoutRequests])
+
   const filteredTransactions = useMemo(() => {
     const from = fromDate ? new Date(fromDate) : null
     const to = toDate ? new Date(toDate) : null
@@ -159,10 +189,19 @@ function Statement() {
         const d = new Date(t.date)
         if (from && d < from) return false
         if (to && d > new Date(to.getTime() + 24 * 60 * 60 * 1000 - 1)) return false
+        // Filter out deleted payouts by booking_id
+        if (t.booking_type === 'payout' && t.booking_id && payoutStatusMap[t.booking_id] === 'deleted') return false
         return true
       })
+      .map((t) => {
+        // Set amount to 0 for deleted payouts (defensive)
+        if (t.booking_type === 'payout' && t.booking_id && payoutStatusMap[t.booking_id] === 'deleted') {
+          return { ...t, amount: 0 }
+        }
+        return t
+      })
       .sort((a, b) => new Date(b.date ?? '').getTime() - new Date(a.date ?? '').getTime())
-  }, [transactions, fromDate, toDate])
+  }, [transactions, fromDate, toDate, payoutStatusMap])
 
   // Merge pending payout requests into the statement as entries
   type StatementEntry =
@@ -174,13 +213,11 @@ function Statement() {
       kind: 'transaction' as const,
       data: t,
     }))
-    // Only show pending requests for users who can request payouts
-    const pendingEntries: StatementEntry[] = canRequestPayout
-      ? payoutRequests
-          .filter((r) => r.status === 'pending')
-          .map((r) => ({ kind: 'payout-request' as const, data: r }))
-      : []
-    const all = [...txEntries, ...pendingEntries]
+    // Show all payout requests except deleted
+    const requestEntries: StatementEntry[] = payoutRequests
+      .filter((r) => r.status !== 'deleted')
+      .map((r) => ({ kind: 'payout-request' as const, data: r }))
+    const all = [...txEntries, ...requestEntries]
     all.sort((a, b) => {
       const dateA = a.kind === 'transaction' ? (a.data.date ?? '') : (a.data.created_at ?? '')
       const dateB = b.kind === 'transaction' ? (b.data.date ?? '') : (b.data.created_at ?? '')
@@ -329,7 +366,14 @@ function Statement() {
     try {
       // PDF-Upload temporär deaktiviert
       const newReq = await createPayoutRequest(musicianId, amount, payoutNote)
-      setPayoutRequests((prev) => [newReq, ...prev])
+      setPayoutRequests((prev) => [
+        {
+          ...newReq,
+          musician_name: musician?.name ?? '',
+          reviewed_by_name: undefined,
+        },
+        ...prev,
+      ])
       setShowPayoutDialog(false)
       setPayoutAmount('')
       setPayoutNote('')
@@ -374,7 +418,11 @@ function Statement() {
           note: editRequestNote || undefined,
         })
       }
-      setPayoutRequests((prev) => prev.map((r) => (r.id === editRequestId ? updated : r)))
+      setPayoutRequests((prev) => prev.map((r) =>
+        r.id === editRequestId
+          ? { ...updated, musician_name: musician?.name ?? '', reviewed_by_name: undefined }
+          : r
+      ))
       setEditRequestId(null)
     } catch (err) {
       let msg = ''
@@ -468,7 +516,30 @@ function Statement() {
         </div>
         <div className="grid gap-2">
           <span className="text-xs text-muted-foreground">Bis</span>
-          <DatePicker value={toDate} onChange={setToDate} placeholder="Bis" />
+          <div className="flex items-center gap-2">
+            <DatePicker value={toDate} onChange={setToDate} placeholder="Bis" />
+            <Button
+              type="button"
+              variant="outline"
+              className="btn-amber px-3 py-1 text-xs h-8"
+              onClick={() => {
+                // Finde frühestes und spätestes Transaktionsdatum
+                let minDate = new Date()
+                let maxDate = new Date(0)
+                transactions.forEach(t => {
+                  if (t.date) {
+                    const d = new Date(t.date)
+                    if (d < minDate) minDate = d
+                    if (d > maxDate) maxDate = d
+                  }
+                })
+                setFromDate(toDateInput(minDate))
+                setToDate(toDateInput(maxDate))
+              }}
+            >
+              Max. Zeitraum
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -523,6 +594,24 @@ function Statement() {
             statementEntries.map((entry) => {
               if (entry.kind === 'payout-request') {
                 const r = entry.data
+                let batchLabel = 'Genehmigung ausstehend…'
+                let batchClass = 'text-xs px-2 py-0.5 rounded-full border border-amber-400/60 text-amber-300 animate-pulse'
+                let showEditDelete = true
+                let displayAmount = r.amount
+                let reviewerSubtitle = null
+                if (r.status === 'approved') {
+                  batchLabel = 'Genehmigt'
+                  batchClass = 'text-xs px-2 py-0.5 rounded-full border border-green-400/60 text-green-400'
+                  showEditDelete = false
+                  reviewerSubtitle = ('reviewed_by_name' in r && r.reviewed_by_name)
+                    ? `Genehmigt von: ${r.reviewed_by_name}`
+                    : null
+                } else if (r.status === 'rejected') {
+                  batchLabel = 'Abgelehnt'
+                  batchClass = 'text-xs px-2 py-0.5 rounded-full border border-red-400/60 text-red-400'
+                  showEditDelete = false
+                  displayAmount = 0
+                }
                 return (
                   <Card key={`pr-${r.id}`} className="bg-muted/40 border-amber-500/30" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
                     <CardContent className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -533,40 +622,53 @@ function Statement() {
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="font-semibold">Auszahlung beantragt</p>
-                            <span className="text-xs px-2 py-0.5 rounded-full border border-amber-400/60 text-amber-300 animate-pulse">
-                              Genehmigung ausstehend…
-                            </span>
+                            <span className={batchClass}>{batchLabel}</span>
                           </div>
                           <p className="text-sm text-muted-foreground">
                             {r.created_at ? formatDate(new Date(r.created_at)) : '-'}
                             {r.note ? ` • ${r.note}` : ''}
                           </p>
+                          {r.status === 'approved' && reviewerSubtitle && (
+                            <span className="text-xs text-green-400">{reviewerSubtitle}</span>
+                          )}
+                          {(() => {
+                            if (r.status === 'rejected' && r.admin_note) {
+                              let reviewer = ''
+                              if ('reviewed_by_name' in r && r.reviewed_by_name) {
+                                reviewer = ` (Bearbeiter: ${r.reviewed_by_name})`;
+                              }
+                              return <><br /><span className="text-xs text-red-400">Begründung: {r.admin_note}{reviewer} (beantragt: {formatCurrency(r.amount)})</span></>
+                            }
+                            return null
+                          })()}
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
                         <p className="text-lg font-semibold text-amber-400">
-                          -{formatCurrency(r.amount)}
+                          -{formatCurrency(displayAmount)}
                         </p>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 btn-amber"
-                            title="Bearbeiten"
-                            onClick={() => openEditRequest(r)}
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-red-400"
-                            title="Löschen"
-                            onClick={() => handleDeleteRequest(r.id)}
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
-                        </div>
+                        {showEditDelete && (
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 btn-amber"
+                              title="Bearbeiten"
+                              onClick={() => openEditRequest(r)}
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-red-400"
+                              title="Löschen"
+                              onClick={() => handleDeleteRequest(r.id)}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>

@@ -8,14 +8,14 @@ create table if not exists logs (
   user_id uuid references musicians(id),
   user_name text not null,
   created_at timestamptz default now()
+  payout_request_id uuid references payout_requests(id),
 );
 
 create index if not exists logs_created_at_idx on logs(created_at desc);
 -- ============================================
 -- NOEXIT Finance - Supabase Datenbank-Schema
 -- ============================================
--- Führe dieses SQL im Supabase SQL Editor aus:
--- https://supabase.com/dashboard → SQL Editor
+-- ALTER TABLE bookings ADD COLUMN IF NOT EXISTS payout_request_id uuid REFERENCES payout_requests(id);
 --
 -- SETUP-REIHENFOLGE:
 -- 1. Dieses SQL im SQL Editor ausführen
@@ -158,7 +158,7 @@ create table if not exists payout_requests (
   musician_id uuid references musicians(id) on delete cascade not null,
   amount numeric(12,2) not null,
   note text,
-  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected', 'deleted')),
   admin_note text,
   reviewed_by uuid references musicians(id),
   reviewed_at timestamptz,

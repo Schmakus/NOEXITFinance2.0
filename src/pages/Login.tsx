@@ -4,13 +4,16 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Eye, EyeOff } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { fetchPublicSettings } from '@/lib/api-client'
+import { DialogDescription } from '@radix-ui/react-dialog'
 
 function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [logo, setLogo] = useState<string | null>(null)
@@ -103,15 +106,27 @@ function Login() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Passwort</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-                required
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  required
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-amber-500 focus:outline-none"
+                  tabIndex={-1}
+                  aria-label={showPassword ? 'Passwort verbergen' : 'Passwort anzeigen'}
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
             </div>
             <div className="flex justify-between items-center">
               <Button
@@ -140,10 +155,13 @@ function Login() {
 
       {/* Passwort vergessen Dialog */}
       <Dialog open={showResetDialog} onOpenChange={setShowResetDialog}>
-        <DialogContent>
+        <DialogContent aria-describedby="login-dialog-desc">
           <DialogHeader>
             <DialogTitle>Passwort zurücksetzen</DialogTitle>
           </DialogHeader>
+          <DialogDescription id="login-dialog-desc" className="sr-only">
+            Bitte gib deine E-Mail-Adresse ein, um dein Passwort zurückzusetzen.
+          </DialogDescription>
           <div className="space-y-4">
             <Label htmlFor="reset-email">E-Mail-Adresse</Label>
             <Input

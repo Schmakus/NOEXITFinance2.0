@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/contexts/AuthContext'
 import { Save, Mail, Lock } from 'lucide-react'
+import { Eye, EyeOff } from 'lucide-react'
 
 function Account() {
   const { user, updateEmail, updatePassword } = useAuth()
@@ -12,6 +13,7 @@ function Account() {
   const [newEmail, setNewEmail] = useState(user?.email ?? '')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
 
@@ -76,7 +78,7 @@ function Account() {
       )}
 
       {/* Profil-Info */}
-      <Card>
+      <Card style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
         <CardHeader>
           <CardTitle>Profil</CardTitle>
           <CardDescription>Deine Kontoinformationen</CardDescription>
@@ -100,7 +102,7 @@ function Account() {
       </Card>
 
       {/* E-Mail ändern */}
-      <Card>
+      <Card style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Mail className="w-5 h-5" />
@@ -121,7 +123,7 @@ function Account() {
               placeholder="neue@email.de"
             />
           </div>
-          <Button onClick={handleUpdateEmail} disabled={saving || newEmail === user?.email}>
+          <Button onClick={handleUpdateEmail} disabled={saving || newEmail === user?.email} className="btn-amber">
             <Save className="w-4 h-4 mr-2" />
             E-Mail ändern
           </Button>
@@ -129,7 +131,7 @@ function Account() {
       </Card>
 
       {/* Passwort ändern */}
-      <Card>
+      <Card style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Lock className="w-5 h-5" />
@@ -140,25 +142,39 @@ function Account() {
         <CardContent className="space-y-4">
           <div>
             <Label htmlFor="new-password">Neues Passwort</Label>
-            <Input
-              id="new-password"
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="••••••••"
-            />
+            <div className="relative">
+              <Input
+                id="new-password"
+                type={showPassword ? 'text' : 'password'}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="••••••••"
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-amber-500 focus:outline-none"
+                tabIndex={-1}
+                aria-label={showPassword ? 'Passwort verbergen' : 'Passwort anzeigen'}
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
-          <div>
-            <Label htmlFor="confirm-password">Passwort bestätigen</Label>
-            <Input
-              id="confirm-password"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="••••••••"
-            />
-          </div>
-          <Button onClick={handleUpdatePassword} disabled={saving || !newPassword}>
+          {!showPassword && (
+            <div>
+              <Label htmlFor="confirm-password">Passwort bestätigen</Label>
+              <Input
+                id="confirm-password"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="••••••••"
+              />
+            </div>
+          )}
+          <Button onClick={handleUpdatePassword} disabled={saving || !newPassword} className="btn-amber">
             <Save className="w-4 h-4 mr-2" />
             Passwort ändern
           </Button>
