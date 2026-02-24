@@ -107,7 +107,7 @@ export interface DbPayoutRequest {
   musician_id: string
   amount: number
   note: string | null
-  status: 'pending' | 'approved' | 'rejected'
+  status: 'pending' | 'approved' | 'rejected' | 'deleted'
   admin_note: string | null
   reviewed_by: string | null
   reviewed_at: string | null

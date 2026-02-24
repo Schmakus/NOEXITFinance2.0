@@ -29,12 +29,14 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
+  X,
   HandCoins,
   Pencil,
   Trash2,
 } from 'lucide-react'
 
-type TabFilter = 'pending' | 'all'
+
+// Typ-Erweiterung für Status
 
 
 function PayoutRequests() {
@@ -46,7 +48,7 @@ function PayoutRequests() {
   const [requests, setRequests] = useState<PayoutRequestWithMusician[]>([])
   const [, setPayoutBookings] = useState<BookingWithDetails[]>([])
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState<TabFilter>('pending')
+  const [tab, setTab] = useState<'pending' | 'all'>('pending')
 
   // Action states
   const [actionId, setActionId] = useState<string | null>(null)
@@ -205,14 +207,17 @@ function PayoutRequests() {
     const statusIcon =
       r.status === 'pending' ? <Clock className="w-5 h-5" /> :
       r.status === 'approved' ? <CheckCircle2 className="w-5 h-5" /> :
+      r.status === 'deleted' ? <X className="w-5 h-5 text-red-400" /> :
       <XCircle className="w-5 h-5" />
     const statusColor =
       r.status === 'pending' ? 'bg-amber-500/20 text-amber-300' :
       r.status === 'approved' ? 'bg-green-500/20 text-green-300' :
+      r.status === 'deleted' ? 'bg-red-500/20 text-red-400' :
       'bg-red-500/20 text-red-300'
     const statusLabel =
       r.status === 'pending' ? 'Ausstehend' :
       r.status === 'approved' ? 'Genehmigt' :
+      r.status === 'deleted' ? 'Gelöscht' :
       'Abgelehnt'
 
     return (
@@ -229,6 +234,7 @@ function PayoutRequests() {
                   <span className={`text-xs px-2 py-0.5 rounded-full border ${
                     r.status === 'pending' ? 'border-amber-400/60 text-amber-300' :
                     r.status === 'approved' ? 'border-green-400/60 text-green-300' :
+                    r.status === 'deleted' ? 'border-red-400/80 text-red-400' :
                     'border-red-400/60 text-red-300'
                   }`}>
                     {statusLabel}

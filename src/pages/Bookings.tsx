@@ -33,10 +33,12 @@ import { Spinner } from '@/components/ui/spinner'
 import { supabase } from '@/lib/supabase'
 import type { DbBooking, DbMusician, GroupWithMembers } from '@/lib/database.types'
 
+type BookingWithDetailsAndPayout = (DbBooking & { group_name?: string, payout_request_id?: string })
+
 function Bookings() {
   const { user } = useAuth()
   const canManage = user?.role === 'administrator' || user?.role === 'superuser'
-  const [bookings, setBookings] = useState<(DbBooking & { group_name?: string })[]>([])
+  const [bookings, setBookings] = useState<BookingWithDetailsAndPayout[]>([])
   const [musicians, setMusicians] = useState<DbMusician[]>([])
   const [groups, setGroups] = useState<GroupWithMembers[]>([])
   const [loading, setLoading] = useState(true)
@@ -247,6 +249,12 @@ function Bookings() {
     if (!confirm('Buchung wirklich löschen?')) return
     try {
       const oldBooking = bookings.find((b) => b.id === id);
+      // Falls es eine Auszahlung mit payout_request_id ist, setze den Status des zugehörigen payout_requests auf 'deleted'
+      if (oldBooking && oldBooking.type === 'payout' && oldBooking.payout_request_id) {
+        await supabase.from('payout_requests')
+          .update({ status: 'deleted', updated_at: new Date().toISOString() })
+          .eq('id', oldBooking.payout_request_id);
+      }
       await apiDeleteBooking(id);
       setBookings((prev) => prev.filter((b) => b.id !== id));
       // Logging-Aufruf
