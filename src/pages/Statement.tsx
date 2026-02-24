@@ -104,7 +104,12 @@ function Statement() {
     }
   }, [isUser, user, musicianId, navigate])
 
-  const today = useMemo(() => new Date(), [])
+  // Bis-Datum: größtes Transaktionsdatum, sonst heute
+  const maxTransactionDate = useMemo(() => {
+    if (transactions.length === 0) return new Date()
+    return new Date(Math.max(...transactions.map(t => t.date ? new Date(t.date).getTime() : 0)))
+  }, [transactions])
+
   const ninetyDaysAgo = useMemo(() => {
     const d = new Date()
     d.setDate(d.getDate() - 90)
@@ -112,7 +117,12 @@ function Statement() {
   }, [])
 
   const [fromDate, setFromDate] = useState(toDateInput(ninetyDaysAgo))
-  const [toDate, setToDate] = useState(toDateInput(today))
+  const [toDate, setToDate] = useState(() => toDateInput(maxTransactionDate))
+
+  // toDate aktualisieren, wenn sich maxTransactionDate ändert
+  useEffect(() => {
+    setToDate(toDateInput(maxTransactionDate))
+  }, [maxTransactionDate])
 
   useEffect(() => {
     const load = async () => {
