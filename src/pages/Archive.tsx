@@ -20,7 +20,7 @@ const isPayout = (t: TransactionArchiveWithMusician) =>
 
 function ArchivePage() {
   const { user } = useAuth()
-  const isAdmin = user?.role === 'administrator'
+  const isAdminOrSuperuser = user?.role === 'administrator' || user?.role === 'superuser'
   const [loading, setLoading] = useState(true)
   const [musicians, setMusicians] = useState<DbMusician[]>([])
   const [transactions, setTransactions] = useState<TransactionArchiveWithMusician[]>([])
@@ -81,7 +81,7 @@ function ArchivePage() {
     }
   }
 
-  if (!isAdmin) {
+  if (!isAdminOrSuperuser) {
     return (
       <div className="flex items-center justify-center py-12">
         <p className="text-muted-foreground">Kein Zugriff.</p>
