@@ -330,7 +330,7 @@ function Bookings() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label>Typ</Label>
-                  <select value={form.type} onChange={(e) => setForm((s) => ({ ...s, type: e.target.value, payoutMusicians: [] }))} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50 input-amber-focus">
+                  <select value={form.type} onChange={(e) => setForm((s) => ({ ...s, type: e.target.value, payoutMusicians: [] }))} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50">
                     <option value="expense">Ausgabe</option>
                     <option value="income">Einnahme</option>
                     <option value="payout">Auszahlung</option>
@@ -358,7 +358,7 @@ function Bookings() {
               {form.type !== 'payout' && (
                 <div className="grid gap-2">
                   <Label>Verteilergruppe</Label>
-                  <select value={form.groupId} onChange={(e) => setForm((s) => ({ ...s, groupId: e.target.value }))} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50 input-amber-focus">
+                  <select value={form.groupId} onChange={(e) => setForm((s) => ({ ...s, groupId: e.target.value }))} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50">
                     <option value="">-- Keine Gruppe --</option>
                     {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
                   </select>

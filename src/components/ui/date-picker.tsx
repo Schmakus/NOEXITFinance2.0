@@ -92,9 +92,8 @@ function DatePicker({ value, onChange, className, disabled }: DatePickerProps) {
             </Button>
           </PopoverTrigger>
           <PopoverContent
-            className="w-auto p-0 border border-border shadow-sm rounded-lg"
+            className="w-auto p-0 border border-border shadow-sm rounded-lg bg-amber-600 text-[#23272f]"
             align="start"
-            style={{ backgroundColor: 'var(--color-amber-600)', color: '#23272f' }}
           >
             <DayPicker
               mode="single"

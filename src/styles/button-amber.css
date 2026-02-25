@@ -1,9 +1,0 @@
-.btn-amber {
-  background: var(--color-amber-600) !important;
-  color: #23272f !important;
-  border-color: var(--color-amber-600) !important;
-}
-.btn-amber:hover, .btn-amber:focus-visible {
-  background: var(--color-amber-600, #d97706) !important;
-  filter: brightness(0.95);
-}

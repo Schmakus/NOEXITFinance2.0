@@ -1,5 +1,0 @@
-.input-amber-focus:focus,
-.input-amber-focus:focus-visible {
-  border-color: var(--color-amber-600) !important;
-  box-shadow: 0 0 0 2px var(--color-amber-600, #d97706)33;
-}

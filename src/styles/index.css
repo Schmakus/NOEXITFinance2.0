@@ -160,3 +160,39 @@ nav a, nav button {
   user-select: none;
 }
 
+/* --- Amber Custom Styles (aus button-amber.css, input-amber.css, switch-amber.css) --- */
+
+.btn-amber {
+  background: var(--color-amber-600, #d97706) !important;
+  color: #23272f !important;
+  border-color: var(--color-amber-600, #d97706) !important;
+}
+.btn-amber:hover, .btn-amber:focus-visible {
+  background: var(--color-amber-600, #d97706) !important;
+  filter: brightness(0.95);
+}
+
+.input-amber-focus:focus,
+.input-amber-focus:focus-visible {
+  border-color: var(--color-amber-600, #d97706) !important;
+  box-shadow: 0 0 0 2px var(--color-amber-600, #d97706)33;
+}
+
+.switch-amber[data-state="checked"] {
+  background: var(--color-amber-600, #d97706) !important;
+  border-color: var(--color-amber-600, #d97706) !important;
+}
+.switch-amber[data-state="unchecked"] {
+  background: #23272f !important;
+  border-color: #666 !important;
+}
+.switch-amber .switch-thumb {
+  background: #fff !important;
+  border: 1.5px solid #bbb !important;
+  box-shadow: 0 1px 4px 0 rgba(0,0,0,0.10);
+}
+.switch-amber[data-state="checked"] .switch-thumb {
+  background: #fff !important;
+  border: 1.5px solid var(--color-amber-600, #d97706) !important;
+}
+
