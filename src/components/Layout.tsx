@@ -117,7 +117,7 @@ function Layout() {
               <img
                 src={logo}
                 alt="Logo"
-                className="w-10 h-10 rounded-lg object-contain brightness-0 invert"
+                className="w-10 h-10 rounded-lg object-contain"
               />
             ) : (
               <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg flex items-center justify-center text-white font-bold shrink-0">

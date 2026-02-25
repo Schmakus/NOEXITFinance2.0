@@ -51,6 +51,17 @@ import { exportStatementPdf } from './../lib/pdf-export'
 import type { PdfExportEntry } from './../lib/pdf-export'
 import { useSettings } from '@/contexts/SettingsContext'
 import { invertImageDataUrl } from '@/lib/invert-image'
+// Hilfsfunktion: Bild-URL in Data-URL umwandeln
+async function fetchImageAsDataUrl(url: string): Promise<string> {
+  const response = await fetch(url)
+  const blob = await response.blob()
+  return await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onloadend = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(blob)
+  })
+}
 
 const isPayout = (t: TransactionWithMusician) =>
   t.booking_type === 'payout' ||
@@ -253,7 +264,14 @@ function Statement() {
       // Logo aus SettingsContext verwenden und invertieren
       let logoDataUrl: string | undefined = undefined
       if (logo) {
-        const dataUrl = logo.startsWith('data:image') ? logo : `data:image/png;base64,${logo}`
+        let dataUrl: string
+        if (logo.startsWith('data:image')) {
+          dataUrl = logo
+        } else if (logo.startsWith('http')) {
+          dataUrl = await fetchImageAsDataUrl(logo)
+        } else {
+          dataUrl = `data:image/png;base64,${logo}`
+        }
         logoDataUrl = await invertImageDataUrl(dataUrl)
       }
 

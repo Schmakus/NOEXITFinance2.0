@@ -166,6 +166,45 @@ create table if not exists payout_requests (
   updated_at timestamptz default now()
 );
 
+-- 12. STORAGE BUCKET für Logos (und andere öffentliche Dateien)
+-- Erstelle den Bucket "img" (öffentlich, max. 2MB, nur Bilder erlaubt)
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'img',           -- id
+  'img',           -- name
+  true,            -- public
+  2097152,         -- file_size_limit (2 MB in Bytes)
+  '{image/*}'      -- allowed_mime_types (nur Bilder)
+)
+on conflict (id) do nothing;
+
+-- 13. STORAGE BUCKET img: RLS Policies
+-- Erlaube authentifizierten Usern das Hochladen in den img-Bucket (WITH CHECK!)
+create policy "Authenticated users can upload images"
+on storage.objects
+for insert
+to authenticated
+with check (
+  bucket_id = 'img'
+);
+
+-- Erlaube authentifizierten Usern das Löschen eigener Dateien (optional, falls benötigt)
+create policy "Authenticated users can delete images"
+on storage.objects
+for delete
+to authenticated
+using (
+  bucket_id = 'img'
+);
+
+-- Erlaube allen das Lesen (wenn public)
+create policy "Public can select images"
+on storage.objects
+for select
+using (
+  bucket_id = 'img'
+);
+
 -- ============================================
 -- ROW LEVEL SECURITY (RLS)
 -- ============================================
