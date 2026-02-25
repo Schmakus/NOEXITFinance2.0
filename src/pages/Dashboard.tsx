@@ -261,7 +261,8 @@ function Dashboard() {
           {musiciansWithBalance.map((musician) => (
             <Card
               key={musician.id}
-              className="cursor-pointer hover:shadow-lg transition-all hover:border-amber-400/50 dark:hover:border-amber-500/50"
+              className="cursor-pointer hover:shadow-lg transition-all hover:border-amber-400/50 dark:hover:border-amber-500/50 bg-muted/40"
+              style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}
               onClick={() => navigate(`/statement/${musician.id}`)}
             >
               <CardContent className="pt-6">
