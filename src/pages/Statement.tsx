@@ -1,9 +1,11 @@
+
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { DatePicker } from '@/components/ui/date-picker'
 import { Input } from '@/components/ui/input'
+import { MultiSelect } from '@/components/ui/multiselect'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import {
@@ -75,6 +77,14 @@ const isGage = (t: TransactionWithMusician) =>
 const toDateInput = (date: Date) => date.toISOString().slice(0, 10)
 
 function Statement() {
+
+  // ...existing code...
+
+
+
+
+  // --- Filter- und Tag-Logik: nach allen States und filteredTransactions ---
+  // Diese Blöcke müssen nach allen useState, useMemo, useEffect, filteredTransactions, transactions, payoutRequests stehen!
   const { musicianId } = useParams()
   const navigate = useNavigate()
   const { user, isUser, isSuperuser, logout, updateEmail, updatePassword } = useAuth()
@@ -214,6 +224,65 @@ function Statement() {
       .sort((a, b) => new Date(b.date ?? '').getTime() - new Date(a.date ?? '').getTime())
   }, [transactions, fromDate, toDate, payoutStatusMap])
 
+  // --- Filter- und Tag-Logik: nach allen States und filteredTransactions ---
+  const [searchText, setSearchText] = useState('')
+  const [searchTags, setSearchTags] = useState<string[]>([])
+
+  const allTags: string[] = useMemo(() => {
+    const tags = new Set<string>()
+    transactions.forEach(t => {
+      if (t.description) t.description.split(/[,; ]+/).forEach((word: string) => { if (word.length > 2) tags.add(word) })
+      if (t.concert_name) t.concert_name.split(/[,; ]+/).forEach((word: string) => { if (word.length > 2) tags.add(word) })
+    })
+    payoutRequests.forEach(r => {
+      if ('note' in r && r.note) r.note.split(/[,; ]+/).forEach((word: string) => { if (word.length > 2) tags.add(word) })
+    })
+    return Array.from(tags).sort()
+  }, [transactions, payoutRequests])
+
+  const tagOptions = allTags.map(t => ({ value: t, label: t }))
+
+  const filteredStatementEntries = useMemo(() => {
+    type FilteredStatementEntry =
+      | { kind: 'transaction'; data: TransactionWithMusician }
+      | { kind: 'payout-request'; data: DbPayoutRequest }
+    const txEntries: FilteredStatementEntry[] = filteredTransactions.map((t) => ({ kind: 'transaction', data: t }))
+    const requestEntries: FilteredStatementEntry[] = payoutRequests
+      .filter((r) => r.status !== 'deleted')
+      .map((r) => ({ kind: 'payout-request', data: r }))
+    const all: FilteredStatementEntry[] = [...txEntries, ...requestEntries]
+    all.sort((a, b) => {
+      const dateA = a.kind === 'transaction' ? (a.data.date ?? '') : (a.data.created_at ?? '')
+      const dateB = b.kind === 'transaction' ? (b.data.date ?? '') : (b.data.created_at ?? '')
+      return new Date(dateB).getTime() - new Date(dateA).getTime()
+    })
+    return all.filter(entry => {
+      const text = searchText.trim().toLowerCase()
+      let matchesText = true
+      if (text) {
+        if (entry.kind === 'transaction') {
+          const t = entry.data
+          matchesText = [t.description, t.amount?.toString(), t.date, t.concert_name]
+            .filter(Boolean)
+            .some(val => val?.toLowerCase().includes(text))
+        } else {
+          const r = entry.data
+          matchesText = [r.note, r.amount?.toString(), r.created_at]
+            .filter(Boolean)
+            .some(val => val?.toLowerCase().includes(text))
+        }
+      }
+      let matchesTags = true
+      if (searchTags.length > 0) {
+        const entryText = entry.kind === 'transaction'
+          ? [entry.data.description, entry.data.concert_name].filter(Boolean).join(' ').toLowerCase()
+          : (entry.data.note ?? '').toLowerCase()
+        matchesTags = searchTags.some(tag => entryText.includes(tag.toLowerCase()))
+      }
+      return matchesText && matchesTags
+    })
+  }, [filteredTransactions, payoutRequests, searchText, searchTags])
+
   // Merge pending payout requests into the statement as entries
   type StatementEntry =
     | { kind: 'transaction'; data: TransactionWithMusician }
@@ -236,6 +305,9 @@ function Statement() {
     })
     return all
   }, [filteredTransactions, payoutRequests, canRequestPayout])
+
+  // --- Filter- und Tag-Logik: nach allen States und filteredTransactions ---
+  // Diese Blöcke müssen nach allen useState, useMemo, useEffect, filteredTransactions, transactions, payoutRequests stehen!
 
   // Gesamtsummen immer aus allen Transaktionen berechnen
   const totals = useMemo(() => {
@@ -561,6 +633,33 @@ function Statement() {
         </div>
       </div>
 
+      {/* Suchmasken */}
+      <div className="flex flex-col md:flex-row gap-3 md:items-end p-4">
+        <div className="flex-1">
+          <Label htmlFor="search-text">Suche</Label>
+          <Input
+            id="search-text"
+            placeholder="Freitextsuche (Name, Beschreibung, Betrag, Datum...)"
+            value={searchText}
+            onChange={e => setSearchText(e.target.value)}
+            className="mt-1"
+          />
+        </div>
+        <div className="flex-1">
+          <Label htmlFor="search-tags">Stichworte</Label>
+          <MultiSelect
+            options={tagOptions}
+            value={searchTags}
+            onChange={setSearchTags}
+            placeholder="Stichworte wählen..."
+            className="mt-1"
+          />
+        </div>
+        {(searchText || searchTags.length > 0) && (
+          <Button variant="outline" className="h-10 mt-6" onClick={() => { setSearchText(''); setSearchTags([]) }}>Zurücksetzen</Button>
+        )}
+      </div>
+
       <div ref={contentRef} className="space-y-6 p-4">
         {/* PDF Header — Musiker & Zeitraum */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -606,10 +705,10 @@ function Statement() {
 
         <div className="space-y-3">
           <h2 className="text-xl font-semibold">Kontoauszug</h2>
-          {statementEntries.length === 0 ? (
-            <p className="text-muted-foreground">Keine Transaktionen im Zeitraum.</p>
+          {filteredStatementEntries.length === 0 ? (
+            <p className="text-muted-foreground">Keine Transaktionen gefunden.</p>
           ) : (
-            statementEntries.map((entry) => {
+            filteredStatementEntries.map((entry) => {
               if (entry.kind === 'payout-request') {
                 const r = entry.data
                 let batchLabel = 'Genehmigung ausstehend…'

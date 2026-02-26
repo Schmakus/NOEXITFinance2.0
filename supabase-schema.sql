@@ -1,17 +1,3 @@
--- 11. LOGGING (Audit Log)
-create table if not exists logs (
-  id uuid primary key default gen_random_uuid(),
-  type text not null check (type in ('booking', 'concert', 'payout', 'login', 'musician')),
-  action text not null check (action in ('create', 'update', 'delete', 'request', 'login', 'archive', 'restore')),
-  label text not null, -- z.B. "Buchung", "Konzert", "Auszahlung", "Login", "Musiker"
-  description text not null, -- z.B. "Einnahme von 1000€ auf 1100€ geändert"
-  user_id uuid references musicians(id),
-  user_name text not null,
-  created_at timestamptz default now()
-  payout_request_id uuid references payout_requests(id),
-);
-
-create index if not exists logs_created_at_idx on logs(created_at desc);
 -- ============================================
 -- NOEXIT Finance - Supabase Datenbank-Schema
 -- ============================================
@@ -165,6 +151,21 @@ create table if not exists payout_requests (
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
+
+-- 11. LOGGING (Audit Log)
+create table if not exists logs (
+  id uuid primary key default gen_random_uuid(),
+  type text not null check (type in ('booking', 'concert', 'payout', 'login', 'musician')),
+  action text not null check (action in ('create', 'update', 'delete', 'request', 'login', 'archive', 'restore')),
+  label text not null, -- z.B. "Buchung", "Konzert", "Auszahlung", "Login", "Musiker"
+  description text not null, -- z.B. "Einnahme von 1000€ auf 1100€ geändert"
+  user_id uuid references musicians(id),
+  user_name text not null,
+  created_at timestamptz default now()
+  payout_request_id uuid references payout_requests(id),
+);
+
+create index if not exists logs_created_at_idx on logs(created_at desc);
 
 -- 12. STORAGE BUCKET für Logos (und andere öffentliche Dateien)
 -- Erstelle den Bucket "img" (öffentlich, max. 2MB, nur Bilder erlaubt)

@@ -59,14 +59,26 @@ Bei Datenbank-Operationen oder Migrationen gelten diese Regeln:
 
 ---
 
-## 5. Coding-Prinzipien (Definition of Done)
-* **Type Safety:** Definiere Interfaces für alle Props und API-Antworten.
-* **Fehlerbehandlung:** Asynchrone Logik immer in `try/catch` oder via React Query `onError`.
-* **Kommentare:** Nutze JSDoc für komplexe Logik.
-* **Code-Stil:** * Keine Class Components.
-    * Nutze `npm run lint:fix` kompatible Formatierung.
-* **Conventional Commits:** * Format: `type(scope): beschreibung` (z.B. `feat(auth): login hinzugefügt`).
-    * Typen: `feat`, `fix`, `docs`, `chore`, `refactor`, `perf`, `test`.
+
+## 5. Coding-Prinzipien & Security (Definition of Done)
+* **Type Safety:** Definiere für alle Props und API-Antworten explizite Interfaces. Verwende niemals `any` oder `unknown`.
+* **Fehlerbehandlung:** Jede asynchrone Logik muss in `try/catch` oder via React Query `onError` behandelt werden. Beispiel:
+    ```ts
+    try {
+        await apiCall()
+    } catch (err) {
+        // Fehlerbehandlung
+    }
+    ```
+* **Input-Validierung:** Prüfe alle Benutzereingaben (z.B. Forms) auf Plausibilität und sichere Werte. Keine direkten DOM-Manipulationen.
+* **Security:**
+    * Verhindere XSS/CSRF/SQL-Injection durch konsequente Nutzung von React, sichere API-Calls und keine direkte DOM-Manipulation.
+    * Sensible Aktionen (z.B. Datenexport, User-Management) immer mit expliziter Berechtigungsprüfung (`is_admin_or_superuser()` oder Policy).
+* **API-Policy:** Alle Datenflüsse (auch neue Features) laufen ausschließlich über den Client in `src/lib/api-client.ts` und TanStack Query. Keine direkten Supabase- oder DB-Calls in Komponenten.
+* **Kommentare & Dokumentation:** Nutze JSDoc für komplexe Logik. Dokumentiere alle Änderungen und Features in README und Code-Kommentaren.
+* **Testing:** Schreibe Unit-Tests für kritische Logik (z.B. in `src/lib/utils.ts`).
+* **Linting & Code-Stil:** Keine Class Components. Nutze `npm run lint:fix` für Formatierung. TypeScript-Strictness muss auch im Linter durchgesetzt werden (keine Ausnahmen für `any`, `no-unused-vars` etc.).
+* **Conventional Commits:** Format: `type(scope): beschreibung` (z.B. `feat(auth): login hinzugefügt`). Typen: `feat`, `fix`, `docs`, `chore`, `refactor`, `perf`, `test`.
 
 ---
 
@@ -75,3 +87,11 @@ Beziehe dich bei Fragen zur Logik primär auf diese Dateien:
 - `#src/lib/api-client.ts` (API-Struktur)
 - `#src/lib/utils.ts` (Helper)
 - `#src/contexts/AuthContext.tsx` (Security/Session)
+
+
+## 7. Generelle Anmerkungen & Review-Checkliste
+* **Keine Annahmen:** Wenn Informationen fehlen, frage explizit nach.
+* **Iterativ:** Generiere Code in kleinen Schritten, um Feedback zu ermöglichen.
+* **Dokumentation & Testing:** README und Code-Kommentare immer aktuell halten. Schreibe Unit-Tests für kritische Logik.
+* **SQL-Änderungen:** Bei jeder Änderung am Datenbankschema muss `supabase-schema.sql` aktualisiert und im Pull Request explizit referenziert werden.
+* **Problemsolving:** Immer zuerst Konsolen-Logs und Fehlermeldungen prüfen, Ursache identifizieren, dann Code ändern. Dokumentation und Kommentare nachziehen. Bestehende Funktionen dürfen nicht beeinträchtigt werden.
