@@ -534,17 +534,6 @@ function Bookings() {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="font-semibold truncate text-sm sm:text-base">{b.description || '-'}</p>
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full border leading-none ${
-                            isDeletedPayout
-                              ? 'border-red-400/60 text-red-400 bg-red-900/40'
-                              : isPayout
-                                ? 'border-amber-400/60 text-amber-300'
-                                : isIncome
-                                  ? 'border-green-400/60 text-green-300'
-                                  : 'border-red-400/60 text-red-300'
-                          }`}>
-                            {typeLabel}
-                          </span>
                           {Array.isArray(b.keywords) && b.keywords.length > 0 && (
                             <span className="flex flex-wrap gap-1 ml-2">
                               {b.keywords.map((kw: string) => (

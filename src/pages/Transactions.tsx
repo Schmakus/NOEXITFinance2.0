@@ -70,7 +70,6 @@ function Transactions() {
         <Card>
           <CardHeader>
             <CardTitle>Transaktionsliste</CardTitle>
-            <CardDescription>Alle Transaktionen</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="text-center py-12 text-muted-foreground">
@@ -82,8 +81,7 @@ function Transactions() {
         <>
           <Card>
             <CardHeader>
-              <CardTitle>Alle Transaktionen</CardTitle>
-              <CardDescription>Insgesamt: {transactions.length}</CardDescription>
+              <CardDescription>Insgesamt: {transactions.length} Transaktionen</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-2 max-h-[600px] overflow-y-auto">
@@ -110,9 +108,23 @@ function Transactions() {
                         return <div className={`p-2 rounded-full ${iconWrapClass}`}>{icon}</div>
                       })()}
                       <div className="flex-1">
-                        <p className="font-medium text-sm">
-                          {transaction.musician_name} - {isPayout(transaction) ? 'Auszahlung' : transaction.description}
-                        </p>
+                        <div className="flex flex-row flex-wrap items-center gap-2 min-w-0">
+                          <span className="font-medium text-sm truncate">
+                            {transaction.musician_name} - {isPayout(transaction) ? 'Auszahlung' : transaction.description}
+                          </span>
+                          {(() => {
+                            const keywords = Array.isArray(transaction.keywords) && transaction.keywords.length > 0
+                              ? transaction.keywords
+                              : (Array.isArray((transaction.booking_keywords)) ? transaction.booking_keywords : []);
+                            return keywords.length > 0 ? (
+                              <span className="flex flex-wrap gap-1">
+                                {keywords.map((kw: string) => (
+                                  <span key={kw} className="keyword text-xs px-2 py-0.5 rounded-full border border-blue-400/60 text-blue-300 bg-blue-500/10">{kw}</span>
+                                ))}
+                              </span>
+                            ) : null
+                          })()}
+                        </div>
                         <p className="text-xs text-muted-foreground">
                           {transaction.concert_name ?? '-'} • {transaction.date ? formatDate(new Date(transaction.date)) : '-'}
                         </p>
@@ -152,7 +164,21 @@ function Transactions() {
                           .map((transaction) => (
                             <div key={transaction.id} className="flex items-center justify-between p-2 rounded text-sm">
                               <div>
-                                <p className="font-medium">{transaction.description}</p>
+                                <div className="flex flex-row flex-wrap items-center gap-2 min-w-0">
+                                  <span className="font-medium truncate">{transaction.description}</span>
+                                  {(() => {
+                                    const keywords = Array.isArray(transaction.keywords) && transaction.keywords.length > 0
+                                      ? transaction.keywords
+                                      : (Array.isArray((transaction.booking_keywords)) ? transaction.booking_keywords : []);
+                                    return keywords.length > 0 ? (
+                                      <span className="flex flex-wrap gap-1">
+                                        {keywords.map((kw: string) => (
+                                          <span key={kw} className="keyword text-xs px-2 py-0.5 rounded-full border border-blue-400/60 text-blue-300 bg-blue-500/10">{kw}</span>
+                                        ))}
+                                      </span>
+                                    ) : null
+                                  })()}
+                                </div>
                                 <p className="text-xs text-muted-foreground">
                                   {transaction.date ? formatDate(new Date(transaction.date)) : '-'}
                                 </p>
