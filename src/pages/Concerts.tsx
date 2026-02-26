@@ -176,7 +176,8 @@ function Concerts() {
           amount: Number((restBetrag * member.percent / 100).toFixed(2)),
           date: formData.date,
           type: 'earn' as const,
-           description: `Gage: ${formData.name}`,
+          description: formData.name, // Nur Veranstaltungsname
+          keywords: ['Gage'],
         }));
         await replaceTransactionsByConcert(concertId, transactions);
       } else {

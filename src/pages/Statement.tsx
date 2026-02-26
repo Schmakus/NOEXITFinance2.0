@@ -816,7 +816,7 @@ function Statement() {
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <p className="font-semibold">{t.description || '-'}</p>
+                          <p className="font-semibold">{t.description || t.concert_name || '-'}</p>
                           {/* Bisherige Status-Badges (z.B. Gage, Auszahlung) */}
                           {payout ? (
                             <span className="text-xs px-2 py-0.5 rounded-full border border-amber-400/60 text-amber-300">

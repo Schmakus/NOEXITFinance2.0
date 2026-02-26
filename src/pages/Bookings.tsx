@@ -164,7 +164,11 @@ function Bookings() {
       date: form.date,
       group_id: form.type !== 'payout' ? (form.groupId || null) : null,
       payout_musician_ids: form.type === 'payout' ? form.payoutMusicians : [],
-      keywords: form.keywords.length ? form.keywords : [],
+      keywords: (() => {
+        let kws = form.keywords.length ? [...form.keywords] : [];
+        if (form.type === 'payout' && !kws.includes('Auszahlung')) kws.push('Auszahlung');
+        return kws;
+      })(),
       notes: form.notes,
     }
 
