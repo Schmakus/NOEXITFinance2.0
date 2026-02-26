@@ -317,6 +317,7 @@ function Dashboard() {
                     min="0.01"
                     value={editAmount}
                     onChange={(e) => setEditAmount(e.target.value)}
+                    variant="amber"
                   />
                 </div>
                 <div className="grid gap-2">
@@ -326,6 +327,7 @@ function Dashboard() {
                     value={editNote}
                     onChange={(e) => setEditNote(e.target.value)}
                     rows={2}
+                    variant="amber"
                   />
                 </div>
               </>
@@ -338,6 +340,7 @@ function Dashboard() {
                   value={adminNote}
                   onChange={(e) => setAdminNote(e.target.value)}
                   rows={2}
+                  variant="amber"
                 />
               </div>
             )}

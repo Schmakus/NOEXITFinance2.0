@@ -340,6 +340,7 @@ function Settings() {
                 value={bandName}
                 onChange={(e) => setBandName(e.target.value)}
                 placeholder="Bandname"
+                variant="amber"
               />
             </div>
             <div className="flex items-end">

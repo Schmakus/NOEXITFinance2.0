@@ -182,6 +182,7 @@ function Tags() {
                 onChange={(e) => { setNewTagName(e.target.value); setError(null) }}
                 onKeyDown={(e) => e.key === 'Enter' && handleAddTag()}
                 placeholder="Keyword eingeben"
+                variant="amber"
               />
               {error && <p className="text-sm text-destructive">{error}</p>}
             </div>
@@ -208,6 +209,7 @@ function Tags() {
                 value={editName}
                 onChange={(e) => { setEditName(e.target.value); setError(null) }}
                 onKeyDown={(e) => e.key === 'Enter' && handleEditTag()}
+                variant="amber"
                 placeholder="Keyword eingeben"
               />
               {error && <p className="text-sm text-destructive">{error}</p>}

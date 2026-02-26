@@ -334,7 +334,7 @@ function Bookings() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label>Typ</Label>
-                  <select value={form.type} onChange={(e) => setForm((s) => ({ ...s, type: e.target.value, payoutMusicians: [] }))} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50">
+                  <select value={form.type} onChange={(e) => setForm((s) => ({ ...s, type: e.target.value, payoutMusicians: [] }))} className="flex h-10 w-full rounded-md border border-input bg-[#18181b] px-3 py-2 text-base text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:border-amber-500 disabled:cursor-not-allowed disabled:opacity-50">
                     <option value="expense">Ausgabe</option>
                     <option value="income">Einnahme</option>
                     <option value="payout">Auszahlung</option>
@@ -342,13 +342,13 @@ function Bookings() {
                 </div>
                 <div className="grid gap-2">
                   <Label>Betrag (€)</Label>
-                  <Input type="number" step="0.01" value={form.amount} onChange={(e) => setForm((s) => ({ ...s, amount: e.target.value }))} />
+                  <Input type="number" step="0.01" value={form.amount} onChange={(e) => setForm((s) => ({ ...s, amount: e.target.value }))} variant="amber" />
                 </div>
               </div>
 
               <div className="grid gap-2">
                 <Label>Beschreibung</Label>
-                <Input list="desc-suggestions" value={form.description} onChange={(e) => setForm((s) => ({ ...s, description: e.target.value }))} />
+                  <Input list="desc-suggestions" value={form.description} onChange={(e) => setForm((s) => ({ ...s, description: e.target.value }))} variant="amber" />
                 <datalist id="desc-suggestions">
                   {descriptionSuggestions.map((d) => <option key={d} value={d} />)}
                 </datalist>
@@ -356,13 +356,13 @@ function Bookings() {
 
               <div className="grid gap-2">
                 <Label>Datum</Label>
-                <DatePicker value={form.date} onChange={(v) => setForm((s) => ({ ...s, date: v }))} />
+                  <DatePicker value={form.date} onChange={(v) => setForm((s) => ({ ...s, date: v }))} variant="amber" />
               </div>
 
               {form.type !== 'payout' && (
                 <div className="grid gap-2">
                   <Label>Verteilergruppe</Label>
-                  <select value={form.groupId} onChange={(e) => setForm((s) => ({ ...s, groupId: e.target.value }))} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50">
+                  <select value={form.groupId} onChange={(e) => setForm((s) => ({ ...s, groupId: e.target.value }))} className="flex h-10 w-full rounded-md border border-input bg-[#18181b] px-3 py-2 text-base text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:border-amber-500 disabled:cursor-not-allowed disabled:opacity-50">
                     <option value="">-- Keine Gruppe --</option>
                     {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
                   </select>
@@ -397,7 +397,7 @@ function Bookings() {
                       }
                       return (
                         <div key={m.id} className="flex items-center gap-2 p-2 rounded border border-input">
-                          <Switch checked={selected} onCheckedChange={handleChange} />
+                          <Switch checked={selected} onCheckedChange={handleChange} variant="amber" />
                           <span className="text-sm">{m.name}</span>
                         </div>
                       )
@@ -416,11 +416,12 @@ function Bookings() {
                         <button
                           key={k}
                           onClick={() => setForm((s) => ({ ...s, keywords: isSelected ? s.keywords.filter((x) => x !== k) : [...s.keywords, k] }))}
-                          className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium border transition-colors ${
                             isSelected
-                              ? 'bg-primary text-primary-foreground'
-                              : 'bg-muted text-foreground hover:bg-muted/80'
+                              ? 'border-blue-400/60 text-blue-300 bg-blue-500/10'
+                              : 'border-border text-foreground bg-muted hover:bg-muted/80'
                           }`}
+                          style={{ minWidth: '2.5rem' }}
                         >
                           {k}
                         </button>
@@ -428,7 +429,7 @@ function Bookings() {
                     })}
                   </div>
                   <div className="flex gap-2">
-                    <Input placeholder="Neues Stichwort" value={form.keyword} onChange={(e) => setForm((s) => ({ ...s, keyword: e.target.value }))} />
+                    <Input placeholder="Neues Stichwort" value={form.keyword} onChange={(e) => setForm((s) => ({ ...s, keyword: e.target.value }))} variant="amber" />
                     <Button variant="outline" onClick={() => addKeyword(form.keyword)}>Hinzufügen</Button>
                   </div>
                   {form.keywords.length > 0 && (
@@ -436,12 +437,12 @@ function Bookings() {
                       <div className="text-xs text-muted-foreground mb-2">Ausgewählte Stichworte:</div>
                       <div className="flex gap-2 flex-wrap">
                         {form.keywords.map((k) => (
-                          <div key={k} className="px-3 py-1 bg-primary text-primary-foreground rounded-full text-sm font-medium flex items-center gap-2">
-                            <span>{k}</span>
-                            <button onClick={() => setForm((s) => ({ ...s, keywords: s.keywords.filter((x) => x !== k) }))} className="hover:opacity-80">
+                          <span key={k} className="keyword text-xs px-2 py-0.5 rounded-full border border-blue-400/60 text-blue-300 bg-blue-500/10 flex items-center gap-1">
+                            {k}
+                            <button onClick={() => setForm((s) => ({ ...s, keywords: s.keywords.filter((x) => x !== k) }))} className="hover:opacity-80 ml-1">
                               <X className="w-3 h-3" />
                             </button>
-                          </div>
+                          </span>
                         ))}
                       </div>
                     </div>
@@ -451,7 +452,7 @@ function Bookings() {
 
               <div className="grid gap-2">
                 <Label>Notizen</Label>
-                <Textarea value={form.notes} onChange={(e) => setForm((s) => ({ ...s, notes: e.target.value }))} />
+                <Textarea value={form.notes} onChange={(e) => setForm((s) => ({ ...s, notes: e.target.value }))} variant="amber" />
               </div>
             </div>
 

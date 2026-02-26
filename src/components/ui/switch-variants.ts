@@ -6,7 +6,14 @@ export const switchVariants = cva(
     variants: {
       variant: {
         default: "border-input bg-background",
-        amber: "border-amber-600 bg-amber-600 data-[state=unchecked]:bg-[#23272f] data-[state=unchecked]:border-[#666] data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600",
+        amber: [
+          // Grundlayout
+          "border-amber-600",
+          // Track: Aus = dunkel, Ein = amber
+          "bg-[#23272f] data-[state=checked]:bg-amber-600",
+          // Border: Aus = grau, Ein = amber
+          "border-[#666] data-[state=checked]:border-amber-600"
+        ].join(" "),
       },
     },
     defaultVariants: {

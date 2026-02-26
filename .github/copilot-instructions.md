@@ -59,6 +59,7 @@ Bei Datenbank-Operationen oder Migrationen gelten diese Regeln:
 * **Design-Konsistenz:** Halte dich an die bestehenden Farb- und Abstandsdefinitionen. Keine neuen Farben oder Spacing-Werte ohne Rücksprache. Verwende bei input-feldern, switches, buttons etc. die vordefinierten shadcn/ui Komponenten und verwende immer die selben Designs für z.B. highlighted buttons, disabled states etc. (z.B. `variant="outline"`, `disabled` etc.).
 * **Icons:** Verwende Lucide React Icons, keine externen SVGs oder Icon-Fonts.
 * **Barrierefreiheit:** Alle interaktiven Elemente müssen ARIA-Attribute und Tastatur-Navigation unterstützen. Keine reinen visuellen Elemente ohne semantische Bedeutung.
+* **Keine Inline-Styles:** Alle Stile müssen über Tailwind-Klassen oder shadcn/ui Props definiert werden. Keine `style={{}}`-Objekte. Styles müssen konsistent und wartbar sein, keine Einzelfälle oder "Hacks". Styles werden in der index.css definiert, wenn sie mehrfach verwendet werden, ansonsten über Tailwind-Klassen direkt in den Komponenten.
 
 
 ---

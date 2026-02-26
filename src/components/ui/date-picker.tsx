@@ -130,9 +130,10 @@ function DatePicker({ value, onChange, className, disabled }: DatePickerProps) {
           value={inputValue}
           onChange={handleInputChange}
           placeholder="TT.MM.JJJJ"
-          className="w-32 border border-border shadow-sm rounded-lg"
+          className="w-32"
           disabled={disabled}
           maxLength={10}
+          variant="amber"
         />
       </div>
       {inputError && <span className="text-xs text-red-500">{inputError}</span>}

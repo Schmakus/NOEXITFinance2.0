@@ -260,7 +260,7 @@ function Groups() {
             <div className="grid gap-4 py-4">
               <div className="grid gap-2 px-1 sm:px-2">
                 <Label htmlFor="group-name">Gruppenname</Label>
-                <Input id="group-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="z. B. Hauptband" />
+                <Input id="group-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="z. B. Hauptband" variant="amber" />
               </div>
 
               <div>
@@ -271,7 +271,7 @@ function Groups() {
                 <div className="space-y-2">
                   {musicians.map((m) => (
                     <div key={m.id} className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
-                      <Switch checked={m.id in selected} onCheckedChange={(checked: boolean) => toggleSelectChecked(m.id, checked)} />
+                      <Switch checked={m.id in selected} onCheckedChange={(checked: boolean) => toggleSelectChecked(m.id, checked)} variant="amber" />
                       <div className="flex-1 min-w-[80px]">
                         <div className="font-medium text-sm sm:text-base">{m.name}</div>
                       </div>
@@ -284,6 +284,7 @@ function Groups() {
                           disabled={!(m.id in selected)}
                           value={(m.id in selected ? (selected[m.id] ?? '') : '') as any}
                           onChange={(e) => setPercent(m.id, e.target.value)}
+                          variant="amber"
                         />
                       </div>
                       <div className="w-8 sm:w-12 text-sm text-muted-foreground">%</div>

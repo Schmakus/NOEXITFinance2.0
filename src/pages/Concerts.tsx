@@ -305,6 +305,7 @@ function Concerts() {
                     placeholder="z.B. Stadtfest Musterstadt"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    variant="amber"
                   />
                 </div>
                 <div className="grid gap-2">
@@ -314,6 +315,7 @@ function Concerts() {
                     placeholder="Ort/Location"
                     value={formData.location}
                     onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                    variant="amber"
                   />
                 </div>
               </div>
@@ -321,7 +323,7 @@ function Concerts() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="date">Datum</Label>
-                  <DatePicker value={formData.date} onChange={(v) => setFormData({ ...formData, date: v })} />
+                  <DatePicker value={formData.date} onChange={(v) => setFormData({ ...formData, date: v })} variant="amber" />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="nettoGage">Netto-Gage (€)</Label>
@@ -332,6 +334,7 @@ function Concerts() {
                     step="0.01"
                     value={formData.nettoGage}
                     onChange={(e) => setFormData({ ...formData, nettoGage: e.target.value })}
+                    variant="amber"
                   />
                 </div>
               </div>
@@ -380,6 +383,7 @@ function Concerts() {
                       value={expenseForm.description}
                       onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })}
                       list="expense-description-suggestions"
+                      variant="amber"
                     />
                     <datalist id="expense-description-suggestions">
                       {expenseDescriptionSuggestions.map((desc) => (
@@ -392,12 +396,14 @@ function Concerts() {
                       step="0.01"
                       value={expenseForm.amount}
                       onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
+                      variant="amber"
                     />
                     <Input
                       placeholder="Stichwort"
                       list="concert-keyword-suggestions"
                       value={expenseForm.keyword}
                       onChange={(e) => setExpenseForm({ ...expenseForm, keyword: e.target.value })}
+                      variant="amber"
                     />
                     <datalist id="concert-keyword-suggestions">
                       {tagNames.map((tag) => (
@@ -418,7 +424,7 @@ function Concerts() {
                   id="groupId"
                   value={formData.groupId}
                   onChange={(e) => setFormData({ ...formData, groupId: e.target.value })}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-10 w-full rounded-md border border-input bg-[#18181b] px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:border-amber-500 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <option value="">-- Keine Gruppe --</option>
                   {groups.map((group) => (
@@ -449,6 +455,7 @@ function Concerts() {
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   className="min-h-24"
+                  variant="amber"
                 />
               </div>
             </div>

@@ -411,6 +411,7 @@ function PayoutRequests() {
                     min="0.01"
                     value={editAmount}
                     onChange={(e) => setEditAmount(e.target.value)}
+                    variant="amber"
                   />
                 </div>
                 <div className="grid gap-2">
@@ -420,6 +421,7 @@ function PayoutRequests() {
                     value={editNote}
                     onChange={(e) => setEditNote(e.target.value)}
                     rows={2}
+                    variant="amber"
                   />
                 </div>
               </>
@@ -432,6 +434,7 @@ function PayoutRequests() {
                   value={adminNote}
                   onChange={(e) => setAdminNote(e.target.value)}
                   rows={2}
+                  variant="amber"
                 />
               </div>
             )}
