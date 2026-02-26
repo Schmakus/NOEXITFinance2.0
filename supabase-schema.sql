@@ -205,6 +205,9 @@ using (
   bucket_id = 'img'
 );
 
+-- RLS für storage.objects aktivieren
+alter table storage.objects enable row level security;
+
 -- ============================================
 -- ROW LEVEL SECURITY (RLS)
 -- ============================================
