@@ -47,8 +47,8 @@ import {
   Pencil,
   Trash2,
 } from 'lucide-react'
-import { exportStatementPdf } from './../lib/pdf-export'
-import type { PdfExportEntry } from './../lib/pdf-export'
+import { exportStatementPdf } from './../lib/pdf-exports-bank-statement'
+import type { PdfExportEntry } from './../lib/pdf-exports-bank-statement'
 import { useSettings } from '@/contexts/SettingsContext'
 import { invertImageDataUrl } from '@/lib/invert-image'
 // Hilfsfunktion: Bild-URL in Data-URL umwandeln
