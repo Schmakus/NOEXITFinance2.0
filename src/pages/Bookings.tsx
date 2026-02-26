@@ -348,7 +348,7 @@ function Bookings() {
 
               <div className="grid gap-2">
                 <Label>Beschreibung</Label>
-                  <Input list="desc-suggestions" value={form.description} onChange={(e) => setForm((s) => ({ ...s, description: e.target.value }))} variant="amber" />
+                  <Input list="desc-suggestions" value={form.description} onChange={(e) => setForm((s) => ({ ...s, description: e.target.value }))} />
                 <datalist id="desc-suggestions">
                   {descriptionSuggestions.map((d) => <option key={d} value={d} />)}
                 </datalist>
@@ -356,7 +356,7 @@ function Bookings() {
 
               <div className="grid gap-2">
                 <Label>Datum</Label>
-                  <DatePicker value={form.date} onChange={(v) => setForm((s) => ({ ...s, date: v }))} variant="amber" />
+                  <DatePicker value={form.date} onChange={(v) => setForm((s) => ({ ...s, date: v }))} />
               </div>
 
               {form.type !== 'payout' && (
@@ -511,13 +511,7 @@ function Bookings() {
                   ? <CircleDollarSign className="w-5 h-5" />
                   : <TrendingDown className="w-5 h-5" />
 
-            const typeLabel = isDeletedPayout
-              ? 'Auszahlung gelöscht'
-              : isPayout
-                ? 'Auszahlung'
-                : isIncome
-                  ? 'Einnahme'
-                  : 'Ausgabe'
+
 
             const hasDetails = (isPayout && payoutNames.length > 0)
               || (!isPayout && groupMembers.length > 0)

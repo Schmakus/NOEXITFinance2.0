@@ -18,6 +18,8 @@ interface TransactionRow {
   date: string | null
   type: 'earn' | 'expense'
   description: string | null
+  keywords?: string[]
+  booking_keywords?: string[]
 }
 
 function Transactions() {

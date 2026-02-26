@@ -596,12 +596,12 @@ function Statement() {
       <div className="flex flex-wrap items-end gap-4 px-4">
         <div className="grid gap-2">
           <span className="text-xs text-muted-foreground">Von</span>
-          <DatePicker value={fromDate} onChange={setFromDate} placeholder="Von" variant="amber" />
+          <DatePicker value={fromDate} onChange={setFromDate} placeholder="Von" />
         </div>
         <div className="grid gap-2">
           <span className="text-xs text-muted-foreground">Bis</span>
           <div className="flex items-center gap-2">
-            <DatePicker value={toDate} onChange={setToDate} placeholder="Bis" variant="amber" />
+            <DatePicker value={toDate} onChange={setToDate} placeholder="Bis" />
             <Button
               type="button"
               variant="outline"
@@ -636,7 +636,6 @@ function Statement() {
             placeholder="Freitextsuche (Name, Beschreibung, Betrag, Datum...)"
             value={searchText}
             onChange={e => setSearchText(e.target.value)}
-            variant="amber"
             className="mt-1"
           />
         </div>
@@ -647,7 +646,6 @@ function Statement() {
             value={searchTags}
             onChange={setSearchTags}
             placeholder="Stichworte wählen..."
-            variant="amber"
             className="mt-1"
           />
         </div>

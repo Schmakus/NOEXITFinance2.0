@@ -353,7 +353,7 @@ function Concerts() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="date">Datum</Label>
-                  <DatePicker value={formData.date} onChange={(v) => setFormData({ ...formData, date: v })} variant="amber" />
+                  <DatePicker value={formData.date} onChange={(v) => setFormData({ ...formData, date: v })} />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="nettoGage">Netto-Gage (€)</Label>
