@@ -42,7 +42,6 @@ function Musicians() {
     name: '',
     email: '',
     password: '',
-    balance: '',
     role: 'user' as 'administrator' | 'superuser' | 'user',
   })
 
@@ -64,7 +63,7 @@ function Musicians() {
 
   const handleAdd = () => {
     setEditingId(null)
-    setFormData({ name: '', email: '', password: '', balance: '', role: 'user' })
+    setFormData({ name: '', email: '', password: '', role: 'user' })
     setIsOpen(true)
   }
 
@@ -74,7 +73,6 @@ function Musicians() {
       name: musician.name,
       email: musician.email,
       password: '',
-      balance: musician.balance.toString(),
       role: musician.role,
     })
     setIsOpen(true)
@@ -83,10 +81,7 @@ function Musicians() {
   const handleDelete = async (id: string) => {
     const musician = musicians.find((m) => m.id === id)
     if (!musician) return
-    if (Math.abs(musician.balance) > 0.01) {
-      alert('Musiker kann nur archiviert werden, wenn der Kontostand 0,00€ ist.')
-      return
-    }
+    // Keine Balance-Prüfung mehr nötig
     if (!confirm('Musiker ins Archiv verschieben?')) return
     try {
       await archiveMusician(id)
@@ -161,7 +156,6 @@ function Musicians() {
         const updated = await updateMusician(editingId, {
           name: formData.name,
           email: formData.email,
-          balance: parseFloat(formData.balance || '0'),
           role: formData.role,
         });
         setMusicians((prev) => prev.map((m) => (m.id === editingId ? updated : m)));
@@ -172,7 +166,6 @@ function Musicians() {
           if (formData.name !== oldMusician.name) changes.push(`Name von "${oldMusician.name}" auf "${formData.name}"`);
           if (formData.email !== oldMusician.email) changes.push(`E-Mail von "${oldMusician.email}" auf "${formData.email}"`);
           if (formData.role !== oldMusician.role) changes.push(`Rolle von "${oldMusician.role}" auf "${formData.role}"`);
-          if (parseFloat(formData.balance || '0') !== oldMusician.balance) changes.push(`Kontostand von ${formatCurrency(oldMusician.balance)} auf ${formatCurrency(parseFloat(formData.balance || '0'))}`);
           logDesc = `Musiker: ${oldMusician.name}, ${changes.length ? changes.join(', ') : 'keine Änderung'}`;
         } else {
           logDesc = `Musiker bearbeitet`;
@@ -185,7 +178,6 @@ function Musicians() {
           const created = await createMusician({
             name: formData.name,
             email: formData.email,
-            balance: parseFloat(formData.balance || '0'),
             role: formData.role,
             user_id: authUserId,
           });
@@ -212,7 +204,7 @@ function Musicians() {
       }
 
       setIsOpen(false);
-      setFormData({ name: '', email: '', password: '', balance: '', role: 'user' });
+      setFormData({ name: '', email: '', password: '', role: 'user' });
     } catch (err: any) {
       console.error('Musiker speichern fehlgeschlagen:', err);
       alert(err?.message || 'Musiker konnte nicht gespeichert werden.');
@@ -326,18 +318,7 @@ function Musicians() {
                   </p>
                 </div>
               )}
-              <div className="grid gap-2">
-                <Label htmlFor="balance">Anfänglicher Kontostand (€)</Label>
-                <Input
-                  id="balance"
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={formData.balance}
-                  onChange={(e) => setFormData({ ...formData, balance: e.target.value })}
-                  variant="amber"
-                />
-              </div>
+
               <div className="grid gap-2">
                 <Label htmlFor="role">Rolle</Label>
                 <select
@@ -419,10 +400,7 @@ function Musicians() {
                         <Mail className="w-4 h-4" />
                         {musician.email}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <User className="w-4 h-4" />
-                        Init-Wert: <span className="font-semibold text-foreground">{formatCurrency(musician.balance)}</span>
-                      </div>
+
                     </div>
                   </div>
                   {isAdmin && (
