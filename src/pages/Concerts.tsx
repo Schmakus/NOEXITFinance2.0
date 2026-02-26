@@ -132,11 +132,26 @@ function Concerts() {
   }
 
   const saveConcert = async () => {
+
     if (!formData.name || !formData.location || !formData.date || !formData.nettoGage) return
 
     const nettoGage = parseFloat(formData.nettoGage)
-    const expenseTotal = expenses.reduce((sum, e) => sum + e.amount, 0)
-    // restBetrag wird weiter unten als const deklariert, daher hier entfernen
+    let newExpenses = [...expenses]
+    // Prüfe, ob Keyword 'Gage' schon existiert
+    const hasGage = newExpenses.some(e => (e.keyword || '').toLowerCase() === 'gage')
+    if (!hasGage) {
+      // Füge Dummy-Ausgabe mit Keyword 'Gage' und Betrag 0 hinzu
+      newExpenses = [
+        ...newExpenses,
+        {
+          id: 'gage-auto',
+          description: 'Gage',
+          amount: 0,
+          keyword: 'Gage',
+        },
+      ]
+    }
+    const expenseTotal = newExpenses.reduce((sum, e) => sum + e.amount, 0)
 
     const concertData = {
       name: formData.name,
@@ -146,7 +161,7 @@ function Concerts() {
       group_id: formData.groupId || null,
       notes: formData.notes,
     }
-    const expenseData = expenses.map((e) => ({
+    const expenseData = newExpenses.map((e) => ({
       description: e.description,
       amount: e.amount,
       keyword: e.keyword,
@@ -460,8 +475,12 @@ function Concerts() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => { setOpen(false); resetForm() }}>Abbrechen</Button>
-              <Button onClick={saveConcert}>{editingId ? 'Aktualisieren' : 'Erstellen'}</Button>
+              <Button variant="outline" className="border-red-500 text-red-400 hover:bg-red-500/10" onClick={() => { setOpen(false); resetForm() }}>Abbrechen</Button>
+              {editingId ? (
+                <Button variant="outline" className="border-yellow-400 text-yellow-300 hover:bg-yellow-400/10" onClick={saveConcert}>Aktualisieren</Button>
+              ) : (
+                <Button variant="outline" className="border-green-500 text-green-400 hover:bg-green-500/10" onClick={saveConcert}>Erstellen</Button>
+              )}
             </DialogFooter>
           </DialogContent>
         </Dialog>
