@@ -98,6 +98,7 @@ create table if not exists transactions (
   date date,
   type text not null check (type in ('earn', 'expense')),
   description text,
+  keywords text[] default '{}',
   created_at timestamptz default now()
 );
 

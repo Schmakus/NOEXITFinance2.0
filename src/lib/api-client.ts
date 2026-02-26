@@ -653,7 +653,7 @@ export async function fetchTransactionsWithMusician() {
     amount: Number(t.amount),
     musician_name: t.musicians?.name ?? 'Unbekannt',
     booking_type: t.bookings?.type ?? null,
-    keywords: t.bookings?.keywords ?? [],
+    keywords: t.keywords ?? t.bookings?.keywords ?? [],
   }))
 }
 
@@ -710,6 +710,7 @@ export async function createTransactions(
         date: t.date || null,
         type: t.type,
         description: t.description,
+        keywords: t.keywords ?? [],
       }))
     )
     .select()
@@ -742,11 +743,12 @@ export async function replaceTransactionsByConcert(
     date: string
     type: 'earn' | 'expense'
     description: string
+    keywords?: string[]
   }[]
 ): Promise<DbTransaction[]> {
   await deleteTransactionsByConcert(concertId)
   return createTransactions(
-    transactions.map((t) => ({ ...t, concert_id: concertId }))
+    transactions.map((t) => ({ ...t, concert_id: concertId, keywords: t.keywords ?? [] }))
   )
 }
 

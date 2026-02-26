@@ -98,14 +98,25 @@ function Concerts() {
       groupId: concert.group_id || '',
       notes: concert.notes || '',
     })
-    setExpenses(
-      concert.expenses.map((e) => ({
-        id: e.id,
-        description: e.description,
-        amount: e.amount,
-        keyword: e.keyword || '',
-      }))
-    )
+    let exp = concert.expenses.map((e) => ({
+      id: e.id,
+      description: e.description,
+      amount: e.amount,
+      keyword: e.keyword || '',
+    }))
+    // Ergänze Dummy-Ausgabe mit 'Gage', falls nicht vorhanden
+    if (!exp.some(e => (e.keyword || '').toLowerCase() === 'gage')) {
+      exp = [
+        ...exp,
+        {
+          id: 'gage-auto',
+          description: 'Gage',
+          amount: 0,
+          keyword: 'Gage',
+        },
+      ]
+    }
+    setExpenses(exp)
     setOpen(true)
   }
 
@@ -192,7 +203,11 @@ function Concerts() {
           date: formData.date,
           type: 'earn' as const,
           description: formData.name, // Nur Veranstaltungsname
-          keywords: ['Gage'],
+          keywords: (() => {
+            // Falls schon andere Keywords (z.B. aus Ausgaben) für diesen Musiker existieren, ergänze 'Gage' falls nicht enthalten
+            const kws = ['Gage']
+            return Array.from(new Set(kws))
+          })(),
         }));
         await replaceTransactionsByConcert(concertId, transactions);
       } else {

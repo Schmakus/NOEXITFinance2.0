@@ -65,14 +65,7 @@ async function fetchImageAsDataUrl(url: string): Promise<string> {
   })
 }
 
-const isPayout = (t: TransactionWithMusician) =>
-  t.booking_type === 'payout' ||
-  (t.description ?? '').toLowerCase().includes('auszahlung') ||
-  (t.concert_name ?? '').toLowerCase().includes('auszahlung')
 
-const isGage = (t: TransactionWithMusician) =>
-  (t.description ?? '').toLowerCase().includes('gage') ||
-  (t.concert_name ?? '').toLowerCase().includes('gage')
 
 const toDateInput = (date: Date) => date.toISOString().slice(0, 10)
 
@@ -316,10 +309,10 @@ function Statement() {
       .filter((t) => t.type === 'earn')
       .reduce((sum, t) => sum + t.amount, 0)
     const payouts = transactions
-      .filter((t) => t.type === 'expense' && isPayout(t))
+      .filter((t) => t.type === 'expense' && Array.isArray((t as any).keywords) && (t as any).keywords.includes('Auszahlung'))
       .reduce((sum, t) => sum + Math.abs(t.amount), 0)
     const expenses = transactions
-      .filter((t) => t.type === 'expense' && !isPayout(t))
+      .filter((t) => t.type === 'expense' && (!Array.isArray((t as any).keywords) || !(t as any).keywords.includes('Auszahlung')))
       .reduce((sum, t) => sum + Math.abs(t.amount), 0)
     return { income, payouts, expenses }
   }, [transactions])
@@ -819,17 +812,7 @@ function Statement() {
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="font-semibold">{t.description || t.concert_name || '-'}</p>
-                          {/* Bisherige Status-Badges (z.B. Gage, Auszahlung) */}
-                          {payout ? (
-                            <span className="text-xs px-2 py-0.5 rounded-full border border-amber-400/60 text-amber-300">
-                              Auszahlung
-                            </span>
-                          ) : null}
-                          {!payout && t.type === 'earn' && isGage(t) ? (
-                            <span className="text-xs px-2 py-0.5 rounded-full border border-amber-400/60 text-amber-300">
-                              Gage
-                            </span>
-                          ) : null}
+                          {/* Nur noch echte Keywords als Badges anzeigen */}
                           {/* Keywords als Badges anzeigen */}
                           {Array.isArray((t as any).keywords) && (t as any).keywords.length > 0 && (
                             <span className="flex flex-wrap gap-1 ml-2">

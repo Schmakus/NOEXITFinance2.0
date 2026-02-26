@@ -371,8 +371,11 @@ function Groups() {
                     <CardContent>
                       <div className="flex flex-wrap gap-2">
                         {g.members.map((m) => (
-                          <span key={m.musician_id} className="inline-flex items-center gap-2 px-3 py-1 bg-muted rounded-full text-sm">
-                            <Users className="w-4 h-4 text-muted-foreground" />
+                          <span
+                            key={m.musician_id}
+                            className="keyword text-xs px-2 py-0.5 rounded-full border border-blue-400/60 text-blue-300 bg-blue-500/10 flex items-center gap-1"
+                          >
+                            <Users className="w-4 h-4 text-blue-400" />
                             {m.musician_name} ({m.percent.toFixed(2)}%)
                           </span>
                         ))}
