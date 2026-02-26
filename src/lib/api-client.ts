@@ -645,7 +645,7 @@ export async function fetchTransactions(): Promise<DbTransaction[]> {
 export async function fetchTransactionsWithMusician() {
   const { data, error } = await supabase
     .from('transactions')
-    .select('*, musicians(name), bookings(type)')
+    .select('*, musicians(name), bookings(type,keywords)')
     .order('date', { ascending: false })
   if (error) throw error
   return (data ?? []).map((t: any) => ({
@@ -653,6 +653,7 @@ export async function fetchTransactionsWithMusician() {
     amount: Number(t.amount),
     musician_name: t.musicians?.name ?? 'Unbekannt',
     booking_type: t.bookings?.type ?? null,
+    keywords: t.bookings?.keywords ?? [],
   }))
 }
 

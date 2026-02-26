@@ -56,6 +56,10 @@ Bei Datenbank-Operationen oder Migrationen gelten diese Regeln:
 * **Tailwind First:** Erzeuge keine CSS-Klassen. Nutze Tailwind Utility-Klassen.
 * **shadcn/ui:** Prüfe immer, ob eine Komponente in `src/components/ui/` existiert, bevor du etwas Neues baust.
 * **Responsivität:** Nutze mobile-first Präfixe (`sm:`, `md:`, `lg:`).
+* **Design-Konsistenz:** Halte dich an die bestehenden Farb- und Abstandsdefinitionen. Keine neuen Farben oder Spacing-Werte ohne Rücksprache. Verwende bei input-feldern, switches, buttons etc. die vordefinierten shadcn/ui Komponenten und verwende immer die selben Designs für z.B. highlighted buttons, disabled states etc. (z.B. `variant="outline"`, `disabled` etc.).
+* **Icons:** Verwende Lucide React Icons, keine externen SVGs oder Icon-Fonts.
+* **Barrierefreiheit:** Alle interaktiven Elemente müssen ARIA-Attribute und Tastatur-Navigation unterstützen. Keine reinen visuellen Elemente ohne semantische Bedeutung.
+
 
 ---
 

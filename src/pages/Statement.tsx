@@ -229,13 +229,14 @@ function Statement() {
   const [searchTags, setSearchTags] = useState<string[]>([])
 
   const allTags: string[] = useMemo(() => {
+    // Extrahiere alle tatsächlich vorkommenden Keywords aus dem keywords-Feld der Buchungen
     const tags = new Set<string>()
     transactions.forEach(t => {
-      if (t.description) t.description.split(/[,; ]+/).forEach((word: string) => { if (word.length > 2) tags.add(word) })
-      if (t.concert_name) t.concert_name.split(/[,; ]+/).forEach((word: string) => { if (word.length > 2) tags.add(word) })
-    })
-    payoutRequests.forEach(r => {
-      if ('note' in r && r.note) r.note.split(/[,; ]+/).forEach((word: string) => { if (word.length > 2) tags.add(word) })
+      if (Array.isArray((t as any).keywords)) {
+        (t as any).keywords.forEach((kw: string) => {
+          if (kw && typeof kw === 'string' && kw.trim().length > 0) tags.add(kw.trim())
+        })
+      }
     })
     return Array.from(tags).sort()
   }, [transactions, payoutRequests])
@@ -816,6 +817,7 @@ function Statement() {
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="font-semibold">{t.description || '-'}</p>
+                          {/* Bisherige Status-Badges (z.B. Gage, Auszahlung) */}
                           {payout ? (
                             <span className="text-xs px-2 py-0.5 rounded-full border border-amber-400/60 text-amber-300">
                               Auszahlung
@@ -826,6 +828,14 @@ function Statement() {
                               Gage
                             </span>
                           ) : null}
+                          {/* Keywords als Badges anzeigen */}
+                          {Array.isArray((t as any).keywords) && (t as any).keywords.length > 0 && (
+                            <span className="flex flex-wrap gap-1 ml-2">
+                              {(t as any).keywords.map((kw: string) => (
+                                <span key={kw} className="keyword text-xs px-2 py-0.5 rounded-full border border-blue-400/60 text-blue-300 bg-blue-500/10">{kw}</span>
+                              ))}
+                            </span>
+                          )}
                         </div>
                         <p className="text-sm text-muted-foreground">
                           {t.date ? formatDate(new Date(t.date)) : '-'}
