@@ -789,7 +789,7 @@ function Statement() {
               }
 
               const t = entry.data
-              const payout = t.type === 'expense' && isPayout(t)
+              const payout = t.type === 'expense' && Array.isArray((t as any).keywords) && (t as any).keywords.includes('Auszahlung')
               const iconWrapClass = payout
                 ? 'bg-amber-500/20 text-amber-300'
                 : t.type === 'earn'
@@ -812,15 +812,20 @@ function Statement() {
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="font-semibold">{t.description || t.concert_name || '-'}</p>
-                          {/* Nur noch echte Keywords als Badges anzeigen */}
-                          {/* Keywords als Badges anzeigen */}
-                          {Array.isArray((t as any).keywords) && (t as any).keywords.length > 0 && (
-                            <span className="flex flex-wrap gap-1 ml-2">
-                              {(t as any).keywords.map((kw: string) => (
-                                <span key={kw} className="keyword text-xs px-2 py-0.5 rounded-full border border-blue-400/60 text-blue-300 bg-blue-500/10">{kw}</span>
-                              ))}
-                            </span>
-                          )}
+                          {/* Keywords als Badges anzeigen (Transaktion oder Buchung) */}
+                          {(() => {
+                            // Zeige zuerst Transaktions-Keywords, sonst Buchungs-Keywords (falls vorhanden)
+                            const keywords = Array.isArray((t as any).keywords) && (t as any).keywords.length > 0
+                              ? (t as any).keywords
+                              : (Array.isArray((t as any).booking_keywords) ? (t as any).booking_keywords : []);
+                            return keywords.length > 0 ? (
+                              <span className="flex flex-wrap gap-1 ml-2">
+                                {keywords.map((kw: string) => (
+                                  <span key={kw} className="keyword text-xs px-2 py-0.5 rounded-full border border-blue-400/60 text-blue-300 bg-blue-500/10">{kw}</span>
+                                ))}
+                              </span>
+                            ) : null
+                          })()}
                         </div>
                         <p className="text-sm text-muted-foreground">
                           {t.date ? formatDate(new Date(t.date)) : '-'}

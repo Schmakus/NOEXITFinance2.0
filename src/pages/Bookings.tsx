@@ -369,11 +369,14 @@ function Bookings() {
                   {selectedGroupMembers.length > 0 && (
                     <div className="mt-3 p-3 bg-muted rounded-md">
                       <div className="text-sm font-medium mb-2">Gruppenmitglieder:</div>
-                      <div className="space-y-2">
+                      <div className="flex flex-wrap gap-2">
                         {selectedGroupMembers.map((m) => (
-                          <div key={m.musician_id} className="text-sm text-muted-foreground">
-                            {m.musician_name} ({m.percent}%)
-                          </div>
+                          <span
+                            key={m.musician_id}
+                            className="keyword text-xs px-2 py-0.5 rounded-full border border-blue-400/60 text-blue-300 bg-blue-500/10 flex items-center gap-1"
+                          >
+                            {m.musician_name} ({m.percent.toFixed(2)}%)
+                          </span>
                         ))}
                       </div>
                     </div>
@@ -542,6 +545,13 @@ function Bookings() {
                           }`}>
                             {typeLabel}
                           </span>
+                          {Array.isArray(b.keywords) && b.keywords.length > 0 && (
+                            <span className="flex flex-wrap gap-1 ml-2">
+                              {b.keywords.map((kw: string) => (
+                                <span key={kw} className="keyword text-xs px-2 py-0.5 rounded-full border border-blue-400/60 text-blue-300 bg-blue-500/10">{kw}</span>
+                              ))}
+                            </span>
+                          )}
                         </div>
                         <p className="text-xs text-muted-foreground">
                           {b.date ? formatDate(new Date(b.date)) : '-'}

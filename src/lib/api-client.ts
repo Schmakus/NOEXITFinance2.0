@@ -653,7 +653,8 @@ export async function fetchTransactionsWithMusician() {
     amount: Number(t.amount),
     musician_name: t.musicians?.name ?? 'Unbekannt',
     booking_type: t.bookings?.type ?? null,
-    keywords: t.keywords ?? t.bookings?.keywords ?? [],
+    keywords: t.keywords ?? [],
+    booking_keywords: t.bookings?.keywords ?? [],
   }))
 }
 
