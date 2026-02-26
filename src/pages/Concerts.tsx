@@ -453,9 +453,12 @@ function Concerts() {
                   <div className="flex flex-wrap gap-2 p-3 bg-muted rounded-lg">
                     <p className="text-sm text-muted-foreground w-full mb-2">Gruppenmitglieder:</p>
                     {getGroupMembers(formData.groupId).map((member) => (
-                      <div key={member.musician_id} className="inline-flex items-center gap-2 px-3 py-1 bg-background rounded-full text-sm">
-                        <div>{member.musician_name} ({member.percent.toFixed(2)}%)</div>
-                      </div>
+                      <span
+                        key={member.musician_id}
+                        className="keyword text-xs px-2 py-0.5 rounded-full border border-blue-400/60 text-blue-300 bg-blue-500/10 flex items-center gap-1"
+                      >
+                        {member.musician_name} ({member.percent.toFixed(2)}%)
+                      </span>
                     ))}
                   </div>
                 )}
@@ -559,10 +562,13 @@ function Concerts() {
                         <h4 className="font-medium mb-2">Verteilung: {concert.group_name || concert.group_id}</h4>
                         <div className="flex flex-wrap gap-2">
                           {members.map((member) => (
-                            <div key={member.musician_id} className="inline-flex items-center gap-2 px-3 py-1 bg-muted rounded-full text-sm">
-                              <Users className="w-4 h-4 text-muted-foreground" />
-                              <div>{member.musician_name} ({member.percent.toFixed(2)}%)</div>
-                            </div>
+                            <span
+                              key={member.musician_id}
+                              className="keyword text-xs px-2 py-0.5 rounded-full border border-blue-400/60 text-blue-300 bg-blue-500/10 flex items-center gap-1"
+                            >
+                              <Users className="w-4 h-4 text-blue-400" />
+                              {member.musician_name} ({member.percent.toFixed(2)}%)
+                            </span>
                           ))}
                         </div>
                       </div>
