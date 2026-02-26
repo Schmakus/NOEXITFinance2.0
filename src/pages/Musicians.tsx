@@ -358,12 +358,30 @@ function Musicians() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setIsOpen(false)}
+                className="border-red-500 text-red-600 hover:bg-red-50 hover:border-red-600"
+              >
                 Abbrechen
               </Button>
-              <Button onClick={handleSave}>
-                {editingId ? 'Aktualisieren' : 'Hinzufügen'}
-              </Button>
+              {editingId ? (
+                <Button
+                  variant="outline"
+                  onClick={handleSave}
+                  className="border-amber-400 text-amber-600 hover:bg-amber-50 hover:border-amber-500"
+                >
+                  Aktualisieren
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  onClick={handleSave}
+                  className="border-green-500 text-green-600 hover:bg-green-50 hover:border-green-600"
+                >
+                  Hinzufügen
+                </Button>
+              )}
             </DialogFooter>
               </DialogContent>
             </Dialog>

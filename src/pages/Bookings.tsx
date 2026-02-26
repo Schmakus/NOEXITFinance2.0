@@ -457,8 +457,12 @@ function Bookings() {
             </div>
 
             <DialogFooter>
-              <Button variant="outline" onClick={() => { setOpen(false); resetForm() }}>Abbrechen</Button>
-              <Button onClick={saveBooking}>{editingId ? 'Aktualisieren' : 'Erstellen'}</Button>
+              <Button variant="outline" onClick={() => { setOpen(false); resetForm() }} className="border-red-500 text-red-600 hover:bg-red-50 hover:border-red-600">Abbrechen</Button>
+              {editingId ? (
+                <Button onClick={saveBooking} variant="outline" className="border-amber-400 text-amber-600 hover:bg-amber-50 hover:border-amber-500">Aktualisieren</Button>
+              ) : (
+                <Button onClick={saveBooking} variant="outline" className="border-green-500 text-green-600 hover:bg-green-50 hover:border-green-600">Erstellen</Button>
+              )}
             </DialogFooter>
             </DialogContent>
           </Dialog>

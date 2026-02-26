@@ -188,8 +188,8 @@ function Tags() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddDialog(false)}>Abbrechen</Button>
-            <Button onClick={handleAddTag} disabled={!newTagName.trim()}>Erstellen</Button>
+            <Button variant="outline" onClick={() => setShowAddDialog(false)} className="border-red-500 text-red-600 hover:bg-red-50 hover:border-red-600">Abbrechen</Button>
+            <Button onClick={handleAddTag} disabled={!newTagName.trim()} variant="outline" className="border-green-500 text-green-600 hover:bg-green-50 hover:border-green-600">Erstellen</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -216,8 +216,8 @@ function Tags() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditDialog(false)}>Abbrechen</Button>
-            <Button onClick={handleEditTag} disabled={!editName.trim()}>Speichern</Button>
+            <Button variant="outline" onClick={() => setShowEditDialog(false)} className="border-red-500 text-red-600 hover:bg-red-50 hover:border-red-600">Abbrechen</Button>
+            <Button onClick={handleEditTag} disabled={!editName.trim()} variant="outline" className="border-amber-400 text-amber-600 hover:bg-amber-50 hover:border-amber-500">Speichern</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -441,26 +441,26 @@ function PayoutRequests() {
 
             {error && <p className="text-sm text-red-400">{error}</p>}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={closeAction} disabled={submitting}>
-              Abbrechen
-            </Button>
-            {actionType === 'approve' && (
-              <Button onClick={handleApprove} disabled={submitting} className="bg-green-600 hover:bg-green-700">
-                {submitting ? 'Wird genehmigt...' : 'Genehmigen'}
+            <DialogFooter>
+              <Button variant="outline" onClick={closeAction} disabled={submitting} className="border-red-500 text-red-600 hover:bg-red-50 hover:border-red-600">
+                Abbrechen
               </Button>
-            )}
-            {actionType === 'reject' && (
-              <Button onClick={handleReject} disabled={submitting} variant="destructive">
-                {submitting ? 'Wird abgelehnt...' : 'Ablehnen'}
-              </Button>
-            )}
-            {actionType === 'edit' && (
-              <Button onClick={handleEdit} disabled={submitting}>
-                {submitting ? 'Wird gespeichert...' : 'Speichern'}
-              </Button>
-            )}
-          </DialogFooter>
+              {actionType === 'approve' && (
+                <Button onClick={handleApprove} disabled={submitting} variant="outline" className="border-green-500 text-green-600 hover:bg-green-50 hover:border-green-600">
+                  {submitting ? 'Wird genehmigt...' : 'Genehmigen'}
+                </Button>
+              )}
+              {actionType === 'reject' && (
+                <Button onClick={handleReject} disabled={submitting} variant="outline" className="border-red-500 text-red-600 hover:bg-red-50 hover:border-red-600">
+                  {submitting ? 'Wird abgelehnt...' : 'Ablehnen'}
+                </Button>
+              )}
+              {actionType === 'edit' && (
+                <Button onClick={handleEdit} disabled={submitting} variant="outline" className="border-amber-400 text-amber-600 hover:bg-amber-50 hover:border-amber-500">
+                  {submitting ? 'Wird gespeichert...' : 'Speichern'}
+                </Button>
+              )}
+            </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
