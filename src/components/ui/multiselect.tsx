@@ -71,7 +71,8 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({ options, value, onChan
           {filteredOptions.map((opt) => (
             <div
               key={opt.value}
-              className="px-3 py-2 hover:bg-amber-100 cursor-pointer text-sm"
+              className="px-3 py-2 bg-background hover:bg-amber-100 hover:text-amber-400 cursor-pointer text-sm transition-colors"
+              style={{ backgroundColor: '#23232a' }}
               onMouseDown={() => handleAdd(opt.value)}
             >
               {opt.label}

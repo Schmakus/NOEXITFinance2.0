@@ -180,7 +180,7 @@ function Concerts() {
         action = 'create';
       }
 
-      // Create transactions if group is selected and there's a positive rest
+      // Transaktionen IMMER neu schreiben, damit das Keyword 'Gage' garantiert gesetzt ist
       const restBetrag = nettoGage - expenseTotal;
       if (formData.groupId && restBetrag > 0) {
         const members = getGroupMembers(formData.groupId);
@@ -196,7 +196,7 @@ function Concerts() {
         }));
         await replaceTransactionsByConcert(concertId, transactions);
       } else {
-        // No group or no rest — remove any existing transactions
+        // No group oder kein Restbetrag — immer löschen
         await deleteTransactionsByConcert(concertId);
       }
 
