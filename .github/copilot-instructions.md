@@ -61,6 +61,11 @@ Bei Datenbank-Operationen oder Migrationen gelten diese Regeln:
     * Alle UI-Komponenten (Button, Input, Textarea, Switch, DatePicker etc.) besitzen zentrale Varianten-Logik in ihren jeweiligen Dateien unter `src/components/ui/` (z.B. `button.tsx`, `input.tsx`, `switch.tsx`).
     * Die Variante `update` für Buttons: `border-amber-600 text-amber-600 bg-background hover:bg-amber-50 hover:border-amber-700` (kein Hintergrund, amber Hover).
     * Die Variante `amber` für Switches: `border-amber-600 bg-[#23272f] data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600`.
+    * Für Icon-Buttons (z.B. Löschen, Bearbeiten, Approve, Reject) gibt es zentrale Varianten:
+        * `deleteicon`: roter Rand/Text, kein Hintergrund, hover rot
+        * `editicon`: amber Rand/Text, kein Hintergrund, hover amber
+        * `approveicon`: grüner Rand/Text, kein Hintergrund, hover grün
+        * `rejecticon`: roter Rand/Text, kein Hintergrund, hover rot
     * Für Design-Review gibt es eine Übersichtseite `ComponentOverview.tsx`, erreichbar über die Einstellungen, die alle Komponenten und States darstellt.
 * **Design-Review:**
     * UI-Komponenten-Übersicht ist über die Settings erreichbar (Button „Komponenten-Übersicht“).

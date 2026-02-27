@@ -24,6 +24,10 @@ const buttonVariants = cva(
         success: "border border-green-500 text-green-600 hover:bg-green-50 hover:border-green-600 bg-background",
         approve: "bg-green-600 text-white hover:bg-green-700",
         reject: "bg-red-600 text-white hover:bg-red-700",
+        deleteicon: "border border-red-500 text-red-500 bg-background hover:bg-red-50 hover:border-red-600",
+        editicon: "border border-amber-600 text-amber-600 bg-background hover:bg-amber-50 hover:border-amber-700",
+        approveicon: "border border-green-600 text-green-600 bg-background hover:bg-green-50 hover:border-green-700",
+        rejecticon: "border border-red-600 text-red-600 bg-background hover:bg-red-50 hover:border-red-700",
       },
       size: {
         default: "h-10 px-4 py-2",

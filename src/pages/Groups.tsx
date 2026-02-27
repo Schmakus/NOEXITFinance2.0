@@ -359,10 +359,10 @@ function Groups() {
                           <CardDescription>{g.members.length} Mitglieder</CardDescription>
                         </div>
                         <div className="flex gap-2">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(g)}>
+                          <Button variant="editicon" size="icon" className="h-7 w-7" onClick={() => openEdit(g)}>
                             <Edit2 className="w-3.5 h-3.5" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-300" onClick={() => deleteGroup(g.id)}>
+                          <Button variant="deleteicon" size="icon" className="h-7 w-7" onClick={() => deleteGroup(g.id)}>
                             <Trash2 className="w-3.5 h-3.5" />
                           </Button>
                         </div>

@@ -550,10 +550,10 @@ function Bookings() {
                       </p>
                       {canManage && (
                         <div className="flex gap-0.5">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(b)}>
+                          <Button variant="editicon" size="icon" className="h-7 w-7" onClick={() => openEdit(b)}>
                             <Edit2 className="w-3.5 h-3.5" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-300" onClick={() => handleDeleteBooking(b.id)}>
+                          <Button variant="deleteicon" size="icon" className="h-7 w-7" onClick={() => handleDeleteBooking(b.id)}>
                             <Trash2 className="w-3.5 h-3.5" />
                           </Button>
                         </div>

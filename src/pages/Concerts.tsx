@@ -529,10 +529,10 @@ function Concerts() {
                       </CardDescription>
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(concert)}>
+                      <Button variant="editicon" size="icon" className="h-7 w-7" onClick={() => openEdit(concert)}>
                         <Edit2 className="w-3.5 h-3.5" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-300" onClick={() => handleDeleteConcert(concert.id)}>
+                      <Button variant="deleteicon" size="icon" className="h-7 w-7" onClick={() => handleDeleteConcert(concert.id)}>
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </div>
