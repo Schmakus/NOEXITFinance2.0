@@ -218,16 +218,16 @@ function Dashboard() {
                 <div className="flex flex-col items-end gap-2 shrink-0">
                   <p className="text-lg font-semibold text-amber-400">{formatCurrency(r.amount)}</p>
                   <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" title="Bearbeiten" onClick={() => openAction(r.id, 'edit')}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" title="Bearbeiten" onClick={() => openAction(r.id, 'edit')}>
                       <Pencil className="w-3.5 h-3.5" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-green-400 hover:text-green-300" title="Genehmigen" onClick={() => openAction(r.id, 'approve')}>
+                    <Button variant="approve" size="icon" className="h-7 w-7" title="Genehmigen" onClick={() => openAction(r.id, 'approve')}>
                       <CheckCircle2 className="w-3.5 h-3.5" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-300" title="Ablehnen" onClick={() => openAction(r.id, 'reject')}>
+                    <Button variant="reject" size="icon" className="h-7 w-7" title="Ablehnen" onClick={() => openAction(r.id, 'reject')}>
                       <XCircle className="w-3.5 h-3.5" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-red-400" title="Löschen" onClick={() => handleDelete(r.id)}>
+                    <Button variant="danger" size="icon" className="h-7 w-7" title="Löschen" onClick={() => handleDelete(r.id)}>
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   </div>
@@ -348,11 +348,11 @@ function Dashboard() {
             {actionError && <p className="text-sm text-red-400">{actionError}</p>}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={closeAction} disabled={submitting}>
+            <Button variant="danger" onClick={closeAction} disabled={submitting}>
               Abbrechen
             </Button>
             {actionType === 'approve' && (
-              <Button onClick={handleApprove} disabled={submitting} className="bg-green-600 hover:bg-green-700">
+              <Button onClick={handleApprove} disabled={submitting} variant="approve">
                 {submitting ? 'Wird genehmigt...' : 'Genehmigen'}
               </Button>
             )}

@@ -276,6 +276,11 @@ function Settings() {
     <div className="space-y-8">
       {/* Logfile Button und Dialog ganz oben */}
       <div className="flex justify-end mb-4">
+        <Button variant="amber" onClick={() => window.location.href = '/component-overview'}>
+          Komponenten-Übersicht
+        </Button>
+      </div>
+      <div className="flex justify-end mb-4">
         <Dialog open={logDialogOpen} onOpenChange={setLogDialogOpen}>
           <DialogTrigger asChild>
             <Button variant="outline" onClick={() => setLogDialogOpen(true)}>

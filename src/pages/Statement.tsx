@@ -925,7 +925,7 @@ function Statement() {
                 />
               </div>
               {(!!newEmail && newEmail !== user?.email && !accountSaving) && (
-                <Button size="sm" onClick={handleUpdateEmail}>
+                <Button size="sm" onClick={handleUpdateEmail} variant="update">
                   <Save className="w-4 h-4 mr-2" />
                   E-Mail ändern
                 </Button>

@@ -124,7 +124,7 @@ function Account() {
               variant="amber"
             />
           </div>
-          <Button onClick={handleUpdateEmail} disabled={saving || newEmail === user?.email} className="btn-amber">
+          <Button onClick={handleUpdateEmail} disabled={saving || newEmail === user?.email} variant="amber">
             <Save className="w-4 h-4 mr-2" />
             E-Mail ändern
           </Button>

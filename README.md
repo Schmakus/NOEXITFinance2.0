@@ -1,3 +1,25 @@
+## UI Button-Varianten
+
+Verwende für Buttons die folgenden Varianten, um ein konsistentes Design zu gewährleisten:
+
+| Variante   | Zweck/Ereignis                | Beispieltext         |
+|------------|-------------------------------|---------------------|
+| default    | Standard-Button               | Speichern           |
+| amber      | Hinzufügen, Primäraktion      | Hinzufügen, Neu     |
+| update     | Aktualisieren/Ändern          | Aktualisieren       |
+| success    | Erfolgsaktion, Erstellen      | Erstellen           |
+| danger     | Abbrechen, Löschen, Warnung   | Abbrechen, Löschen  |
+| approve    | Genehmigen, Freigeben         | Genehmigen          |
+| reject     | Ablehnen, Verwerfen           | Ablehnen            |
+| outline    | Sekundär, neutral             | Details, Info       |
+
+Alle Varianten sind zentral in `src/components/ui/button.tsx` definiert und können direkt als `variant`-Prop verwendet werden:
+
+```tsx
+<Button variant="amber">Hinzufügen</Button>
+<Button variant="danger">Abbrechen</Button>
+<Button variant="update">Aktualisieren</Button>
+```
 # NOEXIT Finance App
 
 Eine moderne **Finanzmanagement-Anwendung für Musikbands** mit aktuellem Tech-Stack (React 19, Vite, Tailwind CSS, TypeScript).
