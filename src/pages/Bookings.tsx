@@ -15,7 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Plus, Edit2, Trash2, X, Banknote, CircleDollarSign, TrendingDown } from 'lucide-react'
+import { Plus, Edit2, Trash2, Banknote, CircleDollarSign, TrendingDown } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import {
   fetchBookings,
@@ -435,21 +435,7 @@ function Bookings() {
                     <Input placeholder="Neues Stichwort" value={form.keyword} onChange={(e) => setForm((s) => ({ ...s, keyword: e.target.value }))} variant="amber" />
                     <Button variant="outline" onClick={() => addKeyword(form.keyword)}>Hinzufügen</Button>
                   </div>
-                  {form.keywords.length > 0 && (
-                    <div className="pt-2 border-t border-border">
-                      <div className="text-xs text-muted-foreground mb-2">Ausgewählte Stichworte:</div>
-                      <div className="flex gap-2 flex-wrap">
-                        {form.keywords.map((k) => (
-                          <span key={k} className="keyword text-xs px-2 py-0.5 rounded-full border border-blue-400/60 text-blue-300 bg-blue-500/10 flex items-center gap-1">
-                            {k}
-                            <button onClick={() => setForm((s) => ({ ...s, keywords: s.keywords.filter((x) => x !== k) }))} className="hover:opacity-80 ml-1">
-                              <X className="w-3 h-3" />
-                            </button>
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  {/* Die untere Auflistung der ausgewählten Stichworte wurde entfernt, da die Markierung oben ausreicht. */}
                 </div>
               </div>
 
