@@ -18,7 +18,8 @@ export async function updatePayoutRequestUser(
   }
   const row = data[0]
   return { ...row, amount: Number(row.amount) }
-}
+// ...existing code...
+// ...existing code...
 
 // USER: Delete own payout request (only if pending)
 export async function deletePayoutRequestUser(id: string, musicianId: string): Promise<void> {
@@ -200,14 +201,7 @@ export async function deleteMusician(id: string): Promise<void> {
   if (error) throw error
 }
 
-export async function archiveMusician(id: string): Promise<void> {
-  const { data: musician, error: mErr } = await supabase
-    .from('musicians')
-    .select('*')
-    .eq('id', id)
-    .maybeSingle()
-  if (mErr) throw mErr
-  if (!musician) throw new Error('Musiker nicht gefunden')
+// ...existing code...
 
   const balance = Number(musician.balance)
   if (Math.abs(balance) > 0.01) {
