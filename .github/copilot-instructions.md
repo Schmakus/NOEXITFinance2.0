@@ -100,3 +100,9 @@ Beziehe dich bei Fragen zur Logik primär auf diese Dateien:
 * **Dokumentation & Testing:** README und Code-Kommentare immer aktuell halten. Schreibe Unit-Tests für kritische Logik.
 * **SQL-Änderungen:** Bei jeder Änderung am Datenbankschema muss `supabase-schema.sql` aktualisiert und im Pull Request explizit referenziert werden.
 * **Problemsolving:** Immer zuerst Konsolen-Logs und Fehlermeldungen prüfen, Ursache identifizieren, dann Code ändern. Dokumentation und Kommentare nachziehen. Bestehende Funktionen dürfen nicht beeinträchtigt werden.
+
+## 8. Selbstoptimierung & Feedback
+- Wenn du feststellst, dass ich deine Vorschläge wiederholt manuell korrigiere (z.B. Naming, Architektur), weise mich darauf hin.
+- Frage am Ende einer großen Aufgabe: "Soll ich unsere `copilot-instructions.md` basierend auf dieser neuen Implementierung aktualisieren?"
+
+## Letzte Anpassungen
