@@ -16,7 +16,8 @@ function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
-  const [logo, setLogo] = useState<string | null>(null)
+  const [, setLogo] = useState<string | null>(null)
+  const [icon, setIcon] = useState<string | null>(null)
   const [bandName, setBandName] = useState('NO EXIT')
   const { login } = useAuth()
 
@@ -28,8 +29,9 @@ function Login() {
 
   useEffect(() => {
     fetchPublicSettings()
-      .then(({ logo, bandname }) => {
+      .then(({ logo, icon, bandname }) => {
         setLogo(logo)
+        setIcon(icon)
         setBandName(bandname)
       })
       .catch(() => {})
@@ -68,10 +70,10 @@ function Login() {
       <Card className="w-full max-w-md shadow-2xl" style={{ backgroundColor: '#18181b' }}>
         <CardHeader className="space-y-2">
           <div className="flex items-center gap-3">
-            {logo ? (
+            {icon ? (
               <img
-                src={logo}
-                alt="Logo"
+                src={icon}
+                alt="Icon"
                 className="w-12 h-12 rounded-lg object-contain brightness-0 invert"
               />
             ) : (

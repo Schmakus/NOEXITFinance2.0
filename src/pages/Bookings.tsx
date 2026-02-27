@@ -15,7 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Plus, Edit2, Trash2, X, Banknote, CircleDollarSign, TrendingDown } from 'lucide-react'
+import { Plus, Edit2, Trash2, Banknote, CircleDollarSign, TrendingDown } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import {
   fetchBookings,
@@ -164,7 +164,11 @@ function Bookings() {
       date: form.date,
       group_id: form.type !== 'payout' ? (form.groupId || null) : null,
       payout_musician_ids: form.type === 'payout' ? form.payoutMusicians : [],
-      keywords: form.keywords.length ? form.keywords : [],
+      keywords: (() => {
+        let kws = form.keywords.length ? [...form.keywords] : [];
+        if (form.type === 'payout' && !kws.includes('Auszahlung')) kws.push('Auszahlung');
+        return kws;
+      })(),
       notes: form.notes,
     }
 
@@ -330,7 +334,7 @@ function Bookings() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label>Typ</Label>
-                  <select value={form.type} onChange={(e) => setForm((s) => ({ ...s, type: e.target.value, payoutMusicians: [] }))} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50 input-amber-focus">
+                  <select value={form.type} onChange={(e) => setForm((s) => ({ ...s, type: e.target.value, payoutMusicians: [] }))} className="flex h-10 w-full rounded-md border border-input bg-[#18181b] px-3 py-2 text-base text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:border-amber-500 disabled:cursor-not-allowed disabled:opacity-50">
                     <option value="expense">Ausgabe</option>
                     <option value="income">Einnahme</option>
                     <option value="payout">Auszahlung</option>
@@ -338,13 +342,13 @@ function Bookings() {
                 </div>
                 <div className="grid gap-2">
                   <Label>Betrag (€)</Label>
-                  <Input type="number" step="0.01" value={form.amount} onChange={(e) => setForm((s) => ({ ...s, amount: e.target.value }))} />
+                  <Input type="number" step="0.01" value={form.amount} onChange={(e) => setForm((s) => ({ ...s, amount: e.target.value }))} variant="amber" />
                 </div>
               </div>
 
               <div className="grid gap-2">
                 <Label>Beschreibung</Label>
-                <Input list="desc-suggestions" value={form.description} onChange={(e) => setForm((s) => ({ ...s, description: e.target.value }))} />
+                  <Input list="desc-suggestions" value={form.description} onChange={(e) => setForm((s) => ({ ...s, description: e.target.value }))} />
                 <datalist id="desc-suggestions">
                   {descriptionSuggestions.map((d) => <option key={d} value={d} />)}
                 </datalist>
@@ -352,24 +356,27 @@ function Bookings() {
 
               <div className="grid gap-2">
                 <Label>Datum</Label>
-                <DatePicker value={form.date} onChange={(v) => setForm((s) => ({ ...s, date: v }))} />
+                  <DatePicker value={form.date} onChange={(v) => setForm((s) => ({ ...s, date: v }))} />
               </div>
 
               {form.type !== 'payout' && (
                 <div className="grid gap-2">
                   <Label>Verteilergruppe</Label>
-                  <select value={form.groupId} onChange={(e) => setForm((s) => ({ ...s, groupId: e.target.value }))} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50 input-amber-focus">
+                  <select value={form.groupId} onChange={(e) => setForm((s) => ({ ...s, groupId: e.target.value }))} className="flex h-10 w-full rounded-md border border-input bg-[#18181b] px-3 py-2 text-base text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:border-amber-500 disabled:cursor-not-allowed disabled:opacity-50">
                     <option value="">-- Keine Gruppe --</option>
                     {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
                   </select>
                   {selectedGroupMembers.length > 0 && (
                     <div className="mt-3 p-3 bg-muted rounded-md">
                       <div className="text-sm font-medium mb-2">Gruppenmitglieder:</div>
-                      <div className="space-y-2">
+                      <div className="flex flex-wrap gap-2">
                         {selectedGroupMembers.map((m) => (
-                          <div key={m.musician_id} className="text-sm text-muted-foreground">
-                            {m.musician_name} ({m.percent}%)
-                          </div>
+                          <span
+                            key={m.musician_id}
+                            className="keyword text-xs px-2 py-0.5 rounded-full border border-blue-400/60 text-blue-300 bg-blue-500/10 flex items-center gap-1"
+                          >
+                            {m.musician_name} ({m.percent.toFixed(2)}%)
+                          </span>
                         ))}
                       </div>
                     </div>
@@ -393,7 +400,7 @@ function Bookings() {
                       }
                       return (
                         <div key={m.id} className="flex items-center gap-2 p-2 rounded border border-input">
-                          <Switch checked={selected} onCheckedChange={handleChange} />
+                          <Switch checked={selected} onCheckedChange={handleChange} variant="amber" />
                           <span className="text-sm">{m.name}</span>
                         </div>
                       )
@@ -412,11 +419,12 @@ function Bookings() {
                         <button
                           key={k}
                           onClick={() => setForm((s) => ({ ...s, keywords: isSelected ? s.keywords.filter((x) => x !== k) : [...s.keywords, k] }))}
-                          className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium border transition-colors ${
                             isSelected
-                              ? 'bg-primary text-primary-foreground'
-                              : 'bg-muted text-foreground hover:bg-muted/80'
+                              ? 'border-blue-400/60 text-blue-300 bg-blue-500/10'
+                              : 'border-border text-foreground bg-muted hover:bg-muted/80'
                           }`}
+                          style={{ minWidth: '2.5rem' }}
                         >
                           {k}
                         </button>
@@ -424,36 +432,26 @@ function Bookings() {
                     })}
                   </div>
                   <div className="flex gap-2">
-                    <Input placeholder="Neues Stichwort" value={form.keyword} onChange={(e) => setForm((s) => ({ ...s, keyword: e.target.value }))} />
+                    <Input placeholder="Neues Stichwort" value={form.keyword} onChange={(e) => setForm((s) => ({ ...s, keyword: e.target.value }))} variant="amber" />
                     <Button variant="outline" onClick={() => addKeyword(form.keyword)}>Hinzufügen</Button>
                   </div>
-                  {form.keywords.length > 0 && (
-                    <div className="pt-2 border-t border-border">
-                      <div className="text-xs text-muted-foreground mb-2">Ausgewählte Stichworte:</div>
-                      <div className="flex gap-2 flex-wrap">
-                        {form.keywords.map((k) => (
-                          <div key={k} className="px-3 py-1 bg-primary text-primary-foreground rounded-full text-sm font-medium flex items-center gap-2">
-                            <span>{k}</span>
-                            <button onClick={() => setForm((s) => ({ ...s, keywords: s.keywords.filter((x) => x !== k) }))} className="hover:opacity-80">
-                              <X className="w-3 h-3" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  {/* Die untere Auflistung der ausgewählten Stichworte wurde entfernt, da die Markierung oben ausreicht. */}
                 </div>
               </div>
 
               <div className="grid gap-2">
                 <Label>Notizen</Label>
-                <Textarea value={form.notes} onChange={(e) => setForm((s) => ({ ...s, notes: e.target.value }))} />
+                <Textarea value={form.notes} onChange={(e) => setForm((s) => ({ ...s, notes: e.target.value }))} variant="amber" />
               </div>
             </div>
 
             <DialogFooter>
-              <Button variant="outline" onClick={() => { setOpen(false); resetForm() }}>Abbrechen</Button>
-              <Button onClick={saveBooking}>{editingId ? 'Aktualisieren' : 'Erstellen'}</Button>
+              <Button variant="outline" onClick={() => { setOpen(false); resetForm() }} className="border-red-500 text-red-600 hover:bg-red-50 hover:border-red-600">Abbrechen</Button>
+              {editingId ? (
+                <Button onClick={saveBooking} variant="outline" className="border-amber-400 text-amber-600 hover:bg-amber-50 hover:border-amber-500">Aktualisieren</Button>
+              ) : (
+                <Button onClick={saveBooking} variant="outline" className="border-green-500 text-green-600 hover:bg-green-50 hover:border-green-600">Erstellen</Button>
+              )}
             </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -499,13 +497,7 @@ function Bookings() {
                   ? <CircleDollarSign className="w-5 h-5" />
                   : <TrendingDown className="w-5 h-5" />
 
-            const typeLabel = isDeletedPayout
-              ? 'Auszahlung gelöscht'
-              : isPayout
-                ? 'Auszahlung'
-                : isIncome
-                  ? 'Einnahme'
-                  : 'Ausgabe'
+
 
             const hasDetails = (isPayout && payoutNames.length > 0)
               || (!isPayout && groupMembers.length > 0)
@@ -522,17 +514,13 @@ function Bookings() {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="font-semibold truncate text-sm sm:text-base">{b.description || '-'}</p>
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full border leading-none ${
-                            isDeletedPayout
-                              ? 'border-red-400/60 text-red-400 bg-red-900/40'
-                              : isPayout
-                                ? 'border-amber-400/60 text-amber-300'
-                                : isIncome
-                                  ? 'border-green-400/60 text-green-300'
-                                  : 'border-red-400/60 text-red-300'
-                          }`}>
-                            {typeLabel}
-                          </span>
+                          {Array.isArray(b.keywords) && b.keywords.length > 0 && (
+                            <span className="flex flex-wrap gap-1 ml-2">
+                              {b.keywords.map((kw: string) => (
+                                <span key={kw} className="keyword text-xs px-2 py-0.5 rounded-full border border-blue-400/60 text-blue-300 bg-blue-500/10">{kw}</span>
+                              ))}
+                            </span>
+                          )}
                         </div>
                         <p className="text-xs text-muted-foreground">
                           {b.date ? formatDate(new Date(b.date)) : '-'}
@@ -548,10 +536,10 @@ function Bookings() {
                       </p>
                       {canManage && (
                         <div className="flex gap-0.5">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(b)}>
+                          <Button variant="editicon" size="icon" className="h-7 w-7" onClick={() => openEdit(b)}>
                             <Edit2 className="w-3.5 h-3.5" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-300" onClick={() => handleDeleteBooking(b.id)}>
+                          <Button variant="deleteicon" size="icon" className="h-7 w-7" onClick={() => handleDeleteBooking(b.id)}>
                             <Trash2 className="w-3.5 h-3.5" />
                           </Button>
                         </div>

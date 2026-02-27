@@ -16,8 +16,18 @@ const buttonVariants = cva(
           "border border-input bg-background hover:bg-accent hover:text-accent-foreground dark:border-border dark:hover:bg-accent",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80 dark:bg-secondary dark:text-secondary-foreground",
+        amber: "bg-amber-600 text-[#23272f] border border-amber-600 hover:bg-amber-600/95 focus-visible:ring-amber-600",
+        update: "border border-amber-600 text-amber-600 bg-background hover:bg-amber-50 hover:border-amber-700",
         ghost: "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent",
         link: "text-primary underline-offset-4 hover:underline dark:text-primary",
+        danger: "border border-red-500 text-red-600 hover:bg-red-50 hover:border-red-600 bg-background",
+        success: "border border-green-500 text-green-600 hover:bg-green-50 hover:border-green-600 bg-background",
+        approve: "bg-green-600 text-white hover:bg-green-700",
+        reject: "bg-red-600 text-white hover:bg-red-700",
+        deleteicon: "border border-red-500 text-red-500 bg-background hover:bg-red-50 hover:border-red-600",
+        editicon: "border border-amber-600 text-amber-600 bg-background hover:bg-amber-50 hover:border-amber-700",
+        approveicon: "border border-green-600 text-green-600 bg-background hover:bg-green-50 hover:border-green-700",
+        rejecticon: "border border-red-600 text-red-600 bg-background hover:bg-red-50 hover:border-red-700",
       },
       size: {
         default: "h-10 px-4 py-2",

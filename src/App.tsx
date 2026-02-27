@@ -17,6 +17,7 @@ import Login from '@/pages/Login'
 import Statement from '@/pages/Statement'
 import Account from '@/pages/Account'
 import PayoutRequests from '@/pages/PayoutRequests'
+import ComponentOverview from '@/pages/ComponentOverview'
 
 // Route guard: redirects to dashboard if user doesn't have permission
 function ProtectedRoute({ allowed, children }: { allowed: boolean; children: React.ReactNode }) {
@@ -52,10 +53,12 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />} />
-        
         {isAuthenticated ? (
           <>
-            <Route path="/statement/:musicianId" element={<Statement />} />
+            {/* Statement: User sieht Vollbild, Admin/Superuser im Layout */}
+            {isAdmin || isSuperuser ? null : (
+              <Route path="/statement/:musicianId" element={<Statement />} />
+            )}
             <Route element={<Layout />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/musicians" element={<ProtectedRoute allowed={canManageMusicians}><Musicians /></ProtectedRoute>} />
@@ -67,7 +70,12 @@ function App() {
               <Route path="/payout-requests" element={<ProtectedRoute allowed={isAdmin || isSuperuser}><PayoutRequests /></ProtectedRoute>} />
               <Route path="/tags" element={<ProtectedRoute allowed={isAdmin}><Tags /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute allowed={canAccessSettings}><Settings /></ProtectedRoute>} />
+              <Route path="/component-overview" element={<ComponentOverview />} />
               <Route path="/account" element={<Account />} />
+              {/* Statement für Admin/Superuser im Layout */}
+              {(isAdmin || isSuperuser) && (
+                <Route path="/statement/:musicianId" element={<Statement />} />
+              )}
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Route>
           </>

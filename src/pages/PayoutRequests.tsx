@@ -411,6 +411,7 @@ function PayoutRequests() {
                     min="0.01"
                     value={editAmount}
                     onChange={(e) => setEditAmount(e.target.value)}
+                    variant="amber"
                   />
                 </div>
                 <div className="grid gap-2">
@@ -420,6 +421,7 @@ function PayoutRequests() {
                     value={editNote}
                     onChange={(e) => setEditNote(e.target.value)}
                     rows={2}
+                    variant="amber"
                   />
                 </div>
               </>
@@ -432,32 +434,33 @@ function PayoutRequests() {
                   value={adminNote}
                   onChange={(e) => setAdminNote(e.target.value)}
                   rows={2}
+                  variant="amber"
                 />
               </div>
             )}
 
             {error && <p className="text-sm text-red-400">{error}</p>}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={closeAction} disabled={submitting}>
-              Abbrechen
-            </Button>
-            {actionType === 'approve' && (
-              <Button onClick={handleApprove} disabled={submitting} className="bg-green-600 hover:bg-green-700">
-                {submitting ? 'Wird genehmigt...' : 'Genehmigen'}
+            <DialogFooter>
+              <Button variant="danger" onClick={closeAction} disabled={submitting}>
+                Abbrechen
               </Button>
-            )}
-            {actionType === 'reject' && (
-              <Button onClick={handleReject} disabled={submitting} variant="destructive">
-                {submitting ? 'Wird abgelehnt...' : 'Ablehnen'}
-              </Button>
-            )}
-            {actionType === 'edit' && (
-              <Button onClick={handleEdit} disabled={submitting}>
-                {submitting ? 'Wird gespeichert...' : 'Speichern'}
-              </Button>
-            )}
-          </DialogFooter>
+              {actionType === 'approve' && (
+                <Button onClick={handleApprove} disabled={submitting} variant="approve">
+                  {submitting ? 'Wird genehmigt...' : 'Genehmigen'}
+                </Button>
+              )}
+              {actionType === 'reject' && (
+                <Button onClick={handleReject} disabled={submitting} variant="reject">
+                  {submitting ? 'Wird abgelehnt...' : 'Ablehnen'}
+                </Button>
+              )}
+              {actionType === 'edit' && (
+                <Button onClick={handleEdit} disabled={submitting} variant="amber">
+                  {submitting ? 'Wird gespeichert...' : 'Speichern'}
+                </Button>
+              )}
+            </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

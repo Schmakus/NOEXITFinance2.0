@@ -41,7 +41,7 @@ function Layout() {
       setSidebarOpen(true)
     }
   }, [isMobile, user?.role])
-  const { logo, bandName } = useSettings()
+  const { icon, bandName } = useSettings()
   const [pendingPayoutCount, setPendingPayoutCount] = useState(0)
 
   // Track screen size
@@ -113,11 +113,11 @@ function Layout() {
         {/* Logo */}
         <div className="p-4 md:p-6 border-b border-border">
           <Link to="/dashboard" className="flex items-center gap-2" onClick={() => isMobile && setSidebarOpen(false)}>
-            {logo ? (
+            {icon ? (
               <img
-                src={logo}
-                alt="Logo"
-                className="w-10 h-10 rounded-lg object-contain brightness-0 invert"
+                src={icon}
+                alt="Icon"
+                className="w-10 h-10 rounded-lg object-contain"
               />
             ) : (
               <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg flex items-center justify-center text-white font-bold shrink-0">

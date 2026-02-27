@@ -121,9 +121,10 @@ function Account() {
               value={newEmail}
               onChange={(e) => setNewEmail(e.target.value)}
               placeholder="neue@email.de"
+              variant="amber"
             />
           </div>
-          <Button onClick={handleUpdateEmail} disabled={saving || newEmail === user?.email} className="btn-amber">
+          <Button onClick={handleUpdateEmail} disabled={saving || newEmail === user?.email} variant="amber">
             <Save className="w-4 h-4 mr-2" />
             E-Mail ändern
           </Button>
@@ -150,6 +151,7 @@ function Account() {
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="••••••••"
                 className="pr-10"
+                variant="amber"
               />
               <button
                 type="button"
@@ -171,6 +173,7 @@ function Account() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="••••••••"
+                variant="amber"
               />
             </div>
           )}

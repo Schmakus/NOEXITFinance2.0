@@ -98,14 +98,25 @@ function Concerts() {
       groupId: concert.group_id || '',
       notes: concert.notes || '',
     })
-    setExpenses(
-      concert.expenses.map((e) => ({
-        id: e.id,
-        description: e.description,
-        amount: e.amount,
-        keyword: e.keyword || '',
-      }))
-    )
+    let exp = concert.expenses.map((e) => ({
+      id: e.id,
+      description: e.description,
+      amount: e.amount,
+      keyword: e.keyword || '',
+    }))
+    // Ergänze Dummy-Ausgabe mit 'Gage', falls nicht vorhanden
+    if (!exp.some(e => (e.keyword || '').toLowerCase() === 'gage')) {
+      exp = [
+        ...exp,
+        {
+          id: 'gage-auto',
+          description: 'Gage',
+          amount: 0,
+          keyword: 'Gage',
+        },
+      ]
+    }
+    setExpenses(exp)
     setOpen(true)
   }
 
@@ -132,11 +143,26 @@ function Concerts() {
   }
 
   const saveConcert = async () => {
+
     if (!formData.name || !formData.location || !formData.date || !formData.nettoGage) return
 
     const nettoGage = parseFloat(formData.nettoGage)
-    const expenseTotal = expenses.reduce((sum, e) => sum + e.amount, 0)
-    // restBetrag wird weiter unten als const deklariert, daher hier entfernen
+    let newExpenses = [...expenses]
+    // Prüfe, ob Keyword 'Gage' schon existiert
+    const hasGage = newExpenses.some(e => (e.keyword || '').toLowerCase() === 'gage')
+    if (!hasGage) {
+      // Füge Dummy-Ausgabe mit Keyword 'Gage' und Betrag 0 hinzu
+      newExpenses = [
+        ...newExpenses,
+        {
+          id: 'gage-auto',
+          description: 'Gage',
+          amount: 0,
+          keyword: 'Gage',
+        },
+      ]
+    }
+    const expenseTotal = newExpenses.reduce((sum, e) => sum + e.amount, 0)
 
     const concertData = {
       name: formData.name,
@@ -146,7 +172,7 @@ function Concerts() {
       group_id: formData.groupId || null,
       notes: formData.notes,
     }
-    const expenseData = expenses.map((e) => ({
+    const expenseData = newExpenses.map((e) => ({
       description: e.description,
       amount: e.amount,
       keyword: e.keyword,
@@ -165,7 +191,7 @@ function Concerts() {
         action = 'create';
       }
 
-      // Create transactions if group is selected and there's a positive rest
+      // Transaktionen IMMER neu schreiben, damit das Keyword 'Gage' garantiert gesetzt ist
       const restBetrag = nettoGage - expenseTotal;
       if (formData.groupId && restBetrag > 0) {
         const members = getGroupMembers(formData.groupId);
@@ -176,11 +202,16 @@ function Concerts() {
           amount: Number((restBetrag * member.percent / 100).toFixed(2)),
           date: formData.date,
           type: 'earn' as const,
-           description: `Gage: ${formData.name}`,
+          description: formData.name, // Nur Veranstaltungsname
+          keywords: (() => {
+            // Falls schon andere Keywords (z.B. aus Ausgaben) für diesen Musiker existieren, ergänze 'Gage' falls nicht enthalten
+            const kws = ['Gage']
+            return Array.from(new Set(kws))
+          })(),
         }));
         await replaceTransactionsByConcert(concertId, transactions);
       } else {
-        // No group or no rest — remove any existing transactions
+        // No group oder kein Restbetrag — immer löschen
         await deleteTransactionsByConcert(concertId);
       }
 
@@ -304,6 +335,7 @@ function Concerts() {
                     placeholder="z.B. Stadtfest Musterstadt"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    variant="amber"
                   />
                 </div>
                 <div className="grid gap-2">
@@ -313,6 +345,7 @@ function Concerts() {
                     placeholder="Ort/Location"
                     value={formData.location}
                     onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                    variant="amber"
                   />
                 </div>
               </div>
@@ -331,6 +364,7 @@ function Concerts() {
                     step="0.01"
                     value={formData.nettoGage}
                     onChange={(e) => setFormData({ ...formData, nettoGage: e.target.value })}
+                    variant="amber"
                   />
                 </div>
               </div>
@@ -379,6 +413,7 @@ function Concerts() {
                       value={expenseForm.description}
                       onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })}
                       list="expense-description-suggestions"
+                      variant="amber"
                     />
                     <datalist id="expense-description-suggestions">
                       {expenseDescriptionSuggestions.map((desc) => (
@@ -391,12 +426,14 @@ function Concerts() {
                       step="0.01"
                       value={expenseForm.amount}
                       onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
+                      variant="amber"
                     />
                     <Input
                       placeholder="Stichwort"
                       list="concert-keyword-suggestions"
                       value={expenseForm.keyword}
                       onChange={(e) => setExpenseForm({ ...expenseForm, keyword: e.target.value })}
+                      variant="amber"
                     />
                     <datalist id="concert-keyword-suggestions">
                       {tagNames.map((tag) => (
@@ -417,7 +454,7 @@ function Concerts() {
                   id="groupId"
                   value={formData.groupId}
                   onChange={(e) => setFormData({ ...formData, groupId: e.target.value })}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-10 w-full rounded-md border border-input bg-[#18181b] px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:border-amber-500 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <option value="">-- Keine Gruppe --</option>
                   {groups.map((group) => (
@@ -431,9 +468,12 @@ function Concerts() {
                   <div className="flex flex-wrap gap-2 p-3 bg-muted rounded-lg">
                     <p className="text-sm text-muted-foreground w-full mb-2">Gruppenmitglieder:</p>
                     {getGroupMembers(formData.groupId).map((member) => (
-                      <div key={member.musician_id} className="inline-flex items-center gap-2 px-3 py-1 bg-background rounded-full text-sm">
-                        <div>{member.musician_name} ({member.percent.toFixed(2)}%)</div>
-                      </div>
+                      <span
+                        key={member.musician_id}
+                        className="keyword text-xs px-2 py-0.5 rounded-full border border-blue-400/60 text-blue-300 bg-blue-500/10 flex items-center gap-1"
+                      >
+                        {member.musician_name} ({member.percent.toFixed(2)}%)
+                      </span>
                     ))}
                   </div>
                 )}
@@ -448,12 +488,17 @@ function Concerts() {
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   className="min-h-24"
+                  variant="amber"
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => { setOpen(false); resetForm() }}>Abbrechen</Button>
-              <Button onClick={saveConcert}>{editingId ? 'Aktualisieren' : 'Erstellen'}</Button>
+              <Button variant="outline" className="border-red-500 text-red-400 hover:bg-red-500/10" onClick={() => { setOpen(false); resetForm() }}>Abbrechen</Button>
+              {editingId ? (
+                <Button variant="outline" className="border-yellow-400 text-yellow-300 hover:bg-yellow-400/10" onClick={saveConcert}>Aktualisieren</Button>
+              ) : (
+                <Button variant="outline" className="border-green-500 text-green-400 hover:bg-green-500/10" onClick={saveConcert}>Erstellen</Button>
+              )}
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -484,10 +529,10 @@ function Concerts() {
                       </CardDescription>
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(concert)}>
+                      <Button variant="editicon" size="icon" className="h-7 w-7" onClick={() => openEdit(concert)}>
                         <Edit2 className="w-3.5 h-3.5" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-300" onClick={() => handleDeleteConcert(concert.id)}>
+                      <Button variant="deleteicon" size="icon" className="h-7 w-7" onClick={() => handleDeleteConcert(concert.id)}>
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </div>
@@ -532,10 +577,13 @@ function Concerts() {
                         <h4 className="font-medium mb-2">Verteilung: {concert.group_name || concert.group_id}</h4>
                         <div className="flex flex-wrap gap-2">
                           {members.map((member) => (
-                            <div key={member.musician_id} className="inline-flex items-center gap-2 px-3 py-1 bg-muted rounded-full text-sm">
-                              <Users className="w-4 h-4 text-muted-foreground" />
-                              <div>{member.musician_name} ({member.percent.toFixed(2)}%)</div>
-                            </div>
+                            <span
+                              key={member.musician_id}
+                              className="keyword text-xs px-2 py-0.5 rounded-full border border-blue-400/60 text-blue-300 bg-blue-500/10 flex items-center gap-1"
+                            >
+                              <Users className="w-4 h-4 text-blue-400" />
+                              {member.musician_name} ({member.percent.toFixed(2)}%)
+                            </span>
                           ))}
                         </div>
                       </div>

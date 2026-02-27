@@ -256,7 +256,7 @@ function Musicians() {
           {isAdmin && !showArchived && (
             <Dialog open={isOpen} onOpenChange={setIsOpen}>
               <DialogTrigger asChild>
-                <Button onClick={handleAdd} className="btn-amber">
+                <Button onClick={handleAdd} variant="amber">
                   <Plus className="w-4 h-4 mr-2" />
                   Musiker hinzufuegen
                 </Button>
@@ -280,6 +280,7 @@ function Musicians() {
                   placeholder="John Doe"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  variant="amber"
                 />
               </div>
               <div className="grid gap-2">
@@ -290,6 +291,7 @@ function Musicians() {
                   placeholder="max@beispiel.de"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  variant="amber"
                 />
               </div>
               {!editingId && (
@@ -301,6 +303,7 @@ function Musicians() {
                     placeholder="Min. 6 Zeichen"
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    variant="amber"
                   />
                   <p className="text-xs text-muted-foreground">
                     Login-Passwort für den Supabase-Account des Musikers
@@ -316,6 +319,7 @@ function Musicians() {
                     placeholder="Leer lassen = unverändert"
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    variant="amber"
                   />
                   <p className="text-xs text-muted-foreground">
                     Nur ausfüllen, wenn das Passwort geändert werden soll
@@ -331,6 +335,7 @@ function Musicians() {
                   placeholder="0.00"
                   value={formData.balance}
                   onChange={(e) => setFormData({ ...formData, balance: e.target.value })}
+                  variant="amber"
                 />
               </div>
               <div className="grid gap-2">
@@ -344,21 +349,39 @@ function Musicians() {
                       role: e.target.value as 'administrator' | 'superuser' | 'user',
                     })
                   }
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-10 w-full rounded-md border border-input bg-[#18181b] px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:border-amber-500 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <option value="user">Benutzer</option>
-                  <option value="superuser">Superuser</option>
-                  <option value="administrator">Administrator</option>
+                  <option value="superuser" className="bg-[#18181b]">Superuser</option>
+                  <option value="administrator" className="bg-[#18181b]">Administrator</option>
                 </select>
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setIsOpen(false)}
+                className="border-red-500 text-red-600 hover:bg-red-50 hover:border-red-600"
+              >
                 Abbrechen
               </Button>
-              <Button onClick={handleSave}>
-                {editingId ? 'Aktualisieren' : 'Hinzufügen'}
-              </Button>
+              {editingId ? (
+                <Button
+                  variant="outline"
+                  onClick={handleSave}
+                  className="border-amber-400 text-amber-600 hover:bg-amber-50 hover:border-amber-500"
+                >
+                  Aktualisieren
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  onClick={handleSave}
+                  className="border-green-500 text-green-600 hover:bg-green-50 hover:border-green-600"
+                >
+                  Hinzufügen
+                </Button>
+              )}
             </DialogFooter>
               </DialogContent>
             </Dialog>

@@ -260,7 +260,7 @@ function Groups() {
             <div className="grid gap-4 py-4">
               <div className="grid gap-2 px-1 sm:px-2">
                 <Label htmlFor="group-name">Gruppenname</Label>
-                <Input id="group-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="z. B. Hauptband" />
+                <Input id="group-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="z. B. Hauptband" variant="amber" />
               </div>
 
               <div>
@@ -271,7 +271,7 @@ function Groups() {
                 <div className="space-y-2">
                   {musicians.map((m) => (
                     <div key={m.id} className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
-                      <Switch checked={m.id in selected} onCheckedChange={(checked: boolean) => toggleSelectChecked(m.id, checked)} />
+                      <Switch checked={m.id in selected} onCheckedChange={(checked: boolean) => toggleSelectChecked(m.id, checked)} variant="amber" />
                       <div className="flex-1 min-w-[80px]">
                         <div className="font-medium text-sm sm:text-base">{m.name}</div>
                       </div>
@@ -284,6 +284,7 @@ function Groups() {
                           disabled={!(m.id in selected)}
                           value={(m.id in selected ? (selected[m.id] ?? '') : '') as any}
                           onChange={(e) => setPercent(m.id, e.target.value)}
+                          variant="amber"
                         />
                       </div>
                       <div className="w-8 sm:w-12 text-sm text-muted-foreground">%</div>
@@ -307,8 +308,12 @@ function Groups() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => { setOpen(false); resetForm() }}>Abbrechen</Button>
-              <Button onClick={saveGroup} disabled={Math.abs(calculateSum() - 100) > 0.001}>{editingId ? 'Aktualisieren' : 'Erstellen'}</Button>
+              <Button variant="danger" onClick={() => { setOpen(false); resetForm() }}>Abbrechen</Button>
+              {editingId ? (
+                <Button onClick={saveGroup} disabled={Math.abs(calculateSum() - 100) > 0.001} variant="update">Aktualisieren</Button>
+              ) : (
+                <Button onClick={saveGroup} disabled={Math.abs(calculateSum() - 100) > 0.001} variant="success">Erstellen</Button>
+              )}
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -354,10 +359,10 @@ function Groups() {
                           <CardDescription>{g.members.length} Mitglieder</CardDescription>
                         </div>
                         <div className="flex gap-2">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(g)}>
+                          <Button variant="editicon" size="icon" className="h-7 w-7" onClick={() => openEdit(g)}>
                             <Edit2 className="w-3.5 h-3.5" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-300" onClick={() => deleteGroup(g.id)}>
+                          <Button variant="deleteicon" size="icon" className="h-7 w-7" onClick={() => deleteGroup(g.id)}>
                             <Trash2 className="w-3.5 h-3.5" />
                           </Button>
                         </div>
@@ -366,8 +371,11 @@ function Groups() {
                     <CardContent>
                       <div className="flex flex-wrap gap-2">
                         {g.members.map((m) => (
-                          <span key={m.musician_id} className="inline-flex items-center gap-2 px-3 py-1 bg-muted rounded-full text-sm">
-                            <Users className="w-4 h-4 text-muted-foreground" />
+                          <span
+                            key={m.musician_id}
+                            className="keyword text-xs px-2 py-0.5 rounded-full border border-blue-400/60 text-blue-300 bg-blue-500/10 flex items-center gap-1"
+                          >
+                            <Users className="w-4 h-4 text-blue-400" />
                             {m.musician_name} ({m.percent.toFixed(2)}%)
                           </span>
                         ))}

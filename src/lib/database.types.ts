@@ -74,6 +74,7 @@ export interface DbTransaction {
   date: string | null
   type: 'earn' | 'expense'
   description: string | null
+  keywords?: string[]
   created_at: string
 }
 
@@ -87,6 +88,7 @@ export interface DbTransactionArchive {
   date: string | null
   type: 'earn' | 'expense'
   description: string | null
+  keywords?: string[]
   created_at: string | null
   archived_at: string
 }

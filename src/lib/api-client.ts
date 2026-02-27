@@ -645,7 +645,7 @@ export async function fetchTransactions(): Promise<DbTransaction[]> {
 export async function fetchTransactionsWithMusician() {
   const { data, error } = await supabase
     .from('transactions')
-    .select('*, musicians(name), bookings(type)')
+    .select('*, musicians(name), bookings(type,keywords)')
     .order('date', { ascending: false })
   if (error) throw error
   return (data ?? []).map((t: any) => ({
@@ -653,6 +653,8 @@ export async function fetchTransactionsWithMusician() {
     amount: Number(t.amount),
     musician_name: t.musicians?.name ?? 'Unbekannt',
     booking_type: t.bookings?.type ?? null,
+    keywords: t.keywords ?? [],
+    booking_keywords: t.bookings?.keywords ?? [],
   }))
 }
 
@@ -741,6 +743,7 @@ export async function replaceTransactionsByConcert(
     date: string
     type: 'earn' | 'expense'
     description: string
+    keywords?: string[]
   }[]
 ): Promise<DbTransaction[]> {
   await deleteTransactionsByConcert(concertId)
@@ -833,19 +836,19 @@ export async function fetchSettings(): Promise<Record<string, string>> {
 }
 
 // Public settings (logo, bandname) — uses admin client to bypass RLS on login page
-export async function fetchPublicSettings(): Promise<{ logo: string | null; bandname: string }> {
+export async function fetchPublicSettings(): Promise<{ logo: string | null; icon: string | null; bandname: string }> {
   const admin = getSupabaseAdmin()
-  if (!admin) return { logo: null, bandname: 'NO EXIT' }
+  if (!admin) return { logo: null, icon: null, bandname: 'NO EXIT' }
   const { data, error } = await admin
     .from('app_settings')
     .select('key, value')
-    .in('key', ['logo', 'bandname'])
-  if (error) return { logo: null, bandname: 'NO EXIT' }
+    .in('key', ['logo', 'icon', 'bandname'])
+  if (error) return { logo: null, icon: null, bandname: 'NO EXIT' }
   const settings: Record<string, string> = {}
   ;(data ?? []).forEach((s: any) => {
     if (s.value !== null) settings[s.key] = s.value
   })
-  return { logo: settings.logo ?? null, bandname: settings.bandname ?? 'NO EXIT' }
+  return { logo: settings.logo ?? null, icon: settings.icon ?? null, bandname: settings.bandname ?? 'NO EXIT' }
 }
 
 export async function fetchSetting(key: string): Promise<string | null> {

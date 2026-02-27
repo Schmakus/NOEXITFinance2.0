@@ -1,16 +1,14 @@
-
 import React, { useState, useEffect } from 'react'
 import { APP_VERSION } from '@/lib/version'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Save, Upload, Trash2, AlertTriangle, Image, X, FileJson, FileSpreadsheet } from 'lucide-react'
+import { Save, Upload, Trash2, AlertTriangle, Image, FileJson, FileSpreadsheet } from 'lucide-react'
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import {
   fetchSettings,
   upsertSetting,
-  deleteSetting,
   deleteAllData,
   deleteAllConcertsAndTransactions,
   deleteAllBookingsAndTransactions,
@@ -23,9 +21,12 @@ import { Spinner } from '@/components/ui/spinner'
 import { fetchLogs } from '@/lib/fetch-logs'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { useSettings } from '@/contexts/SettingsContext'
 
 function Settings() {
   const { user } = useAuth()
+  const { reloadSettings } = useSettings()
+  const { logo, icon } = useSettings()
   // --- Logfile Dialog State ---
   const [logDialogOpen, setLogDialogOpen] = useState(false)
   const [logs, setLogs] = useState<any[]>([])
@@ -34,7 +35,6 @@ function Settings() {
 
   // --- Settings State ---
   const [bandName, setBandName] = useState('NO EXIT')
-  const [logo, setLogo] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   // const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null) // removed, not used in JSX
@@ -55,9 +55,7 @@ function Settings() {
       try {
         const settings = await fetchSettings()
         if (settings.bandname) setBandName(settings.bandname)
-        if (settings.logo) setLogo(settings.logo)
       } catch (err) {
-         
         console.error('Einstellungen laden fehlgeschlagen:', err)
       } finally {
         setLoading(false)
@@ -86,7 +84,6 @@ function Settings() {
       window.dispatchEvent(new Event('noexit-settings-changed'))
       // Optionally: show a toast here
     } catch (err) {
-       
       console.error(err)
       // Optionally: show a toast here
     } finally {
@@ -94,68 +91,64 @@ function Settings() {
     }
   }
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+
+  const handleLogoUpload2 = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
     if (file.size > 2_000_000) {
       // Optionally: show a toast here
       return
     }
-    const reader = new FileReader()
-    reader.onload = async (ev) => {
-      const dataUrl = ev.target?.result as string
-      try {
-        await upsertSetting('logo', dataUrl)
-        setLogo(dataUrl)
-        // Logging-Aufruf
-        if (user) {
-          await supabase.from('logs').insert({
-            type: 'settings',
-            action: 'update',
-            label: 'logo',
-            description: 'Logo geändert',
-            user_id: user.id,
-            user_name: user.name,
-          })
-        }
-        window.dispatchEvent(new Event('noexit-settings-changed'))
-        // Optionally: show a toast here
-      } catch (err) {
-         
-        console.error('Logo upload error:', err)
-        // Optionally: show a toast here
-      }
-    }
-    reader.onerror = () => {
-      // Optionally: show a toast here
-    }
-    reader.readAsDataURL(file)
-    e.target.value = ''
-  }
-
-  const handleRemoveLogo = async () => {
+    setSaving(true)
     try {
-      await deleteSetting('logo')
-      setLogo(null)
-      // Logging-Aufruf
-      if (user) {
-        await supabase.from('logs').insert({
-          type: 'settings',
-          action: 'delete',
-          label: 'logo',
-          description: 'Logo entfernt',
-          user_id: user.id,
-          user_name: user.name,
-        })
-      }
+      const fileExt = file.name.split('.').pop()
+      const filePath = `logo.${fileExt}`
+      const { error: uploadError } = await supabase.storage.from('img').upload(filePath, file, { upsert: true, cacheControl: '3600' })
+      if (uploadError) throw uploadError
+      const { data } = supabase.storage.from('img').getPublicUrl(filePath)
+      const publicUrl = data.publicUrl
+      await upsertSetting('logo', publicUrl)
+      await reloadSettings()
       window.dispatchEvent(new Event('noexit-settings-changed'))
       // Optionally: show a toast here
     } catch (err) {
-       
-      console.error(err)
+      console.error('Logo upload error:', err)
       // Optionally: show a toast here
+    } finally {
+      setSaving(false)
+      e.target.value = ''
     }
   }
+
+
+  const handleIconUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 2_000_000) {
+      // Optionally: show a toast here
+      return
+    }
+    setSaving(true)
+    try {
+      const fileExt = file.name.split('.').pop()
+      const filePath = `icon.${fileExt}`
+      const { error: uploadError } = await supabase.storage.from('img').upload(filePath, file, { upsert: true, cacheControl: '3600' })
+      if (uploadError) throw uploadError
+      const { data } = supabase.storage.from('img').getPublicUrl(filePath)
+      const publicUrl = data.publicUrl
+      await upsertSetting('icon', publicUrl)
+      await reloadSettings()
+      window.dispatchEvent(new Event('noexit-settings-changed'))
+      // Optionally: show a toast here
+    } catch (err) {
+      console.error('Icon upload error:', err)
+      // Optionally: show a toast here
+    } finally {
+      setSaving(false)
+      e.target.value = ''
+    }
+  }
+
 
   const handleExportBackup = async () => {
     try {
@@ -172,7 +165,6 @@ function Settings() {
       URL.revokeObjectURL(url)
       // Optionally: show a toast here
     } catch (err) {
-       
       console.error(err)
       // Optionally: show a toast here
     }
@@ -203,7 +195,6 @@ function Settings() {
       window.dispatchEvent(new Event('noexit-settings-changed'))
       // Optionally: show a toast here
     } catch (err) {
-       
       console.error(err)
       // Optionally: show a toast here
     }
@@ -223,7 +214,6 @@ function Settings() {
       URL.revokeObjectURL(url)
       // Optionally: show a toast here
     } catch (err) {
-       
       console.error(err)
       // Optionally: show a toast here
     }
@@ -267,7 +257,6 @@ function Settings() {
       }
       // Optionally: show a toast here
     } catch (err) {
-       
       console.error(err)
       // Optionally: show a toast here
     }
@@ -286,6 +275,11 @@ function Settings() {
   return (
     <div className="space-y-8">
       {/* Logfile Button und Dialog ganz oben */}
+      <div className="flex justify-end mb-4">
+        <Button variant="amber" onClick={() => window.location.href = '/component-overview'}>
+          Komponenten-Übersicht
+        </Button>
+      </div>
       <div className="flex justify-end mb-4">
         <Dialog open={logDialogOpen} onOpenChange={setLogDialogOpen}>
           <DialogTrigger asChild>
@@ -351,6 +345,7 @@ function Settings() {
                 value={bandName}
                 onChange={(e) => setBandName(e.target.value)}
                 placeholder="Bandname"
+                variant="amber"
               />
             </div>
             <div className="flex items-end">
@@ -367,41 +362,107 @@ function Settings() {
       <Card style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
         <CardHeader>
           <CardTitle>Logo</CardTitle>
-          <CardDescription>(max. 2 MB)</CardDescription>
+          <CardDescription>(max. 2 MB, für PDF-Export und Branding)</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {logo ? (
-            <div className="flex items-center gap-4">
-              <img
-                src={logo ?? undefined}
-                alt="Logo"
-                className="w-20 h-20 object-contain rounded-lg border"
-              />
-              <button className="btn btn-danger" onClick={handleRemoveLogo}>
-                <X className="w-4 h-4 mr-2" />
-                Entfernen
-              </button>
-            </div>
-          ) : (
-            <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
-              <Image className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground mb-2">Kein Logo hochgeladen</p>
-              <button
-                className="btn btn-outline"
-                onClick={() => document.getElementById('logo-upload')?.click()}
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                Logo hochladen
-              </button>
+          <div className="flex flex-col md:flex-row items-center gap-6">
+            {logo ? (
+              <div className="flex flex-col items-center gap-2">
+                <img
+                  src={logo ?? undefined}
+                  alt="Logo"
+                  className="w-24 h-24 object-contain rounded-lg border bg-muted"
+                />
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-2">
+                <Image className="w-12 h-12 mb-2 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground mb-2">Kein Logo hochgeladen</p>
+              </div>
+            )}
+            <div
+              className="flex-1 border-2 border-dashed border-border rounded-lg p-6 flex flex-col items-center justify-center bg-muted/40 transition-colors hover:bg-muted/60 cursor-pointer min-w-[220px] max-w-xs"
+              onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add('ring', 'ring-primary'); }}
+              onDragLeave={e => { e.preventDefault(); e.currentTarget.classList.remove('ring', 'ring-primary'); }}
+              onDrop={e => {
+                e.preventDefault();
+                e.currentTarget.classList.remove('ring', 'ring-primary');
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                  handleLogoUpload2({ target: { files: e.dataTransfer.files }, preventDefault: () => {}, } as any)
+                }
+              }}
+              tabIndex={0}
+              aria-label="Logo hierher ziehen oder auswählen"
+            >
+              <Upload className="w-8 h-8 mb-2 text-primary" />
+              <span className="text-sm mb-2 text-muted-foreground">Logo hierher ziehen<br />oder auswählen</span>
+              <label htmlFor="logo-upload2" className="btn btn-outline mt-2 cursor-pointer">
+                Datei auswählen
+              </label>
               <input
-                id="logo-upload"
+                id="logo-upload2"
                 type="file"
                 accept="image/*"
                 className="hidden"
-                onChange={handleLogoUpload}
+                onChange={handleLogoUpload2}
               />
+              <span className="text-xs text-muted-foreground mt-2">max. 2 MB</span>
             </div>
-          )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Icon */}
+      <Card style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
+        <CardHeader>
+          <CardTitle>Icon</CardTitle>
+          <CardDescription>(max. 2 MB, quadratisch empfohlen)</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col md:flex-row items-center gap-6">
+            {icon ? (
+              <div className="flex flex-col items-center gap-2">
+                <img
+                  src={icon ?? undefined}
+                  alt="Icon"
+                  className="w-16 h-16 object-contain rounded-lg border bg-muted"
+                />
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-2">
+                <Image className="w-8 h-8 mb-2 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground mb-2">Kein Icon hochgeladen</p>
+              </div>
+            )}
+            <div
+              className="flex-1 border-2 border-dashed border-border rounded-lg p-6 flex flex-col items-center justify-center bg-muted/40 transition-colors hover:bg-muted/60 cursor-pointer min-w-[180px] max-w-xs"
+              onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add('ring', 'ring-primary'); }}
+              onDragLeave={e => { e.preventDefault(); e.currentTarget.classList.remove('ring', 'ring-primary'); }}
+              onDrop={e => {
+                e.preventDefault();
+                e.currentTarget.classList.remove('ring', 'ring-primary');
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                  handleIconUpload({ target: { files: e.dataTransfer.files }, preventDefault: () => {}, } as any)
+                }
+              }}
+              tabIndex={0}
+              aria-label="Icon hierher ziehen oder auswählen"
+            >
+              <Upload className="w-8 h-8 mb-2 text-primary" />
+              <span className="text-sm mb-2 text-muted-foreground">Icon hierher ziehen<br />oder auswählen</span>
+              <label htmlFor="icon-upload" className="btn btn-outline mt-2 cursor-pointer">
+                Datei auswählen
+              </label>
+              <input
+                id="icon-upload"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleIconUpload}
+              />
+              <span className="text-xs text-muted-foreground mt-2">max. 2 MB</span>
+            </div>
+          </div>
         </CardContent>
       </Card>
 

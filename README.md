@@ -1,3 +1,25 @@
+## UI Button-Varianten
+
+Verwende für Buttons die folgenden Varianten, um ein konsistentes Design zu gewährleisten:
+
+| Variante   | Zweck/Ereignis                | Beispieltext         |
+|------------|-------------------------------|---------------------|
+| default    | Standard-Button               | Speichern           |
+| amber      | Hinzufügen, Primäraktion      | Hinzufügen, Neu     |
+| update     | Aktualisieren/Ändern          | Aktualisieren       |
+| success    | Erfolgsaktion, Erstellen      | Erstellen           |
+| danger     | Abbrechen, Löschen, Warnung   | Abbrechen, Löschen  |
+| approve    | Genehmigen, Freigeben         | Genehmigen          |
+| reject     | Ablehnen, Verwerfen           | Ablehnen            |
+| outline    | Sekundär, neutral             | Details, Info       |
+
+Alle Varianten sind zentral in `src/components/ui/button.tsx` definiert und können direkt als `variant`-Prop verwendet werden:
+
+```tsx
+<Button variant="amber">Hinzufügen</Button>
+<Button variant="danger">Abbrechen</Button>
+<Button variant="update">Aktualisieren</Button>
+```
 # NOEXIT Finance App
 
 Eine moderne **Finanzmanagement-Anwendung für Musikbands** mit aktuellem Tech-Stack (React 19, Vite, Tailwind CSS, TypeScript).
@@ -11,6 +33,7 @@ Eine moderne **Finanzmanagement-Anwendung für Musikbands** mit aktuellem Tech-S
 ✅ **Konzerte** - Events und Auftritte verwalten  
 ✅ **Transaktionen** - Finanzielle Aktivitäten tracken  
 ✅ **Auszahlungen beantragen** - Gage beantragen  
+✅ **Kontoauszug:** Für Admin/Superuser mit Menü/Sidebar, für User im Vollbild
 ✅ **Tags** - Transaktionen kategorisieren  
 ✅ **Einstellungen** - Benutzerpräferenzen  
 ✅ **Backup/Restore** - JSON Export & Restore (Admin)  
@@ -24,6 +47,7 @@ Eine moderne **Finanzmanagement-Anwendung für Musikbands** mit aktuellem Tech-S
 - **State Management:** TanStack React Query
 - **Backend:** Supabase (Auth + Database)
 - **Icons:** Lucide React
+- **Logo/Icon:** Icon und Logo können über Settings definiert werden
 
 ## Installation
 
@@ -100,7 +124,7 @@ npm run lint:fix
 src/
 ├── components/          # React Components
 │   ├── ui/              # shadcn UI Components
-│   └── Layout.tsx       # Haupt-Layout
+│   └── Layout.tsx       # Haupt-Layout (Sidebar/Menu, Icon oben links)
 ├── pages/               # Seiten
 │   ├── Dashboard.tsx
 │   ├── Musicians.tsx
@@ -108,12 +132,12 @@ src/
 │   ├── Concerts.tsx
 │   ├── Transactions.tsx
 │   ├── Tags.tsx
-│   ├── Login.tsx
+│   ├── Login.tsx        # Login-Fenster mit Icon
 │   └── Settings.tsx
 ├── contexts/            # React Contexts
 │   └── AuthContext.tsx  # Authentifizierung
 ├── lib/                 # Utilities & Konfiguration
-│   ├── api-client.ts    # Supabase API Client
+│   ├── api-client.ts    # Supabase API Client (liefert auch Icon/Logo)
 │   ├── query-client.ts  # TanStack Query
 │   └── utils.ts         # Utility Functions
 └── App.tsx              # Haupt-App Component
