@@ -52,10 +52,12 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />} />
-        
         {isAuthenticated ? (
           <>
-            <Route path="/statement/:musicianId" element={<Statement />} />
+            {/* Statement: User sieht Vollbild, Admin/Superuser im Layout */}
+            {isAdmin || isSuperuser ? null : (
+              <Route path="/statement/:musicianId" element={<Statement />} />
+            )}
             <Route element={<Layout />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/musicians" element={<ProtectedRoute allowed={canManageMusicians}><Musicians /></ProtectedRoute>} />
@@ -68,6 +70,10 @@ function App() {
               <Route path="/tags" element={<ProtectedRoute allowed={isAdmin}><Tags /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute allowed={canAccessSettings}><Settings /></ProtectedRoute>} />
               <Route path="/account" element={<Account />} />
+              {/* Statement für Admin/Superuser im Layout */}
+              {(isAdmin || isSuperuser) && (
+                <Route path="/statement/:musicianId" element={<Statement />} />
+              )}
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Route>
           </>
