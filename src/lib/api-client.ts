@@ -113,7 +113,7 @@ export async function fetchMusicians(): Promise<DbMusician[]> {
     .is('archived_at', null)
     .order('name')
   if (error) throw error
-  return (data ?? [])
+  return (data ?? []).map((m: any) => ({ ...m, balance: Number(m.balance) }))
 }
 
 export async function fetchAllMusicians(): Promise<DbMusician[]> {
@@ -122,7 +122,7 @@ export async function fetchAllMusicians(): Promise<DbMusician[]> {
     .select('*')
     .order('name')
   if (error) throw error
-  return (data ?? [])
+  return (data ?? []).map((m: any) => ({ ...m, balance: Number(m.balance) }))
 }
 
 export async function fetchArchivedMusicians(): Promise<DbMusician[]> {
@@ -132,7 +132,7 @@ export async function fetchArchivedMusicians(): Promise<DbMusician[]> {
     .not('archived_at', 'is', null)
     .order('name')
   if (error) throw error
-  return (data ?? [])
+  return (data ?? []).map((m: any) => ({ ...m, balance: Number(m.balance) }))
 }
 
 export async function fetchMusicianByUserId(userId: string): Promise<DbMusician | null> {
@@ -143,7 +143,7 @@ export async function fetchMusicianByUserId(userId: string): Promise<DbMusician 
     .is('archived_at', null)
     .maybeSingle()
   if (error) throw error
-  return data ?? null
+  return data ? { ...data, balance: Number(data.balance) } : null
 }
 
 export async function fetchMusicianById(id: string): Promise<DbMusician | null> {
@@ -153,13 +153,14 @@ export async function fetchMusicianById(id: string): Promise<DbMusician | null> 
     .eq('id', id)
     .maybeSingle()
   if (error) throw error
-  return data ?? null
+  return data ? { ...data, balance: Number(data.balance) } : null
 }
 
 export async function createMusician(musician: {
   name: string
   email: string
   role: string
+  balance?: number
   user_id?: string | null
 }): Promise<DbMusician> {
   const { data, error } = await supabase
@@ -168,12 +169,13 @@ export async function createMusician(musician: {
       name: musician.name,
       email: musician.email,
       role: musician.role,
+      balance: musician.balance ?? 0,
       user_id: musician.user_id ?? null,
     })
     .select()
     .single()
   if (error) throw error
-  return data
+  return { ...data, balance: Number(data.balance) }
 }
 
 export async function updateMusician(
@@ -182,6 +184,7 @@ export async function updateMusician(
     name: string
     email: string
     role: string
+    balance: number
     user_id: string | null
   }>
 ): Promise<DbMusician> {
@@ -192,7 +195,7 @@ export async function updateMusician(
     .select()
     .single()
   if (error) throw error
-  return data
+  return { ...data, balance: Number(data.balance) }
 }
 
 export async function deleteMusician(id: string): Promise<void> {
@@ -526,41 +529,46 @@ export async function updateConcert(
   return { ...data, netto_gage: Number(data.netto_gage) }
 }
 
-export async function archiveMusician(id: string): Promise<void> {
-  const { data: musician, error: mErr } = await supabase
-    .from('musicians')
-    .select('*')
-    .eq('id', id)
-    .maybeSingle()
-  if (mErr) throw mErr
-  if (!musician) throw new Error('Musiker nicht gefunden')
-
-  const { data: transactions, error: tErr } = await supabase
-    .from('transactions')
-    .select('*')
-    .eq('musician_id', id)
-  if (tErr) throw tErr
-
-  if ((transactions ?? []).length > 0) {
-    const archiveRows = (transactions ?? []).map((t: any) => ({
-      ...t,
-      archived_at: new Date().toISOString(),
-    }))
-    const { error: aErr } = await supabase.from('transactions_archive').insert(archiveRows)
-    if (aErr) throw aErr
-
-    const { error: dErr } = await supabase
-      .from('transactions')
-      .delete()
-      .eq('musician_id', id)
-    if (dErr) throw dErr
-  }
-  const { error: uErr } = await supabase
-    .from('musicians')
-    .update({ archived_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-    .eq('id', id)
-  if (uErr) throw uErr
+export async function deleteConcert(id: string): Promise<void> {
+  await deleteTransactionsByConcert(id)
+  const { error } = await supabase.from('concerts').delete().eq('id', id)
+  if (error) throw error
 }
+
+// ============================================
+// BUCHUNGEN
+// ============================================
+
+export async function fetchBookings(): Promise<DbBooking[]> {
+  const { data, error } = await supabase
+    .from('bookings')
+    .select('*, groups(name)')
+    .order('date', { ascending: false })
+  if (error) throw error
+  return (data ?? []).map((b: any) => ({
+    id: b.id,
+    description: b.description,
+    amount: Number(b.amount),
+    type: b.type,
+    date: b.date,
+    group_id: b.group_id,
+    musician_id: b.musician_id,
+    payout_musician_ids: b.payout_musician_ids ?? [],
+    keywords: b.keywords ?? [],
+    notes: b.notes,
+    created_at: b.created_at,
+    updated_at: b.updated_at,
+    group_name: b.groups?.name ?? null,
+  }))
+}
+
+export async function createBooking(booking: {
+  description: string
+  amount: number
+  type: 'expense' | 'income' | 'payout'
+  date: string
+  group_id: string | null
+  payout_musician_ids: string[]
   keywords: string[]
   notes: string
 }): Promise<DbBooking> {

@@ -8,6 +8,7 @@ export interface DbMusician {
   name: string
   email: string
   role: 'administrator' | 'superuser' | 'user'
+  balance: number
   archived_at: string | null
   created_at: string
   updated_at: string
