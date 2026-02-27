@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { Banknote, TrendingUp, TrendingDown } from 'lucide-react'
 import { fetchMusicians, fetchTransactionsWithMusician } from '@/lib/api-client'
@@ -24,7 +24,7 @@ interface TransactionRow {
 
 function Transactions() {
   const [transactions, setTransactions] = useState<TransactionRow[]>([])
-  const [musicians, setMusicians] = useState<DbMusician[]>([])
+  const [, setMusicians] = useState<DbMusician[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -46,11 +46,6 @@ function Transactions() {
     (a, b) => new Date(b.date ?? '').getTime() - new Date(a.date ?? '').getTime()
   )
 
-  const transactionsByMusician = transactions.reduce((acc, t) => {
-    if (!acc[t.musician_id]) acc[t.musician_id] = []
-    acc[t.musician_id].push(t)
-    return acc
-  }, {} as Record<string, TransactionRow[]>)
 
   if (loading) {
     return <Spinner text="Transaktionen werden geladen..." />
