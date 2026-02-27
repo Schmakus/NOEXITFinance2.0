@@ -57,9 +57,10 @@ Bei Datenbank-Operationen oder Migrationen gelten diese Regeln:
 * **shadcn/ui:** Prüfe immer, ob eine Komponente in `src/components/ui/` existiert, bevor du etwas Neues baust.
 * **Responsivität:** Nutze mobile-first Präfixe (`sm:`, `md:`, `lg:`).
 * **Design-Konsistenz:** Halte dich an die bestehenden Farb- und Abstandsdefinitionen. Keine neuen Farben oder Spacing-Werte ohne Rücksprache. Verwende bei input-feldern, switches, buttons etc. die vordefinierten shadcn/ui Komponenten und verwende immer die selben Designs für z.B. highlighted buttons, disabled states etc. (z.B. `variant="outline"`, `disabled` etc.).
-* **Button-Varianten:**
-    * Alle Button-Styles sind zentral in `src/components/ui/button.tsx` als Varianten definiert.
-    * Die Variante `update` hat: `border-amber-600 text-amber-600 bg-background hover:bg-amber-50 hover:border-amber-700` (kein Hintergrund, amber Hover).
+* **Komponenten-Varianten:**
+    * Alle UI-Komponenten (Button, Input, Textarea, Switch, DatePicker etc.) besitzen zentrale Varianten-Logik in ihren jeweiligen Dateien unter `src/components/ui/` (z.B. `button.tsx`, `input.tsx`, `switch.tsx`).
+    * Die Variante `update` für Buttons: `border-amber-600 text-amber-600 bg-background hover:bg-amber-50 hover:border-amber-700` (kein Hintergrund, amber Hover).
+    * Die Variante `amber` für Switches: `border-amber-600 bg-[#23272f] data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600`.
     * Für Design-Review gibt es eine Übersichtseite `ComponentOverview.tsx`, erreichbar über die Einstellungen, die alle Komponenten und States darstellt.
 * **Design-Review:**
     * UI-Komponenten-Übersicht ist über die Settings erreichbar (Button „Komponenten-Übersicht“).
