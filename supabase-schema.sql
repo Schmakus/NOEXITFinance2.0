@@ -136,10 +136,32 @@ create table if not exists app_settings (
 -- Standard-Einstellungen
 insert into app_settings (key, value) values
   ('bandname', 'NO EXIT'),
-  ('version', '0.0.1')
+  ('version', '0.0.1'),
+  ('max_guests_per_list', '25')
 on conflict (key) do nothing;
 
--- 10. AUSZAHLUNGSANTRÄGE (Payout Requests)
+-- 10. GÄSTELISTEN
+create table if not exists guest_lists (
+  id uuid primary key default gen_random_uuid(),
+  date date not null,
+  location text not null,
+  max_guests integer not null default 25,
+  created_by uuid references musicians(id) on delete cascade not null,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+-- 10b. GÄSTELISTEN-EINTRÄGE
+create table if not exists guest_list_entries (
+  id uuid primary key default gen_random_uuid(),
+  guest_list_id uuid references guest_lists(id) on delete cascade not null,
+  guest_name text not null,
+  guest_count integer not null default 1 check (guest_count >= 1),
+  added_by uuid references musicians(id) on delete set null,
+  added_at timestamptz default now()
+);
+
+-- 11. AUSZAHLUNGSANTRÄGE (Payout Requests)
 create table if not exists payout_requests (
   id uuid primary key default gen_random_uuid(),
   musician_id uuid references musicians(id) on delete cascade not null,
@@ -152,17 +174,17 @@ create table if not exists payout_requests (
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
-
--- 11. LOGGING (Audit Log)
+2. LOGGING (Audit Log)
 create table if not exists logs (
   id uuid primary key default gen_random_uuid(),
-  type text not null check (type in ('booking', 'concert', 'payout', 'login', 'musician')),
+  type text not null check (type in ('booking', 'concert', 'payout', 'login', 'musician', 'guest_list')),
   action text not null check (action in ('create', 'update', 'delete', 'request', 'login', 'archive', 'restore')),
   label text not null, -- z.B. "Buchung", "Konzert", "Auszahlung", "Login", "Musiker"
   description text not null, -- z.B. "Einnahme von 1000€ auf 1100€ geändert"
   user_id uuid references musicians(id),
   user_name text not null,
-  created_at timestamptz default now()
+  created_at timestamptz default now(),
+  payout_request_id uuid references payout_requests(id)
   payout_request_id uuid references payout_requests(id),
 );
 
@@ -199,10 +221,12 @@ using (
   bucket_id = 'img'
 );
 
--- Erlaube allen das Lesen (wenn public)
+-- Erlaube allen (authentifiziert & unauthentifiziert) das Lesen von öffentlichen Bildern
+drop policy if exists "Public can select images" on storage.objects;
 create policy "Public can select images"
 on storage.objects
 for select
+to public
 using (
   bucket_id = 'img'
 );
@@ -226,6 +250,8 @@ alter table transactions_archive enable row level security;
 alter table tags enable row level security;
 alter table app_settings enable row level security;
 alter table payout_requests enable row level security;
+alter table guest_lists enable row level security;
+alter table guest_list_entries enable row level security;
 
 -- Alle authentifizierten Benutzer können lesen
 create policy "Authenticated users can read musicians" on musicians for select to authenticated using (true);
@@ -235,7 +261,9 @@ create policy "Authenticated users can read concerts" on concerts for select to 
 create policy "Authenticated users can read concert_expenses" on concert_expenses for select to authenticated using (true);
 create policy "Authenticated users can read bookings" on bookings for select to authenticated using (true);
 create policy "Authenticated users can read transactions" on transactions for select to authenticated using (true);
-create policy "Authenticated users can read transactions_archive" on transactions_archive for select to authenticated using (true);
+create policy "Authenticated users can read transactions_archive" on transactions_archive for select to authenticat
+create policy "Authenticated users can read guest_lists" on guest_lists for select to authenticated using (true);
+create policy "Authenticated users can read guest_list_entries" on guest_list_entries for select to authenticated using (true);ed using (true);
 create policy "Authenticated users can read tags" on tags for select to authenticated using (true);
 create policy "Authenticated users can read app_settings" on app_settings for select to authenticated using (true);
 
@@ -268,6 +296,32 @@ create policy "Admins can manage transactions_archive" on transactions_archive f
 
 create policy "Admins can manage tags" on tags for all to authenticated using (is_admin_or_superuser());
 create policy "Admins can manage app_settings" on app_settings for all to authenticated using (is_admin_or_superuser());
+
+-- Guest Lists: Alle Users können erstellen, nur Creator und Admins können bearbeiten, nur Admins können löschen
+create policy "Authenticated users can create guest_lists" on guest_lists
+  for insert to authenticated
+  with check (created_by in (select id from musicians where user_id = auth.uid()));
+
+create policy "Creator can update guest_lists" on guest_lists
+  for update to authenticated
+  using (created_by in (select id from musicians where user_id = auth.uid()) or is_admin_or_superuser());
+
+create policy "Admins can delete guest_lists" on guest_lists
+  for delete to authenticated
+  using (is_admin_or_superuser());
+
+-- Guest List Entries: Alle Users können hinzufügen, Creator und Admins können bearbeiten, Admins können löschen
+create policy "Authenticated users can insert guest_list_entries" on guest_list_entries
+  for insert to authenticated
+  with check (added_by in (select id from musicians where user_id = auth.uid()));
+
+create policy "Admins can update guest_list_entries" on guest_list_entries
+  for update to authenticated
+  using (is_admin_or_superuser());
+
+create policy "Admins can delete guest_list_entries" on guest_list_entries
+  for delete to authenticated
+  using (is_admin_or_superuser());
 
 -- Payout Requests: Users können eigene lesen & erstellen, Admins können alles
 create policy "Users can read own payout_requests" on payout_requests for select to authenticated

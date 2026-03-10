@@ -77,6 +77,7 @@ function Layout() {
     ...(canManageBookings ? [{ icon: DollarSign, label: 'Buchung', path: '/bookings' }] : []),
     ...(canManageBookings ? [{ icon: Calendar, label: 'Konzerte', path: '/concerts' }] : []),
     ...(canManageBookings ? [{ icon: DollarSign, label: 'Transaktionen', path: '/transactions' }] : []),
+    { icon: Users, label: 'Gästelisten', path: '/guest-lists' },
     ...(canManageMusicians ? [{ icon: Users, label: 'Musiker', path: '/musicians' }] : []),
     ...(isAdmin ? [{ icon: Music, label: 'Gruppen', path: '/groups' }] : []),
     ...((isAdmin || isSuperuser) ? [{ icon: HandCoins, label: 'Auszahlungen', path: '/payout-requests', badge: pendingPayoutCount }] : []),

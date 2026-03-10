@@ -35,6 +35,7 @@ function Settings() {
 
   // --- Settings State ---
   const [bandName, setBandName] = useState('NO EXIT')
+  const [maxGuestsPerList, setMaxGuestsPerList] = useState(25)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   // const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null) // removed, not used in JSX
@@ -55,6 +56,7 @@ function Settings() {
       try {
         const settings = await fetchSettings()
         if (settings.bandname) setBandName(settings.bandname)
+        if (settings.max_guests_per_list) setMaxGuestsPerList(parseInt(settings.max_guests_per_list, 10))
       } catch (err) {
         console.error('Einstellungen laden fehlgeschlagen:', err)
       } finally {
@@ -77,6 +79,31 @@ function Settings() {
           action: 'update',
           label: 'bandname',
           description: `Bandname geändert auf "${bandName.trim() || 'NO EXIT'}"`,
+          user_id: user.id,
+          user_name: user.name,
+        })
+      }
+      window.dispatchEvent(new Event('noexit-settings-changed'))
+      // Optionally: show a toast here
+    } catch (err) {
+      console.error(err)
+      // Optionally: show a toast here
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleSaveMaxGuestsPerList = async () => {
+    setSaving(true)
+    try {
+      await upsertSetting('max_guests_per_list', maxGuestsPerList.toString())
+      // Logging-Aufruf
+      if (user) {
+        await supabase.from('logs').insert({
+          type: 'settings',
+          action: 'update',
+          label: 'max_guests_per_list',
+          description: `Maximale Anzahl Gäste pro Liste geändert auf ${maxGuestsPerList}`,
           user_id: user.id,
           user_name: user.name,
         })
@@ -350,6 +377,37 @@ function Settings() {
             </div>
             <div className="flex items-end">
               <button onClick={handleSaveBandName} disabled={saving} className="btn btn-primary">
+                <Save className="w-4 h-4 mr-2" />
+                Speichern
+              </button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Maximale Anzahl Gäste pro Liste */}
+      <Card style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
+        <CardHeader>
+          <CardTitle>Gästelisten-Einstellungen</CardTitle>
+          <CardDescription>Definiere die maximale Anzahl Gäste pro Gästeliste</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <Label htmlFor="max-guests">Maximale Anzahl Gäste</Label>
+              <Input
+                id="max-guests"
+                type="number"
+                min="1"
+                max="1000"
+                value={maxGuestsPerList}
+                onChange={(e) => setMaxGuestsPerList(parseInt(e.target.value, 10) || 25)}
+                placeholder="25"
+                variant="amber"
+              />
+            </div>
+            <div className="flex items-end">
+              <button onClick={handleSaveMaxGuestsPerList} disabled={saving} className="btn btn-primary">
                 <Save className="w-4 h-4 mr-2" />
                 Speichern
               </button>
