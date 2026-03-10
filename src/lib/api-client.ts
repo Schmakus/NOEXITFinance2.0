@@ -70,7 +70,6 @@ import type {
   TransactionArchiveWithMusician,
   PayoutRequestWithMusician,
   DbGuestList,
-  DbGuestListEntry,
   GuestListWithEntries,
   GuestListEntryWithAddedBy,
 } from './database.types'
