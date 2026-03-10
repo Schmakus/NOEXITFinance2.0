@@ -56,6 +56,8 @@ function GuestLists() {
   })
 
   const [createDraftEntries, setCreateDraftEntries] = useState<Array<{ guest_name: string; guest_count: number }>>([])
+  const createDraftTotal = createDraftEntries.reduce((sum, entry) => sum + entry.guest_count, 0)
+  const editingList = editingListId ? guestLists.find((l) => l.id === editingListId) : null
 
   const loadData = async () => {
     try {
@@ -275,7 +277,7 @@ function GuestLists() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">Gästelisten</h1>
-          <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-base">Verwalte deine Gästelisten für Events</p>
+          <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-base">Verwalte unsere Gästelisten</p>
         </div>
         <Dialog open={openCreateDialog} onOpenChange={(v: boolean) => { if (!v) resetForm(); setOpenCreateDialog(v) }}>
           <DialogTrigger asChild>
@@ -291,14 +293,16 @@ function GuestLists() {
             </DialogHeader>
 
             <div className="grid gap-4 py-4 px-1">
-              <div className="grid gap-2">
-                <Label>Datum</Label>
-                <DatePicker value={form.date} onChange={(v) => setForm((s) => ({ ...s, date: v }))} />
-              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Datum</Label>
+                  <DatePicker value={form.date} onChange={(v) => setForm((s) => ({ ...s, date: v }))} />
+                </div>
 
-              <div className="grid gap-2">
-                <Label>Veranstaltungsort</Label>
-                <Input value={form.location} onChange={(e) => setForm((s) => ({ ...s, location: e.target.value }))} placeholder="z.B. Konzertsaal" />
+                <div className="grid gap-2">
+                  <Label>Veranstaltungsort</Label>
+                  <Input value={form.location} onChange={(e) => setForm((s) => ({ ...s, location: e.target.value }))} placeholder="z.B. Konzertsaal" />
+                </div>
               </div>
 
               <div className="grid gap-2">
@@ -315,6 +319,7 @@ function GuestLists() {
 
               <div className="border-t border-border/50 pt-4 space-y-2">
                 <Label className="text-sm font-medium">Gäste hinzufügen</Label>
+                <p className="text-xs text-muted-foreground">Aktuelle Summe: {createDraftTotal}/{maxGuestsDefault} Personen</p>
                 <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-end">
                   <Input
                     placeholder="Name des Gastes"
@@ -361,6 +366,7 @@ function GuestLists() {
                             {entry.guest_name}
                             <span className="text-xs text-muted-foreground ml-2">({entry.guest_count} Person{entry.guest_count !== 1 ? 'en' : ''})</span>
                           </p>
+                          <p className="text-xs text-muted-foreground">von dir</p>
                         </div>
                         <Button
                           variant="deleteicon"
@@ -400,7 +406,7 @@ function GuestLists() {
                       <p className="font-semibold text-sm sm:text-base truncate">{list.location}</p>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {formatDate(new Date(list.date))} • Gäste: {list.total_guests}/{list.max_guests} • Von: {list.created_by_name}
+                      {formatDate(new Date(list.date))} • Aktuelle Summe: {list.total_guests}/{list.max_guests} Personen • Von: {list.created_by_name}
                     </p>
                   </div>
 
@@ -427,7 +433,7 @@ function GuestLists() {
                   <div className="mt-3 pt-3 border-t border-border/50 space-y-1">
                     {list.entries.map((entry) => (
                       <div key={entry.id} className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>{entry.guest_name}</span>
+                        <span>{entry.guest_name} <span className="text-[11px] text-muted-foreground/80">(von {entry.added_by_name || 'Unbekannt'})</span></span>
                         <span>{entry.guest_count} Person{entry.guest_count !== 1 ? 'en' : ''}</span>
                       </div>
                     ))}
@@ -449,13 +455,16 @@ function GuestLists() {
             </DialogHeader>
 
             <div className="grid gap-4 py-4 px-1">
-              <div className="grid gap-2">
-                <Label>Datum</Label>
-                <DatePicker value={form.date} onChange={(v) => setForm((s) => ({ ...s, date: v }))} />
-              </div>
-              <div className="grid gap-2">
-                <Label>Veranstaltungsort</Label>
-                <Input value={form.location} onChange={(e) => setForm((s) => ({ ...s, location: e.target.value }))} variant="amber" />
+              <p className="text-xs text-muted-foreground">Aktuelle Summe: {editingList?.total_guests ?? 0}/{editingList?.max_guests ?? maxGuestsDefault} Personen</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Datum</Label>
+                  <DatePicker value={form.date} onChange={(v) => setForm((s) => ({ ...s, date: v }))} />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Veranstaltungsort</Label>
+                  <Input value={form.location} onChange={(e) => setForm((s) => ({ ...s, location: e.target.value }))} variant="amber" />
+                </div>
               </div>
             </div>
 
@@ -480,6 +489,7 @@ function GuestLists() {
               {/* Current guest list */}
               <div>
                 <Label className="text-sm font-medium">Gästeliste</Label>
+                <p className="text-xs text-muted-foreground mt-1 mb-2">Aktuelle Summe: {editingList?.total_guests ?? 0}/{editingList?.max_guests ?? maxGuestsDefault} Personen</p>
                 <div className="mt-2 space-y-2 max-h-64 overflow-y-auto">
                   {guestLists
                     .find((l) => l.id === editingListId)
@@ -490,6 +500,7 @@ function GuestLists() {
                             {entry.guest_name}
                             <span className="text-xs text-muted-foreground ml-2">({entry.guest_count} Person{entry.guest_count !== 1 ? 'en' : ''})</span>
                           </p>
+                          <p className="text-xs text-muted-foreground">von {entry.added_by_name || 'Unbekannt'}</p>
                         </div>
                         <Button
                           variant="deleteicon"

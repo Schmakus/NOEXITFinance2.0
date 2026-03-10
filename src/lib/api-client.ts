@@ -1405,7 +1405,22 @@ export async function fetchGuestLists(): Promise<GuestListWithEntries[]> {
       .order('added_at', { ascending: true })
     
     if (!entError && entries) {
-      gl.entries = entries
+      const entryMusicianIds = Array.from(new Set(entries.map((e) => e.added_by).filter(Boolean))) as string[]
+      const entryMusicianMap: Record<string, string> = {}
+      if (entryMusicianIds.length > 0) {
+        const { data: entryMusicians } = await supabase
+          .from('musicians')
+          .select('id, name')
+          .in('id', entryMusicianIds)
+        ;(entryMusicians || []).forEach((m: { id: string; name: string }) => {
+          entryMusicianMap[m.id] = m.name
+        })
+      }
+
+      gl.entries = entries.map((entry) => ({
+        ...entry,
+        added_by_name: entry.added_by ? (entryMusicianMap[entry.added_by] || 'Unbekannt') : 'Unbekannt',
+      }))
       gl.total_guests = entries.reduce((sum, e) => sum + e.guest_count, 0)
     }
   }
@@ -1446,7 +1461,25 @@ export async function fetchGuestList(id: string): Promise<GuestListWithEntries> 
     .eq('guest_list_id', id)
     .order('added_at', { ascending: true })
 
-  const guestListEntries = entries || []
+  if (entError) throw entError
+
+  const rawGuestListEntries = entries || []
+  const entryMusicianIds = Array.from(new Set(rawGuestListEntries.map((e) => e.added_by).filter(Boolean))) as string[]
+  const entryMusicianMap: Record<string, string> = {}
+  if (entryMusicianIds.length > 0) {
+    const { data: entryMusicians } = await supabase
+      .from('musicians')
+      .select('id, name')
+      .in('id', entryMusicianIds)
+    ;(entryMusicians || []).forEach((m: { id: string; name: string }) => {
+      entryMusicianMap[m.id] = m.name
+    })
+  }
+
+  const guestListEntries = rawGuestListEntries.map((entry) => ({
+    ...entry,
+    added_by_name: entry.added_by ? (entryMusicianMap[entry.added_by] || 'Unbekannt') : 'Unbekannt',
+  }))
   const total_guests = guestListEntries.reduce((sum, e) => sum + e.guest_count, 0)
 
   const { data: musicianData } = await supabase
@@ -1521,7 +1554,7 @@ export async function deleteGuestList(id: string): Promise<void> {
 export async function addGuestListEntry(guestListId: string, entry: {
   guest_name: string
   guest_count: number
-}): Promise<DbGuestListEntry> {
+}): Promise<GuestListEntryWithAddedBy> {
   const user = await getCurrentUser()
   if (!user) throw new Error('Keine authentifizierte Session')
 
@@ -1541,7 +1574,21 @@ export async function addGuestListEntry(guestListId: string, entry: {
 
   if (error) throw error
   if (!data) throw new Error('Gast konnte nicht hinzugefügt werden')
-  return data
+
+  let addedByName = 'Unbekannt'
+  if (data.added_by) {
+    const { data: musicianData } = await supabase
+      .from('musicians')
+      .select('name')
+      .eq('id', data.added_by)
+      .single()
+    addedByName = musicianData?.name || 'Unbekannt'
+  }
+
+  return {
+    ...data,
+    added_by_name: addedByName,
+  }
 }
 
 export async function deleteGuestListEntry(id: string): Promise<void> {
