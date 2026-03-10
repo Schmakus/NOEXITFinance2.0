@@ -199,10 +199,12 @@ using (
   bucket_id = 'img'
 );
 
--- Erlaube allen das Lesen (wenn public)
+-- Erlaube allen (authentifiziert & unauthentifiziert) das Lesen von öffentlichen Bildern
+drop policy if exists "Public can select images" on storage.objects;
 create policy "Public can select images"
 on storage.objects
 for select
+to public
 using (
   bucket_id = 'img'
 );
