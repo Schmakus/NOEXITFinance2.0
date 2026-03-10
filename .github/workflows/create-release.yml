@@ -12,9 +12,12 @@ jobs:
       - name: Read Changelog
         id: changelog
         run: |
-          echo "RELEASE_NOTES<<EOF" >> $GITHUB_OUTPUT
-          cat CHANGELOG.md >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          delimiter="RELEASE_NOTES_$(date +%s)_$RANDOM"
+          {
+            echo "RELEASE_NOTES<<$delimiter"
+            cat CHANGELOG.md
+            echo "$delimiter"
+          } >> "$GITHUB_OUTPUT"
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
