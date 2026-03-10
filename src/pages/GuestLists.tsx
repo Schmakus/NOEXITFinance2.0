@@ -39,6 +39,8 @@ function GuestLists() {
   const [openCreateDialog, setOpenCreateDialog] = useState(false)
   const [openEditListDialog, setOpenEditListDialog] = useState(false)
   const [openManageGuestsDialog, setOpenManageGuestsDialog] = useState(false)
+  const [openLimitDialog, setOpenLimitDialog] = useState(false)
+  const [limitDialogMessage, setLimitDialogMessage] = useState('')
   const [editingListId, setEditingListId] = useState<string | null>(null)
   const [maxGuestsDefault, setMaxGuestsDefault] = useState(25)
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
@@ -174,7 +176,8 @@ function GuestLists() {
     if (!editingListId || !openManageGuestsDialog) {
       const draftTotal = createDraftEntries.reduce((sum, e) => sum + e.guest_count, 0)
       if (draftTotal + addGuestForm.guestCount > maxGuestsDefault) {
-        alert(`Maximale Anzahl (${maxGuestsDefault}) für diese Gästeliste überschritten.`)
+        setLimitDialogMessage(`Maximale Anzahl (${maxGuestsDefault}) für diese Gästeliste überschritten.`)
+        setOpenLimitDialog(true)
         return
       }
       setCreateDraftEntries((prev) => [
@@ -194,7 +197,8 @@ function GuestLists() {
       const currentTotal = currentList?.total_guests ?? 0
       const maxGuests = currentList?.max_guests ?? maxGuestsDefault
       if (currentTotal + addGuestForm.guestCount > maxGuests) {
-        alert(`Maximale Anzahl (${maxGuests}) für diese Gästeliste überschritten.`)
+        setLimitDialogMessage(`Maximale Anzahl (${maxGuests}) für diese Gästeliste überschritten.`)
+        setOpenLimitDialog(true)
         return
       }
 
@@ -580,6 +584,24 @@ function GuestLists() {
           </DialogContent>
         </Dialog>
       )}
+
+      <Dialog open={openLimitDialog} onOpenChange={setOpenLimitDialog}>
+        <DialogContent className="sm:max-w-[420px]" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
+          <DialogHeader>
+            <DialogTitle>Hinweis</DialogTitle>
+            <DialogDescription>{limitDialogMessage}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="border-amber-400 text-amber-600 hover:bg-amber-50 hover:border-amber-500"
+              onClick={() => setOpenLimitDialog(false)}
+            >
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
