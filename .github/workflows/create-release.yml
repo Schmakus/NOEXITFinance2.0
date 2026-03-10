@@ -14,9 +14,10 @@ jobs:
         run: |
           delimiter="RELEASE_NOTES_$(date +%s)_$RANDOM"
           {
-            echo "RELEASE_NOTES<<$delimiter"
+            printf 'RELEASE_NOTES<<%s\n' "$delimiter"
             cat CHANGELOG.md
-            echo "$delimiter"
+            # Ensure delimiter starts on a new line even if CHANGELOG has no trailing newline.
+            printf '\n%s\n' "$delimiter"
           } >> "$GITHUB_OUTPUT"
       - name: Create Release
         uses: softprops/action-gh-release@v2
