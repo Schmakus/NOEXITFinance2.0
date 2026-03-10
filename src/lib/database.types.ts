@@ -154,3 +154,32 @@ export interface PayoutRequestWithMusician extends DbPayoutRequest {
   reviewed_by_name?: string
   pdf_url?: string | null
 }
+
+export interface DbGuestList {
+  id: string
+  date: string
+  location: string
+  max_guests: number
+  created_by: string
+  created_at: string
+  updated_at: string
+}
+
+export interface DbGuestListEntry {
+  id: string
+  guest_list_id: string
+  guest_name: string
+  guest_count: number
+  added_by: string | null
+  added_at: string
+}
+
+export interface GuestListWithEntries extends DbGuestList {
+  entries: GuestListEntryWithAddedBy[]
+  created_by_name: string
+  total_guests: number
+}
+
+export interface GuestListEntryWithAddedBy extends DbGuestListEntry {
+  added_by_name?: string
+}

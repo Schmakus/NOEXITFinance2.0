@@ -17,6 +17,7 @@ import Login from '@/pages/Login'
 import Statement from '@/pages/Statement'
 import Account from '@/pages/Account'
 import PayoutRequests from '@/pages/PayoutRequests'
+import GuestLists from '@/pages/GuestLists'
 import ComponentOverview from '@/pages/ComponentOverview'
 
 // Route guard: redirects to dashboard if user doesn't have permission
@@ -66,6 +67,7 @@ function App() {
               <Route path="/bookings" element={<ProtectedRoute allowed={canManageBookings}><Bookings /></ProtectedRoute>} />
               <Route path="/concerts" element={<ProtectedRoute allowed={canManageBookings}><Concerts /></ProtectedRoute>} />
               <Route path="/transactions" element={<ProtectedRoute allowed={canManageBookings}><Transactions /></ProtectedRoute>} />
+              <Route path="/guest-lists" element={<GuestLists />} />
               <Route path="/archive" element={<ProtectedRoute allowed={canAccessArchive}><Archive /></ProtectedRoute>} />
               <Route path="/payout-requests" element={<ProtectedRoute allowed={isAdmin || isSuperuser}><PayoutRequests /></ProtectedRoute>} />
               <Route path="/tags" element={<ProtectedRoute allowed={isAdmin}><Tags /></ProtectedRoute>} />
