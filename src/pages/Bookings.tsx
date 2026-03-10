@@ -348,7 +348,7 @@ function Bookings() {
 
               <div className="grid gap-2">
                 <Label>Beschreibung</Label>
-                  <Input list="desc-suggestions" value={form.description} onChange={(e) => setForm((s) => ({ ...s, description: e.target.value }))} />
+                  <Input list="desc-suggestions" value={form.description} onChange={(e) => setForm((s) => ({ ...s, description: e.target.value }))} variant="amber" />
                 <datalist id="desc-suggestions">
                   {descriptionSuggestions.map((d) => <option key={d} value={d} />)}
                 </datalist>
