@@ -13,7 +13,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Plus, Edit2, Trash2, Download, X } from 'lucide-react'
+import { Plus, Edit2, Trash2, Download, X, UserPlus } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import {
   fetchGuestLists,
@@ -25,18 +25,23 @@ import {
   deleteGuestListEntry,
   fetchSettings,
 } from '@/lib/api-client'
+import { exportGuestListPdf } from '@/lib/pdf-exports-guest-list'
 import { useAuth } from '@/contexts/AuthContext'
 import { Spinner } from '@/components/ui/spinner'
 import type { GuestListWithEntries } from '@/lib/database.types'
+
+const GUEST_LIST_PDF_LOGO_WIDTH_PT = 365
 
 function GuestLists() {
   const { isAdmin, isSuperuser } = useAuth()
   const [guestLists, setGuestLists] = useState<GuestListWithEntries[]>([])
   const [loading, setLoading] = useState(true)
   const [openCreateDialog, setOpenCreateDialog] = useState(false)
-  const [openEditDialog, setOpenEditDialog] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
+  const [openEditListDialog, setOpenEditListDialog] = useState(false)
+  const [openManageGuestsDialog, setOpenManageGuestsDialog] = useState(false)
+  const [editingListId, setEditingListId] = useState<string | null>(null)
   const [maxGuestsDefault, setMaxGuestsDefault] = useState(25)
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
 
   const [form, setForm] = useState({
     date: '',
@@ -50,7 +55,7 @@ function GuestLists() {
     expandedCount: false,
   })
 
-  const [editingListId, setEditingListId] = useState<string | null>(null)
+  const [createDraftEntries, setCreateDraftEntries] = useState<Array<{ guest_name: string; guest_count: number }>>([])
 
   const loadData = async () => {
     try {
@@ -61,6 +66,7 @@ function GuestLists() {
       const settings = await fetchSettings()
       const maxGuests = parseInt(settings.max_guests_per_list || '25', 10)
       setMaxGuestsDefault(maxGuests)
+      setLogoUrl(settings.logo ?? null)
     } catch (err) {
       console.error('Daten laden fehlgeschlagen:', err)
     } finally {
@@ -83,7 +89,7 @@ function GuestLists() {
       guestCount: 1,
       expandedCount: false,
     })
-    setEditingId(null)
+    setCreateDraftEntries([])
     setEditingListId(null)
   }
 
@@ -92,36 +98,55 @@ function GuestLists() {
     setOpenCreateDialog(true)
   }
 
-  const openEdit = (list: GuestListWithEntries) => {
-    setEditingId(list.id)
+  const openEditList = (list: GuestListWithEntries) => {
     setEditingListId(list.id)
     setForm({
       date: list.date,
       location: list.location,
       maxGuests: list.max_guests,
     })
-    setOpenEditDialog(true)
+    setOpenEditListDialog(true)
+  }
+
+  const openManageGuests = (list: GuestListWithEntries) => {
+    setEditingListId(list.id)
+    setForm({
+      date: list.date,
+      location: list.location,
+      maxGuests: list.max_guests,
+    })
+    setAddGuestForm({
+      guestName: '',
+      guestCount: 1,
+      expandedCount: false,
+    })
+    setOpenManageGuestsDialog(true)
   }
 
   const saveGuestList = async () => {
     if (!form.date || !form.location) return
 
     try {
-      if (editingId) {
-        await updateGuestList(editingId, {
+      if (editingListId && openEditListDialog) {
+        await updateGuestList(editingListId, {
           date: form.date,
           location: form.location,
-          max_guests: form.maxGuests,
         })
       } else {
-        await createGuestList({
+        const created = await createGuestList({
           date: form.date,
           location: form.location,
-          max_guests: form.maxGuests,
+          max_guests: maxGuestsDefault,
         })
+
+        // Add guests entered during creation, like concert expenses flow.
+        for (const entry of createDraftEntries) {
+          await addGuestListEntry(created.id, entry)
+        }
       }
       setOpenCreateDialog(false)
-      setOpenEditDialog(false)
+      setOpenEditListDialog(false)
+      setOpenManageGuestsDialog(false)
       resetForm()
       await loadData()
     } catch (err) {
@@ -142,9 +167,35 @@ function GuestLists() {
   }
 
   const addGuest = async () => {
-    if (!addGuestForm.guestName || !editingListId) return
+    if (!addGuestForm.guestName) return
+
+    if (!editingListId || !openManageGuestsDialog) {
+      const draftTotal = createDraftEntries.reduce((sum, e) => sum + e.guest_count, 0)
+      if (draftTotal + addGuestForm.guestCount > maxGuestsDefault) {
+        alert(`Maximale Anzahl (${maxGuestsDefault}) für diese Gästeliste überschritten.`)
+        return
+      }
+      setCreateDraftEntries((prev) => [
+        ...prev,
+        { guest_name: addGuestForm.guestName, guest_count: addGuestForm.guestCount },
+      ])
+      setAddGuestForm({
+        guestName: '',
+        guestCount: 1,
+        expandedCount: false,
+      })
+      return
+    }
 
     try {
+      const currentList = guestLists.find((l) => l.id === editingListId)
+      const currentTotal = currentList?.total_guests ?? 0
+      const maxGuests = currentList?.max_guests ?? maxGuestsDefault
+      if (currentTotal + addGuestForm.guestCount > maxGuests) {
+        alert(`Maximale Anzahl (${maxGuests}) für diese Gästeliste überschritten.`)
+        return
+      }
+
       const newEntry = await addGuestListEntry(editingListId, {
         guest_name: addGuestForm.guestName,
         guest_count: addGuestForm.guestCount,
@@ -174,6 +225,10 @@ function GuestLists() {
   }
 
   const removeGuest = async (entryId: string) => {
+    if (!editingListId || !openManageGuestsDialog) {
+      setCreateDraftEntries((prev) => prev.filter((_, idx) => idx.toString() !== entryId))
+      return
+    }
     try {
       await deleteGuestListEntry(entryId)
 
@@ -197,7 +252,14 @@ function GuestLists() {
   const exportPDF = async (listId: string) => {
     try {
       const list = await fetchGuestList(listId)
-      await generateGuestListPDF(list)
+      const latestSettings = await fetchSettings()
+      await exportGuestListPdf({
+        logoUrl: latestSettings.logo ?? logoUrl,
+        logoWidthPt: GUEST_LIST_PDF_LOGO_WIDTH_PT,
+        location: list.location,
+        date: formatDate(new Date(list.date)),
+        entries: list.entries,
+      })
     } catch (err) {
       console.error('Fehler beim PDF-Export:', err)
       alert('PDF-Export fehlgeschlagen.')
@@ -224,7 +286,7 @@ function GuestLists() {
           </DialogTrigger>
           <DialogContent className="sm:max-w-[640px]" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
             <DialogHeader>
-              <DialogTitle>{editingId ? 'Gästeliste bearbeiten' : 'Neue Gästeliste'}</DialogTitle>
+              <DialogTitle>Neue Gästeliste</DialogTitle>
               <DialogDescription>Erstelle eine neue Gästeliste für dein Event</DialogDescription>
             </DialogHeader>
 
@@ -244,20 +306,80 @@ function GuestLists() {
                 <Input
                   type="number"
                   min="1"
-                  value={form.maxGuests}
-                  onChange={(e) => setForm((s) => ({ ...s, maxGuests: parseInt(e.target.value, 10) || 25 }))}
+                  value={maxGuestsDefault}
+                  disabled
                   variant="amber"
                 />
+                <p className="text-xs text-muted-foreground">Wird in den Einstellungen definiert.</p>
+              </div>
+
+              <div className="border-t border-border/50 pt-4 space-y-2">
+                <Label className="text-sm font-medium">Gäste hinzufügen</Label>
+                <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-end">
+                  <Input
+                    placeholder="Name des Gastes"
+                    value={addGuestForm.guestName}
+                    onChange={(e) => setAddGuestForm((s) => ({ ...s, guestName: e.target.value }))}
+                    variant="amber"
+                    className="flex-1"
+                  />
+                  <select
+                    value={addGuestForm.guestCount}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      if (val === '_expand') {
+                        setAddGuestForm((s) => ({ ...s, expandedCount: true }))
+                      } else {
+                        setAddGuestForm((s) => ({ ...s, guestCount: parseInt(val, 10) }))
+                      }
+                    }}
+                    className="flex h-10 w-full sm:w-32 rounded-md border border-amber-600 bg-[#18181b] px-3 py-2 text-base text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 focus-visible:border-amber-600"
+                  >
+                    {[1, 2, 3, 4, 5, 6].map((n) => (
+                      <option key={n} value={n}>{n}</option>
+                    ))}
+                    {addGuestForm.expandedCount && [7, 8, 9, 10, 15, 20].map((n) => (
+                      <option key={n} value={n}>{n}</option>
+                    ))}
+                    {!addGuestForm.expandedCount && <option value="_expand">Mehr...</option>}
+                  </select>
+                  <Button
+                    onClick={addGuest}
+                    variant="outline"
+                    className="border-amber-400 text-amber-600 hover:bg-amber-50 hover:border-amber-500"
+                  >
+                    Hinzufügen
+                  </Button>
+                </div>
+
+                {createDraftEntries.length > 0 && (
+                  <div className="space-y-2 max-h-40 overflow-y-auto mt-2">
+                    {createDraftEntries.map((entry, idx) => (
+                      <div key={`${entry.guest_name}-${idx}`} className="flex items-center justify-between p-2 bg-muted rounded-sm border border-border/50">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">
+                            {entry.guest_name}
+                            <span className="text-xs text-muted-foreground ml-2">({entry.guest_count} Person{entry.guest_count !== 1 ? 'en' : ''})</span>
+                          </p>
+                        </div>
+                        <Button
+                          variant="deleteicon"
+                          size="icon"
+                          className="h-6 w-6 ml-2"
+                          onClick={() => removeGuest(idx.toString())}
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
             <DialogFooter>
               <Button variant="outline" onClick={() => { setOpenCreateDialog(false); resetForm() }} className="border-red-500 text-red-600 hover:bg-red-50 hover:border-red-600">Abbrechen</Button>
-              {editingId ? (
-                <Button onClick={saveGuestList} variant="outline" className="border-amber-400 text-amber-600 hover:bg-amber-50 hover:border-amber-500">Aktualisieren</Button>
-              ) : (
-                <Button onClick={saveGuestList} variant="outline" className="border-green-500 text-green-600 hover:bg-green-50 hover:border-green-600">Erstellen</Button>
-              )}
+              <Button onClick={saveGuestList} variant="outline" className="border-green-500 text-green-600 hover:bg-green-50 hover:border-green-600">Erstellen</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -286,7 +408,10 @@ function GuestLists() {
                     <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => exportPDF(list.id)} title="PDF herunterladen">
                       <Download className="w-3.5 h-3.5" />
                     </Button>
-                    <Button variant="editicon" size="icon" className="h-7 w-7" onClick={() => openEdit(list)}>
+                    <Button variant="outline" size="icon" className="h-7 w-7 border-blue-400 text-blue-300 hover:bg-blue-500/10" onClick={() => openManageGuests(list)} title="Gäste hinzufügen/verwalten">
+                      <UserPlus className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button variant="editicon" size="icon" className="h-7 w-7" onClick={() => openEditList(list)}>
                       <Edit2 className="w-3.5 h-3.5" />
                     </Button>
                     {(isAdmin || isSuperuser) && (
@@ -314,9 +439,37 @@ function GuestLists() {
         )}
       </div>
 
-      {/* Edit Dialog mit Gast-Hinzufügen */}
+      {/* Edit list dialog */}
       {editingListId && (
-        <Dialog open={openEditDialog} onOpenChange={(v: boolean) => { if (!v) resetForm(); setOpenEditDialog(v) }}>
+        <Dialog open={openEditListDialog} onOpenChange={(v: boolean) => { if (!v) resetForm(); setOpenEditListDialog(v) }}>
+          <DialogContent className="sm:max-w-[640px]" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
+            <DialogHeader>
+              <DialogTitle>Gästeliste bearbeiten</DialogTitle>
+              <DialogDescription>Datum und Veranstaltungsort anpassen</DialogDescription>
+            </DialogHeader>
+
+            <div className="grid gap-4 py-4 px-1">
+              <div className="grid gap-2">
+                <Label>Datum</Label>
+                <DatePicker value={form.date} onChange={(v) => setForm((s) => ({ ...s, date: v }))} />
+              </div>
+              <div className="grid gap-2">
+                <Label>Veranstaltungsort</Label>
+                <Input value={form.location} onChange={(e) => setForm((s) => ({ ...s, location: e.target.value }))} variant="amber" />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setOpenEditListDialog(false); resetForm() }} className="border-red-500 text-red-600 hover:bg-red-50 hover:border-red-600">Abbrechen</Button>
+              <Button onClick={saveGuestList} variant="outline" className="border-amber-400 text-amber-600 hover:bg-amber-50 hover:border-amber-500">Aktualisieren</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Manage guests dialog */}
+      {editingListId && (
+        <Dialog open={openManageGuestsDialog} onOpenChange={(v: boolean) => { if (!v) resetForm(); setOpenManageGuestsDialog(v) }}>
           <DialogContent className="sm:max-w-[640px]" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
             <DialogHeader>
               <DialogTitle>Gäste hinzufügen</DialogTitle>
@@ -333,8 +486,10 @@ function GuestLists() {
                     ?.entries.map((entry) => (
                       <div key={entry.id} className="flex items-center justify-between p-2 bg-muted rounded-sm border border-border/50">
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{entry.guest_name}</p>
-                          <p className="text-xs text-muted-foreground">{entry.guest_count} Person{entry.guest_count !== 1 ? 'en' : ''}</p>
+                          <p className="text-sm font-medium truncate">
+                            {entry.guest_name}
+                            <span className="text-xs text-muted-foreground ml-2">({entry.guest_count} Person{entry.guest_count !== 1 ? 'en' : ''})</span>
+                          </p>
                         </div>
                         <Button
                           variant="deleteicon"
@@ -352,54 +507,49 @@ function GuestLists() {
               {/* Add guest form */}
               <div className="border-t border-border/50 pt-4">
                 <Label className="text-sm font-medium">Gast hinzufügen</Label>
-                <div className="space-y-2 mt-2">
+                <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-end mt-2">
                   <Input
                     placeholder="Name des Gastes"
                     value={addGuestForm.guestName}
                     onChange={(e) => setAddGuestForm((s) => ({ ...s, guestName: e.target.value }))}
                     variant="amber"
+                    className="flex-1"
                   />
-
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      <Label className="text-xs text-muted-foreground">Anzahl Personen</Label>
-                      <select
-                        value={addGuestForm.guestCount}
-                        onChange={(e) => {
-                          const val = e.target.value
-                          if (val === '_expand') {
-                            setAddGuestForm((s) => ({ ...s, expandedCount: true }))
-                          } else {
-                            setAddGuestForm((s) => ({ ...s, guestCount: parseInt(val, 10) }))
-                          }
-                        }}
-                        className="flex h-10 w-full rounded-md border border-amber-600 bg-[#18181b] px-3 py-2 text-base text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 focus-visible:border-amber-600"
-                      >
-                        {[1, 2, 3, 4, 5, 6].map((n) => (
+                  <select
+                    value={addGuestForm.guestCount}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      if (val === '_expand') {
+                        setAddGuestForm((s) => ({ ...s, expandedCount: true }))
+                      } else {
+                        setAddGuestForm((s) => ({ ...s, guestCount: parseInt(val, 10) }))
+                      }
+                    }}
+                    className="flex h-10 w-full sm:w-32 rounded-md border border-amber-600 bg-[#18181b] px-3 py-2 text-base text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 focus-visible:border-amber-600"
+                  >
+                    {[1, 2, 3, 4, 5, 6].map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                    {addGuestForm.expandedCount && (
+                      <>
+                        {[7, 8, 9, 10, 15, 20].map((n) => (
                           <option key={n} value={n}>
                             {n}
                           </option>
                         ))}
-                        {addGuestForm.expandedCount && (
-                          <>
-                            {[7, 8, 9, 10, 15, 20].map((n) => (
-                              <option key={n} value={n}>
-                                {n}
-                              </option>
-                            ))}
-                          </>
-                        )}
-                        {!addGuestForm.expandedCount && <option value="_expand">Mehr...</option>}
-                      </select>
-                    </div>
-                    <Button
-                      onClick={addGuest}
-                      variant="outline"
-                      className="self-end border-amber-400 text-amber-600 hover:bg-amber-50 hover:border-amber-500"
-                    >
-                      Hinzufügen
-                    </Button>
-                  </div>
+                      </>
+                    )}
+                    {!addGuestForm.expandedCount && <option value="_expand">Mehr...</option>}
+                  </select>
+                  <Button
+                    onClick={addGuest}
+                    variant="outline"
+                    className="border-amber-400 text-amber-600 hover:bg-amber-50 hover:border-amber-500"
+                  >
+                    Hinzufügen
+                  </Button>
                 </div>
               </div>
             </div>
@@ -407,7 +557,7 @@ function GuestLists() {
             <DialogFooter>
               <Button
                 onClick={() => {
-                  setOpenEditDialog(false)
+                  setOpenManageGuestsDialog(false)
                   resetForm()
                 }}
                 className="border-gray-500 text-gray-600 hover:bg-gray-50"
@@ -421,59 +571,6 @@ function GuestLists() {
       )}
     </div>
   )
-}
-
-// PDF Export Function
-async function generateGuestListPDF(list: GuestListWithEntries) {
-  const { jsPDF } = await import('jspdf')
-  const { default: autoTable } = await import('jspdf-autotable')
-
-  const doc = new jsPDF('p', 'mm', 'a4')
-  const pageWidth = doc.internal.pageSize.getWidth()
-  const pageHeight = doc.internal.pageSize.getHeight()
-  let yPosition = 20
-
-  // Logo (if available)
-  // Note: Logo fetching would need to be implemented
-  const logoSize = 20
-  yPosition += logoSize + 5
-
-  // Title (centered)
-  doc.setFontSize(14)
-  doc.text('Gästeliste', pageWidth / 2, yPosition, { align: 'center' })
-  yPosition += 8
-
-  // Date and Location
-  doc.setFontSize(11)
-  doc.text(`Datum: ${formatDate(new Date(list.date))}`, 20, yPosition)
-  yPosition += 6
-
-  doc.text(`Ort: ${list.location}`, 20, yPosition)
-  yPosition += 10
-
-  // Table with guests
-  const tableData = list.entries.map((entry) => [entry.guest_name, entry.guest_count.toString()])
-
-  autoTable(doc, {
-    head: [['Name', 'Anzahl']],
-    body: tableData,
-    startY: yPosition,
-    theme: 'grid',
-    styles: {
-      fontSize: 10,
-    },
-    columnStyles: {
-      0: { cellWidth: 100 },
-      1: { cellWidth: 30, halign: 'center' },
-    },
-  })
-
-  // Footer
-  const footerY = pageHeight - 10
-  doc.setFontSize(8)
-  doc.text(`Gesamt: ${list.total_guests} Gäste`, 20, footerY)
-
-  doc.save(`Gaestliste_${list.location}_${list.date}.pdf`)
 }
 
 export default GuestLists
