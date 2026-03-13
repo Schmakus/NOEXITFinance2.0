@@ -73,6 +73,8 @@ Bei Datenbank-Operationen oder Migrationen gelten diese Regeln:
 * **Icons:** Verwende Lucide React Icons, keine externen SVGs oder Icon-Fonts.
 * **Barrierefreiheit:** Alle interaktiven Elemente müssen ARIA-Attribute und Tastatur-Navigation unterstützen. Keine reinen visuellen Elemente ohne semantische Bedeutung.
 * **Keine Inline-Styles:** Alle Stile müssen über Tailwind-Klassen oder shadcn/ui Props definiert werden. Keine `style={{}}`-Objekte. Styles müssen konsistent und wartbar sein, keine Einzelfälle oder "Hacks". Styles werden in der index.css definiert, wenn sie mehrfach verwendet werden, ansonsten über Tailwind-Klassen direkt in den Komponenten.
+* **Mobile-Navigation:** In der mobilen Ansicht erfolgt Navigation ausschließlich über das Burger-Menü bzw. den Sidebar-Drawer. Keine zusätzliche Bottom- oder Footer-Navigation einsetzen.
+* **User-Menüführung:** Sobald normale User mehr als eine relevante Seite erreichen können, müssen diese Ziele ebenfalls im zentralen Menü sichtbar sein, nicht nur für Admins/Superuser.
 
 
 ---

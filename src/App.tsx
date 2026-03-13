@@ -56,10 +56,6 @@ function App() {
         <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />} />
         {isAuthenticated ? (
           <>
-            {/* Statement: User sieht Vollbild, Admin/Superuser im Layout */}
-            {isAdmin || isSuperuser ? null : (
-              <Route path="/statement/:musicianId" element={<Statement />} />
-            )}
             <Route element={<Layout />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/musicians" element={<ProtectedRoute allowed={canManageMusicians}><Musicians /></ProtectedRoute>} />
@@ -74,10 +70,7 @@ function App() {
               <Route path="/settings" element={<ProtectedRoute allowed={canAccessSettings}><Settings /></ProtectedRoute>} />
               <Route path="/component-overview" element={<ComponentOverview />} />
               <Route path="/account" element={<Account />} />
-              {/* Statement für Admin/Superuser im Layout */}
-              {(isAdmin || isSuperuser) && (
-                <Route path="/statement/:musicianId" element={<Statement />} />
-              )}
+              <Route path="/statement/:musicianId" element={<Statement />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Route>
           </>

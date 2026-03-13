@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -87,6 +87,17 @@ function Dashboard() {
       balance: m.balance + txnTotal,
     }
   })
+
+  const prioritizedMusiciansWithBalance = useMemo(() => {
+    const loggedInMusicianId = user?.id
+    if (!loggedInMusicianId) return musiciansWithBalance
+
+    return [...musiciansWithBalance].sort((a, b) => {
+      if (a.id === loggedInMusicianId && b.id !== loggedInMusicianId) return -1
+      if (b.id === loggedInMusicianId && a.id !== loggedInMusicianId) return 1
+      return 0
+    })
+  }, [musiciansWithBalance, user?.id])
 
   const totalBalance = musiciansWithBalance.reduce((sum, m) => sum + m.balance, 0)
 
@@ -258,7 +269,7 @@ function Dashboard() {
       <div>
         <h2 className="text-xl font-semibold mb-4">Bandmitglieder</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {musiciansWithBalance.map((musician) => (
+          {prioritizedMusiciansWithBalance.map((musician) => (
             <Card
               key={musician.id}
               className="cursor-pointer hover:shadow-lg transition-all hover:border-amber-400/50 dark:hover:border-amber-500/50 bg-muted/40"

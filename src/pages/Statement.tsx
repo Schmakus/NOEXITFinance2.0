@@ -41,11 +41,6 @@ import {
   UserRound,
   CircleDollarSign,
   HandCoins,
-  LogOut,
-  Settings,
-  Save,
-  Mail,
-  Lock,
   Pencil,
   Trash2,
 } from 'lucide-react'
@@ -69,6 +64,28 @@ async function fetchImageAsDataUrl(url: string): Promise<string> {
 
 const toDateInput = (date: Date) => date.toISOString().slice(0, 10)
 
+type TransactionWithOptionalBookingKeywords = TransactionWithMusician & {
+  booking_keywords?: string[]
+}
+
+const getTransactionKeywords = (transaction: TransactionWithOptionalBookingKeywords): string[] => {
+  if (Array.isArray(transaction.keywords) && transaction.keywords.length > 0) {
+    return transaction.keywords
+      .filter((keyword): keyword is string => typeof keyword === 'string')
+      .map((keyword) => keyword.trim())
+      .filter((keyword) => keyword.length > 0)
+  }
+
+  if (Array.isArray(transaction.booking_keywords) && transaction.booking_keywords.length > 0) {
+    return transaction.booking_keywords
+      .filter((keyword): keyword is string => typeof keyword === 'string')
+      .map((keyword) => keyword.trim())
+      .filter((keyword) => keyword.length > 0)
+  }
+
+  return []
+}
+
 function Statement() {
 
   // ...existing code...
@@ -80,7 +97,7 @@ function Statement() {
   // Diese Blöcke müssen nach allen useState, useMemo, useEffect, filteredTransactions, transactions, payoutRequests stehen!
   const { musicianId } = useParams()
   const navigate = useNavigate()
-  const { user, isUser, isSuperuser, logout, updateEmail, updatePassword } = useAuth()
+  const { user, isUser, isSuperuser } = useAuth()
   const canRequestPayout = (isUser || isSuperuser) && !!user && musicianId === user.id
   const [musician, setMusician] = useState<DbMusician | null>(null)
   const [transactions, setTransactions] = useState<TransactionWithMusician[]>([])
@@ -104,14 +121,6 @@ function Statement() {
   const [editRequestNote, setEditRequestNote] = useState('')
   const [editRequestSubmitting, setEditRequestSubmitting] = useState(false)
   const [editRequestError, setEditRequestError] = useState('')
-
-  // Account dialog state (User only)
-  const [showAccountDialog, setShowAccountDialog] = useState(false)
-  const [newEmail, setNewEmail] = useState('')
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [accountSaving, setAccountSaving] = useState(false)
-  const [accountMessage, setAccountMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
 
   // Users can only view their own statement
   useEffect(() => {
@@ -222,17 +231,14 @@ function Statement() {
   const [searchTags, setSearchTags] = useState<string[]>([])
 
   const allTags: string[] = useMemo(() => {
-    // Extrahiere alle tatsächlich vorkommenden Keywords aus dem keywords-Feld der Buchungen
     const tags = new Set<string>()
-    transactions.forEach(t => {
-      if (Array.isArray((t as any).keywords)) {
-        (t as any).keywords.forEach((kw: string) => {
-          if (kw && typeof kw === 'string' && kw.trim().length > 0) tags.add(kw.trim())
-        })
-      }
+    filteredTransactions.forEach((transaction) => {
+      getTransactionKeywords(transaction).forEach((keyword) => {
+        tags.add(keyword)
+      })
     })
     return Array.from(tags).sort()
-  }, [transactions, payoutRequests])
+  }, [filteredTransactions])
 
   const tagOptions = allTags.map(t => ({ value: t, label: t }))
 
@@ -268,10 +274,9 @@ function Statement() {
       }
       let matchesTags = true
       if (searchTags.length > 0) {
-        const entryText = entry.kind === 'transaction'
-          ? [entry.data.description, entry.data.concert_name].filter(Boolean).join(' ').toLowerCase()
-          : (entry.data.note ?? '').toLowerCase()
-        matchesTags = searchTags.some(tag => entryText.includes(tag.toLowerCase()))
+        matchesTags = entry.kind === 'transaction'
+          ? searchTags.some((tag) => getTransactionKeywords(entry.data).includes(tag))
+          : false
       }
       return matchesText && matchesTags
     })
@@ -387,50 +392,6 @@ function Statement() {
       alert('PDF Export fehlgeschlagen: ' + (err instanceof Error ? err.message : String(err)))
     } finally {
       setExporting(false)
-    }
-  }
-
-  const openAccountDialog = () => {
-    setNewEmail(user?.email ?? '')
-    setNewPassword('')
-    setConfirmPassword('')
-    setAccountMessage(null)
-    setShowAccountDialog(true)
-  }
-
-  const handleUpdateEmail = async () => {
-    if (!newEmail.trim() || newEmail === user?.email) return
-    setAccountSaving(true)
-    try {
-      await updateEmail(newEmail.trim())
-      setAccountMessage({ text: 'E-Mail Änderung angefordert. Bitte bestätige die neue E-Mail-Adresse.', type: 'success' })
-    } catch (err: any) {
-      setAccountMessage({ text: 'Fehler: ' + (err?.message ?? String(err)), type: 'error' })
-    } finally {
-      setAccountSaving(false)
-    }
-  }
-
-  const handleUpdatePassword = async () => {
-    if (!newPassword) return
-    if (newPassword.length < 6) {
-      setAccountMessage({ text: 'Passwort muss mindestens 6 Zeichen lang sein', type: 'error' })
-      return
-    }
-    if (newPassword !== confirmPassword) {
-      setAccountMessage({ text: 'Passwörter stimmen nicht überein', type: 'error' })
-      return
-    }
-    setAccountSaving(true)
-    try {
-      await updatePassword(newPassword)
-      setNewPassword('')
-      setConfirmPassword('')
-      setAccountMessage({ text: 'Passwort erfolgreich geändert', type: 'success' })
-    } catch (err: any) {
-      setAccountMessage({ text: 'Fehler: ' + (err?.message ?? String(err)), type: 'error' })
-    } finally {
-      setAccountSaving(false)
     }
   }
 
@@ -564,7 +525,7 @@ function Statement() {
             <div className="min-w-0">
               <h1 className="text-xl sm:text-2xl font-bold truncate">{musician.name}</h1>
               <p className={`text-base sm:text-lg font-semibold ${currentBalance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {formatCurrency(currentBalance)}
+                Kontostand: {formatCurrency(currentBalance)}
               </p>
             </div>
           </div>
@@ -580,16 +541,6 @@ function Statement() {
             <FileDown className="w-4 h-4 mr-2" />
             PDF Export
           </Button>
-          {isUser && (
-            <>
-              <Button variant="ghost" size="icon" className="shrink-0" onClick={openAccountDialog} title="Mein Konto">
-                <Settings className="w-4 h-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="shrink-0" onClick={logout} title="Logout">
-                <LogOut className="w-4 h-4" />
-              </Button>
-            </>
-          )}
         </div>
       </div>
 
@@ -636,6 +587,7 @@ function Statement() {
             placeholder="Freitextsuche (Name, Beschreibung, Betrag, Datum...)"
             value={searchText}
             onChange={e => setSearchText(e.target.value)}
+            variant="amber"
             className="mt-1"
           />
         </div>
@@ -646,6 +598,7 @@ function Statement() {
             value={searchTags}
             onChange={setSearchTags}
             placeholder="Stichworte wählen..."
+            variant="amber"
             className="mt-1"
           />
         </div>
@@ -655,27 +608,6 @@ function Statement() {
       </div>
 
       <div ref={contentRef} className="space-y-6 p-4">
-        {/* PDF Header — Musiker & Zeitraum */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-600/30 flex items-center justify-center">
-              <UserRound className="w-6 h-6 text-amber-200" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold">{musician.name}</h2>
-              <p className={`text-lg font-semibold ${currentBalance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                Kontostand: {formatCurrency(currentBalance)}
-              </p>
-            </div>
-          </div>
-          <div className="text-right text-sm text-muted-foreground">
-            <p>Zeitraum</p>
-            <p className="font-medium text-foreground">
-              {fromDate ? formatDate(new Date(fromDate)) : '–'} — {toDate ? formatDate(new Date(toDate)) : '–'}
-            </p>
-          </div>
-        </div>
-
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="bg-gradient-to-br from-green-500/10 to-green-500/20 border-green-500/30">
             <CardContent className="p-4">
@@ -698,7 +630,15 @@ function Statement() {
         </div>
 
         <div className="space-y-3">
-          <h2 className="text-xl font-semibold">Kontoauszug</h2>
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <h2 className="text-xl font-semibold">Kontoauszug</h2>
+            <div className="text-sm text-muted-foreground sm:text-right">
+              <p>Zeitraum</p>
+              <p className="font-medium text-foreground">
+                {fromDate ? formatDate(new Date(fromDate)) : '–'} — {toDate ? formatDate(new Date(toDate)) : '–'}
+              </p>
+            </div>
+          </div>
           {filteredStatementEntries.length === 0 ? (
             <p className="text-muted-foreground">Keine Transaktionen gefunden.</p>
           ) : (
@@ -787,7 +727,8 @@ function Statement() {
               }
 
               const t = entry.data
-              const payout = t.type === 'expense' && Array.isArray((t as any).keywords) && (t as any).keywords.includes('Auszahlung')
+              const keywords = getTransactionKeywords(t)
+              const payout = t.type === 'expense' && keywords.includes('Auszahlung')
               const iconWrapClass = payout
                 ? 'bg-amber-500/20 text-amber-300'
                 : t.type === 'earn'
@@ -810,20 +751,13 @@ function Statement() {
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="font-semibold">{t.description || t.concert_name || '-'}</p>
-                          {/* Keywords als Badges anzeigen (Transaktion oder Buchung) */}
-                          {(() => {
-                            // Zeige zuerst Transaktions-Keywords, sonst Buchungs-Keywords (falls vorhanden)
-                            const keywords = Array.isArray((t as any).keywords) && (t as any).keywords.length > 0
-                              ? (t as any).keywords
-                              : (Array.isArray((t as any).booking_keywords) ? (t as any).booking_keywords : []);
-                            return keywords.length > 0 ? (
-                              <span className="flex flex-wrap gap-1 ml-2">
-                                {keywords.map((kw: string) => (
-                                  <span key={kw} className="keyword text-xs px-2 py-0.5 rounded-full border border-blue-400/60 text-blue-300 bg-blue-500/10">{kw}</span>
-                                ))}
-                              </span>
-                            ) : null
-                          })()}
+                          {keywords.length > 0 ? (
+                            <span className="flex flex-wrap gap-1 ml-2">
+                              {keywords.map((keyword) => (
+                                <span key={keyword} className="keyword text-xs px-2 py-0.5 rounded-full border border-blue-400/60 text-blue-300 bg-blue-500/10">{keyword}</span>
+                              ))}
+                            </span>
+                          ) : null}
                         </div>
                         <p className="text-sm text-muted-foreground">
                           {t.date ? formatDate(new Date(t.date)) : '-'}
@@ -890,85 +824,6 @@ function Statement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Account Dialog (User only) */}
-      <Dialog open={showAccountDialog} onOpenChange={setShowAccountDialog}>
-        <DialogContent aria-describedby="account-dialog-desc" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>
-          <DialogHeader>
-            <DialogTitle>Mein Konto</DialogTitle>
-          </DialogHeader>
-          <DialogDescription id="account-dialog-desc" className="sr-only">
-            Hier kannst du deine Kontodaten und dein Passwort ändern.
-          </DialogDescription>
-          <div className="space-y-6 px-1">
-            {accountMessage && (
-              <div className={`p-3 rounded-lg text-sm font-medium ${
-                accountMessage.type === 'success'
-                  ? 'bg-green-900/30 text-green-300'
-                  : 'bg-red-900/30 text-red-300'
-              }`}>
-                {accountMessage.text}
-              </div>
-            )}
-
-            {/* E-Mail ändern */}
-            <div className="space-y-3">
-              <h3 className="text-sm font-semibold flex items-center gap-2"><Mail className="w-4 h-4" /> E-Mail ändern</h3>
-              <div className="grid gap-2">
-                <Label htmlFor="account-email">Neue E-Mail-Adresse</Label>
-                <Input
-                  id="account-email"
-                  type="email"
-                  value={newEmail}
-                  onChange={(e) => setNewEmail(e.target.value)}
-                  placeholder="neue@email.de"
-                />
-              </div>
-              {(!!newEmail && newEmail !== user?.email && !accountSaving) && (
-                <Button size="sm" onClick={handleUpdateEmail} variant="update">
-                  <Save className="w-4 h-4 mr-2" />
-                  E-Mail ändern
-                </Button>
-              )}
-            </div>
-
-            {/* Passwort ändern */}
-            <div className="space-y-3">
-              <h3 className="text-sm font-semibold flex items-center gap-2"><Lock className="w-4 h-4" /> Passwort ändern</h3>
-              <div className="grid gap-2">
-                <Label htmlFor="account-password">Neues Passwort</Label>
-                <Input
-                  id="account-password"
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="••••••••"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="account-confirm">Passwort bestätigen</Label>
-                <Input
-                  id="account-confirm"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="••••••••"
-                />
-              </div>
-              {(!!newPassword && !accountSaving) && (
-                <Button size="sm" onClick={handleUpdatePassword}>
-                  <Save className="w-4 h-4 mr-2" />
-                  Passwort ändern
-                </Button>
-              )}
-            </div>
-          </div>
-          <DialogFooter className="mt-6">
-            <Button variant="outline" onClick={() => setShowAccountDialog(false)}>Schließen</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Payout Request Dialog */}
       <Dialog open={showPayoutDialog} onOpenChange={setShowPayoutDialog}>
         <DialogContent aria-describedby="payout-dialog-desc" style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}>

@@ -10,6 +10,7 @@ import {
   Music,
   Calendar,
   DollarSign,
+  CircleDollarSign,
   Tag,
   Settings,
   LogOut,
@@ -24,7 +25,7 @@ import { fetchPendingPayoutRequestCount } from '@/lib/api-client'
 import { useSettings } from '@/contexts/SettingsContext'
 
 function Layout() {
-  const { user, logout, isAdmin, isSuperuser, canManageBookings, canManageMusicians, canAccessSettings, canAccessArchive } = useAuth()
+  const { user, logout, isAdmin, isSuperuser, isUser, canManageBookings, canManageMusicians, canAccessSettings, canAccessArchive } = useAuth()
   const [showAccountDialog, setShowAccountDialog] = useState(false)
   const location = useLocation()
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false)
@@ -73,7 +74,9 @@ function Layout() {
 
 
   const menuItems = [
-    { icon: BarChart3, label: 'Dashboard', path: '/dashboard' },
+    isUser && user
+      ? { icon: CircleDollarSign, label: 'Kontostand', path: `/statement/${user.id}` }
+      : { icon: BarChart3, label: 'Dashboard', path: '/dashboard' },
     ...(canManageBookings ? [{ icon: DollarSign, label: 'Buchung', path: '/bookings' }] : []),
     ...(canManageBookings ? [{ icon: Calendar, label: 'Konzerte', path: '/concerts' }] : []),
     ...(canManageBookings ? [{ icon: DollarSign, label: 'Transaktionen', path: '/transactions' }] : []),
@@ -87,9 +90,6 @@ function Layout() {
     // User always sees "Mein Konto" for email/pw changes
     ...(!canAccessSettings ? [{ icon: Settings, label: 'Mein Konto', path: '/account' }] : []),
   ]
-
-  // Bottom nav: show max 5 items on mobile
-  const bottomNavItems = menuItems.slice(0, 5)
 
   return (
     <div className="flex h-screen bg-background">
@@ -105,8 +105,8 @@ function Layout() {
       <aside
         className={`
           ${isMobile
-            ? `fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`
-            : `${sidebarOpen ? 'w-64' : 'w-20'} transition-all duration-300`
+            ? `fixed inset-y-0 left-0 z-50 w-64 transform overflow-y-auto overscroll-contain transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`
+            : `${sidebarOpen ? 'w-64' : 'w-20'} transition-all duration-300 overflow-hidden`
           }
           bg-card border-r border-border flex flex-col shadow-lg
         `}
@@ -135,7 +135,7 @@ function Layout() {
         </div>
 
         {/* Menu Items */}
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+        <nav className="flex-1 min-h-0 p-4 space-y-1 overflow-y-auto">
           {menuItems.map(({ icon: Icon, label, path, badge }) => {
             const isActive = location.pathname === path
             return (
@@ -267,51 +267,12 @@ function Layout() {
           </Button>
         </header>
 
-        {/* Page Content — with bottom padding on mobile for nav bar */}
         <main className="flex-1 overflow-auto">
-          <div className="container mx-auto px-4 py-4 md:p-6 pb-20 md:pb-6">
+          <div className="container mx-auto px-4 py-4 md:p-6 pb-6">
             <Outlet />
           </div>
         </main>
       </div>
-
-      {/* Bottom Navigation Bar — Mobile only */}
-      {isMobile && (
-          <nav
-            className="fixed bottom-0 left-0 right-0 z-50 flex justify-around items-center border-t border-border md:hidden"
-            style={{ backgroundColor: '#18181b', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.37)' }}
-          >
-          <div className="flex items-center justify-around h-16">
-            {bottomNavItems.map(({ icon: Icon, label, path }) => {
-              const isActive = location.pathname === path
-              return (
-                <Link
-                  key={path}
-                  to={path}
-                  className={`flex flex-col items-center justify-center gap-0.5 px-2 py-1 rounded-lg transition-colors min-w-0 flex-1 ${
-                    isActive
-                      ? 'text-amber-500'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <Icon className="w-5 h-5" />
-                  <span className="text-[10px] leading-tight truncate">{label}</span>
-                </Link>
-              )
-            })}
-            {/* More button for remaining items (opens sidebar) */}
-            {menuItems.length > 5 && (
-              <button
-                onClick={() => setSidebarOpen(true)}
-                className="flex flex-col items-center justify-center gap-0.5 px-2 py-1 rounded-lg text-muted-foreground hover:text-foreground transition-colors flex-1"
-              >
-                <Menu className="w-5 h-5" />
-                <span className="text-[10px] leading-tight">Mehr</span>
-              </button>
-            )}
-          </div>
-        </nav>
-      )}
     </div>
   )
 }
