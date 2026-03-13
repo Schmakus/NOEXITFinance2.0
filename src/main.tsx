@@ -25,11 +25,28 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 )
 
-// Register service worker for PWA
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {
-      // SW registration failed — not critical
+  if (import.meta.env.DEV) {
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      registrations.forEach((registration) => {
+        void registration.unregister()
+      })
     })
-  })
+  } else {
+    window.addEventListener('load', () => {
+      let refreshing = false
+
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshing) return
+        refreshing = true
+        window.location.reload()
+      })
+
+      navigator.serviceWorker.register('/sw.js').then((registration) => {
+        void registration.update()
+      }).catch(() => {
+        // SW registration failed — not critical
+      })
+    })
+  }
 }

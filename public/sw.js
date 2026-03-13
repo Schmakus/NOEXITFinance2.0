@@ -1,5 +1,5 @@
 // Minimal service worker for PWA installability
-const CACHE_NAME = 'noexit-finance-v1'
+const CACHE_NAME = 'noexit-finance-v2'
 
 self.addEventListener('install', () => {
   self.skipWaiting()
