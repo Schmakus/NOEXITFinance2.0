@@ -1,4 +1,7 @@
 import * as React from 'react'
+import { cn } from '@/lib/utils'
+import { multiSelectOptionVariants, multiSelectVariants } from './multiselect-variants'
+import type { MultiSelectVariantProps } from './multiselect-variants'
 
 export interface MultiSelectOption {
   value: string
@@ -11,9 +14,10 @@ interface MultiSelectProps {
   onChange: (value: string[]) => void
   placeholder?: string
   className?: string
+  variant?: MultiSelectVariantProps['variant']
 }
 
-export const MultiSelect: React.FC<MultiSelectProps> = ({ options, value, onChange, placeholder, className }) => {
+export const MultiSelect: React.FC<MultiSelectProps> = ({ options, value, onChange, placeholder, className, variant }) => {
   const [input, setInput] = React.useState('')
   const [showOptions, setShowOptions] = React.useState(false)
   const inputRef = React.useRef<HTMLInputElement>(null)
@@ -40,8 +44,8 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({ options, value, onChan
   }
 
   return (
-    <div className={`relative w-full ${className ?? ''}`}>
-      <div className="flex flex-wrap gap-1 items-center border rounded px-2 py-1 bg-background focus-within:ring-2 ring-amber-400">
+    <div className={cn('relative z-40 w-full', className)}>
+      <div className={cn(multiSelectVariants({ variant }))}>
         {value.map((val) => {
           const opt = options.find((o) => o.value === val)
           return (
@@ -55,7 +59,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({ options, value, onChan
         })}
         <input
           ref={inputRef}
-          className="flex-1 min-w-[80px] bg-transparent outline-none text-sm px-1 py-0.5"
+          className="h-8 flex-1 min-w-[80px] bg-transparent outline-none text-sm px-1 py-0.5"
           value={input}
           onChange={(e) => {
             setInput(e.target.value)
@@ -67,12 +71,11 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({ options, value, onChan
         />
       </div>
       {showOptions && filteredOptions.length > 0 && (
-        <div className="absolute z-10 mt-1 w-full bg-background border rounded shadow-lg max-h-40 overflow-auto">
+        <div className="absolute z-[90] mt-1 max-h-40 w-full overflow-auto rounded-md border border-border bg-[#18181b] shadow-xl">
           {filteredOptions.map((opt) => (
             <div
               key={opt.value}
-              className="px-3 py-2 bg-background hover:bg-amber-100 hover:text-amber-400 cursor-pointer text-sm transition-colors"
-              style={{ backgroundColor: '#23232a' }}
+              className={cn(multiSelectOptionVariants({ variant }))}
               onMouseDown={() => handleAdd(opt.value)}
             >
               {opt.label}

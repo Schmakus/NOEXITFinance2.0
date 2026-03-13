@@ -64,6 +64,28 @@ async function fetchImageAsDataUrl(url: string): Promise<string> {
 
 const toDateInput = (date: Date) => date.toISOString().slice(0, 10)
 
+type TransactionWithOptionalBookingKeywords = TransactionWithMusician & {
+  booking_keywords?: string[]
+}
+
+const getTransactionKeywords = (transaction: TransactionWithOptionalBookingKeywords): string[] => {
+  if (Array.isArray(transaction.keywords) && transaction.keywords.length > 0) {
+    return transaction.keywords
+      .filter((keyword): keyword is string => typeof keyword === 'string')
+      .map((keyword) => keyword.trim())
+      .filter((keyword) => keyword.length > 0)
+  }
+
+  if (Array.isArray(transaction.booking_keywords) && transaction.booking_keywords.length > 0) {
+    return transaction.booking_keywords
+      .filter((keyword): keyword is string => typeof keyword === 'string')
+      .map((keyword) => keyword.trim())
+      .filter((keyword) => keyword.length > 0)
+  }
+
+  return []
+}
+
 function Statement() {
 
   // ...existing code...
@@ -209,17 +231,14 @@ function Statement() {
   const [searchTags, setSearchTags] = useState<string[]>([])
 
   const allTags: string[] = useMemo(() => {
-    // Extrahiere alle tatsächlich vorkommenden Keywords aus dem keywords-Feld der Buchungen
     const tags = new Set<string>()
-    transactions.forEach(t => {
-      if (Array.isArray((t as any).keywords)) {
-        (t as any).keywords.forEach((kw: string) => {
-          if (kw && typeof kw === 'string' && kw.trim().length > 0) tags.add(kw.trim())
-        })
-      }
+    filteredTransactions.forEach((transaction) => {
+      getTransactionKeywords(transaction).forEach((keyword) => {
+        tags.add(keyword)
+      })
     })
     return Array.from(tags).sort()
-  }, [transactions, payoutRequests])
+  }, [filteredTransactions])
 
   const tagOptions = allTags.map(t => ({ value: t, label: t }))
 
@@ -255,10 +274,9 @@ function Statement() {
       }
       let matchesTags = true
       if (searchTags.length > 0) {
-        const entryText = entry.kind === 'transaction'
-          ? [entry.data.description, entry.data.concert_name].filter(Boolean).join(' ').toLowerCase()
-          : (entry.data.note ?? '').toLowerCase()
-        matchesTags = searchTags.some(tag => entryText.includes(tag.toLowerCase()))
+        matchesTags = entry.kind === 'transaction'
+          ? searchTags.some((tag) => getTransactionKeywords(entry.data).includes(tag))
+          : false
       }
       return matchesText && matchesTags
     })
@@ -569,6 +587,7 @@ function Statement() {
             placeholder="Freitextsuche (Name, Beschreibung, Betrag, Datum...)"
             value={searchText}
             onChange={e => setSearchText(e.target.value)}
+            variant="amber"
             className="mt-1"
           />
         </div>
@@ -579,6 +598,7 @@ function Statement() {
             value={searchTags}
             onChange={setSearchTags}
             placeholder="Stichworte wählen..."
+            variant="amber"
             className="mt-1"
           />
         </div>
@@ -707,7 +727,8 @@ function Statement() {
               }
 
               const t = entry.data
-              const payout = t.type === 'expense' && Array.isArray((t as any).keywords) && (t as any).keywords.includes('Auszahlung')
+              const keywords = getTransactionKeywords(t)
+              const payout = t.type === 'expense' && keywords.includes('Auszahlung')
               const iconWrapClass = payout
                 ? 'bg-amber-500/20 text-amber-300'
                 : t.type === 'earn'
@@ -730,20 +751,13 @@ function Statement() {
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="font-semibold">{t.description || t.concert_name || '-'}</p>
-                          {/* Keywords als Badges anzeigen (Transaktion oder Buchung) */}
-                          {(() => {
-                            // Zeige zuerst Transaktions-Keywords, sonst Buchungs-Keywords (falls vorhanden)
-                            const keywords = Array.isArray((t as any).keywords) && (t as any).keywords.length > 0
-                              ? (t as any).keywords
-                              : (Array.isArray((t as any).booking_keywords) ? (t as any).booking_keywords : []);
-                            return keywords.length > 0 ? (
-                              <span className="flex flex-wrap gap-1 ml-2">
-                                {keywords.map((kw: string) => (
-                                  <span key={kw} className="keyword text-xs px-2 py-0.5 rounded-full border border-blue-400/60 text-blue-300 bg-blue-500/10">{kw}</span>
-                                ))}
-                              </span>
-                            ) : null
-                          })()}
+                          {keywords.length > 0 ? (
+                            <span className="flex flex-wrap gap-1 ml-2">
+                              {keywords.map((keyword) => (
+                                <span key={keyword} className="keyword text-xs px-2 py-0.5 rounded-full border border-blue-400/60 text-blue-300 bg-blue-500/10">{keyword}</span>
+                              ))}
+                            </span>
+                          ) : null}
                         </div>
                         <p className="text-sm text-muted-foreground">
                           {t.date ? formatDate(new Date(t.date)) : '-'}
