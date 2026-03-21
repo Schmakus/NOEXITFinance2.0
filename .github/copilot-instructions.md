@@ -76,6 +76,27 @@ Bei Datenbank-Operationen oder Migrationen gelten diese Regeln:
 * **Mobile-Navigation:** In der mobilen Ansicht erfolgt Navigation ausschließlich über das Burger-Menü bzw. den Sidebar-Drawer. Keine zusätzliche Bottom- oder Footer-Navigation einsetzen.
 * **User-Menüführung:** Sobald normale User mehr als eine relevante Seite erreichen können, müssen diese Ziele ebenfalls im zentralen Menü sichtbar sein, nicht nur für Admins/Superuser.
 
+## UI Button-Varianten
+
+Verwende für Buttons die folgenden Varianten, um ein konsistentes Design zu gewährleisten:
+
+| Variante   | Zweck/Ereignis                | Beispieltext         |
+|------------|-------------------------------|---------------------|
+| default    | Standard-Button               | Speichern           |
+| amber      | Hinzufügen, Primäraktion      | Hinzufügen, Neu     |
+| update     | Aktualisieren/Ändern          | Aktualisieren       |
+| success    | Erfolgsaktion, Erstellen      | Erstellen           |
+| danger     | Abbrechen, Löschen, Warnung   | Abbrechen, Löschen  |
+| approve    | Genehmigen, Freigeben         | Genehmigen          |
+| reject     | Ablehnen, Verwerfen           | Ablehnen            |
+| outline    | Sekundär, neutral             | Details, Info       |
+
+Alle Varianten sind zentral in `src/components/ui/button.tsx` definiert und können direkt als `variant`-Prop verwendet werden:
+
+```tsx
+<Button variant="amber">Hinzufügen</Button>
+<Button variant="danger">Abbrechen</Button>
+<Button variant="update">Aktualisieren</Button>
 
 ---
 
