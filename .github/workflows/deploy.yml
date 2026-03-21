@@ -15,7 +15,7 @@ jobs:
         with:
           node-version: 20
       - name: Install dependencies
-        run: npm install --legacy-peer-deps
+        run: npm ci
       - name: Run Lint
         run: npm run lint
 
@@ -48,8 +48,7 @@ jobs:
             # Neuesten Stand holen
             git pull origin main
             
-            # WICHTIG: Installation mit Legacy-Flag, um ESLint 10 Konflikte zu lösen
-            npm install --legacy-peer-deps
+            npm install
             
             # Dein bestehendes deploy-Skript auf dem Server ausführen
             chmod +x ./deploy.sh
