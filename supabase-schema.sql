@@ -352,3 +352,19 @@ create policy "Users can delete own pending payout_requests" on payout_requests
 -- ============================================
 insert into tags (name) values ('Gage'), ('Reise'), ('Equipment')
 on conflict (name) do nothing;
+
+-- ============================================
+-- KEEP-ALIVE (verhindert Supabase Free-Tier Pause)
+-- ============================================
+create table if not exists keep_alive (
+  id uuid primary key default gen_random_uuid(),
+  pinged_at timestamptz not null default now()
+);
+
+-- Initialen Eintrag anlegen (wird wöchentlich per GitHub Action aktualisiert)
+insert into keep_alive (id, pinged_at)
+values ('00000000-0000-0000-0000-000000000001', now())
+on conflict (id) do nothing;
+
+-- RLS deaktiviert (keine sensiblen Daten, nur ein Timestamp)
+alter table keep_alive disable row level security;
