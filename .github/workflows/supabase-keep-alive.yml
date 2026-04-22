@@ -15,7 +15,9 @@ jobs:
         run: |
           response=$(curl --silent --output /dev/null --write-out "%{http_code}" \
             -X GET \
-            "${{ secrets.SUPABASE_URL }}/health")
+            "${{ secrets.SUPABASE_URL }}/rest/v1/" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
 
           echo "HTTP Status: $response"
 
