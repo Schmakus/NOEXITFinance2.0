@@ -14,6 +14,7 @@ interface PdfExportOptions {
 	musicianName: string
 	fromDate: string
 	toDate: string
+	currentBalance: number
 	entries: PdfExportEntry[]
 }
 
@@ -22,6 +23,7 @@ export async function exportStatementPdf({
 	musicianName,
 	fromDate,
 	toDate,
+	currentBalance,
 	entries,
 }: PdfExportOptions) {
 	const doc = new jsPDF({ unit: 'pt', format: 'a4' })
@@ -74,16 +76,20 @@ export async function exportStatementPdf({
   
 	// Summenreihe
 	doc.setFontSize(11).setFont('helvetica', 'bold')
-	const colWidth = 140
+	const colWidth = 120
 	const startX = 40
 	doc.text('Gesamteinnahmen', startX, y)
 	doc.text('Gesamtausgaben', startX + colWidth, y)
 	doc.text('Auszahlungen', startX + 2 * colWidth, y)
+	doc.text('Aktueller Kontostand', startX + 3 * colWidth, y)
 	doc.setFont('helvetica', 'normal')
 	y += 18
 	doc.text(`${totalIncome.toFixed(2)} €`, startX, y)
 	doc.text(`${Math.abs(totalExpense).toFixed(2)} €`, startX + colWidth, y)
 	doc.text(`${Math.abs(totalPayout).toFixed(2)} €`, startX + 2 * colWidth, y)
+	doc.setFont('helvetica', 'bold')
+	doc.text(`${currentBalance.toFixed(2)} €`, startX + 3 * colWidth, y)
+	doc.setFont('helvetica', 'normal')
 
 	y += 22
 

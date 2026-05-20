@@ -385,6 +385,7 @@ function Statement() {
         musicianName: musician?.name || '',
         fromDate: fromDate ? formatDate(new Date(fromDate)) : '',
         toDate: toDate ? formatDate(new Date(toDate)) : '',
+        currentBalance,
         entries,
       })
     } catch (err) {
