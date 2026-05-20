@@ -5,6 +5,7 @@ export interface PdfExportEntry {
 	date: string
 	description: string
 	amount: number
+	isPayout?: boolean
 	eventName?: string
 	eventLocation?: string
 }
@@ -68,9 +69,9 @@ export async function exportStatementPdf({
 
 	// Summen berechnen
 	const totalIncome = entries.filter(e => e.amount > 0).reduce((sum, e) => sum + e.amount, 0)
-	const totalExpense = entries.filter(e => e.amount < 0).reduce((sum, e) => sum + e.amount, 0)
-	// Auszahlungen: alle mit "Auszahlung" oder "payout" im description
-	const totalPayout = entries.filter(e => (e.description || '').toLowerCase().includes('auszahlung') || (e.description || '').toLowerCase().includes('payout')).reduce((sum, e) => sum + e.amount, 0)
+	// Auszahlungen: Transaktionen mit isPayout-Flag oder Auszahlungsanträge (description enthält 'auszahlungsantrag')
+	const totalPayout = entries.filter(e => e.isPayout || (e.description || '').toLowerCase().includes('auszahlungsantrag')).reduce((sum, e) => sum + e.amount, 0)
+	const totalExpense = entries.filter(e => e.amount < 0 && !e.isPayout && !(e.description || '').toLowerCase().includes('auszahlungsantrag')).reduce((sum, e) => sum + e.amount, 0)
 
 	y += 40
   

@@ -314,10 +314,10 @@ function Statement() {
       .filter((t) => t.type === 'earn')
       .reduce((sum, t) => sum + t.amount, 0)
     const payouts = transactions
-      .filter((t) => t.type === 'expense' && Array.isArray((t as any).keywords) && (t as any).keywords.includes('Auszahlung'))
+      .filter((t) => t.type === 'expense' && t.booking_type === 'payout')
       .reduce((sum, t) => sum + Math.abs(t.amount), 0)
     const expenses = transactions
-      .filter((t) => t.type === 'expense' && (!Array.isArray((t as any).keywords) || !(t as any).keywords.includes('Auszahlung')))
+      .filter((t) => t.type === 'expense' && t.booking_type !== 'payout')
       .reduce((sum, t) => sum + Math.abs(t.amount), 0)
     return { income, payouts, expenses }
   }, [transactions])
@@ -364,6 +364,7 @@ function Statement() {
             date: t.date ? formatDate(new Date(t.date)) : '',
             description: t.description || '',
             amount: t.amount,
+            isPayout: t.booking_type === 'payout',
             eventName,
             eventLocation,
           }
