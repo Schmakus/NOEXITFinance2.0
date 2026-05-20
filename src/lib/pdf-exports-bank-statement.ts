@@ -5,6 +5,7 @@ export interface PdfExportEntry {
 	date: string
 	description: string
 	amount: number
+	isPayout?: boolean
 	eventName?: string
 	eventLocation?: string
 }
@@ -14,6 +15,7 @@ interface PdfExportOptions {
 	musicianName: string
 	fromDate: string
 	toDate: string
+	currentBalance: number
 	entries: PdfExportEntry[]
 }
 
@@ -22,6 +24,7 @@ export async function exportStatementPdf({
 	musicianName,
 	fromDate,
 	toDate,
+	currentBalance,
 	entries,
 }: PdfExportOptions) {
 	const doc = new jsPDF({ unit: 'pt', format: 'a4' })
@@ -66,24 +69,28 @@ export async function exportStatementPdf({
 
 	// Summen berechnen
 	const totalIncome = entries.filter(e => e.amount > 0).reduce((sum, e) => sum + e.amount, 0)
-	const totalExpense = entries.filter(e => e.amount < 0).reduce((sum, e) => sum + e.amount, 0)
-	// Auszahlungen: alle mit "Auszahlung" oder "payout" im description
-	const totalPayout = entries.filter(e => (e.description || '').toLowerCase().includes('auszahlung') || (e.description || '').toLowerCase().includes('payout')).reduce((sum, e) => sum + e.amount, 0)
+	// Auszahlungen: Transaktionen mit isPayout-Flag oder Auszahlungsanträge (description enthält 'auszahlungsantrag')
+	const totalPayout = entries.filter(e => e.isPayout || (e.description || '').toLowerCase().includes('auszahlungsantrag')).reduce((sum, e) => sum + e.amount, 0)
+	const totalExpense = entries.filter(e => e.amount < 0 && !e.isPayout && !(e.description || '').toLowerCase().includes('auszahlungsantrag')).reduce((sum, e) => sum + e.amount, 0)
 
 	y += 40
   
 	// Summenreihe
 	doc.setFontSize(11).setFont('helvetica', 'bold')
-	const colWidth = 140
+	const colWidth = 120
 	const startX = 40
 	doc.text('Gesamteinnahmen', startX, y)
 	doc.text('Gesamtausgaben', startX + colWidth, y)
 	doc.text('Auszahlungen', startX + 2 * colWidth, y)
+	doc.text('Aktueller Kontostand', startX + 3 * colWidth, y)
 	doc.setFont('helvetica', 'normal')
 	y += 18
 	doc.text(`${totalIncome.toFixed(2)} €`, startX, y)
 	doc.text(`${Math.abs(totalExpense).toFixed(2)} €`, startX + colWidth, y)
 	doc.text(`${Math.abs(totalPayout).toFixed(2)} €`, startX + 2 * colWidth, y)
+	doc.setFont('helvetica', 'bold')
+	doc.text(`${currentBalance.toFixed(2)} €`, startX + 3 * colWidth, y)
+	doc.setFont('helvetica', 'normal')
 
 	y += 22
 
