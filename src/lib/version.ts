@@ -1,2 +1,2 @@
 // This file is auto-generated. Do not edit manually.
-export const APP_VERSION = "2.1.1";
+export const APP_VERSION = "2.1.3";
